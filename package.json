@@ -1,0 +1,28 @@
+{
+  "name": "motherboard-mvp",
+  "version": "1.0.0",
+  "description": "Project Motherboard - Visual Task Management Circuit Board MVP",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.158.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@types/three": "^0.158.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "project-management",
+    "task-tracker",
+    "visual",
+    "circuit-board",
+    "systems-thinking"
+  ],
+  "author": "",
+  "license": "MIT"
+}
