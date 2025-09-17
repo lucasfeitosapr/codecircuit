@@ -1350,7 +1350,7 @@ export class MotherboardApp {
     this.hideDatasheet();
     this.selectedComponent = null;
 
-    this.animateToMainView(() => {
+    this.animateToMainView(previousView.camera, () => {
       this.currentView = {
         type: previousView.type,
         component: previousView.component,
@@ -1372,33 +1372,132 @@ export class MotherboardApp {
     });
   }
 
+  // Camera utility methods for smooth transitions
+  private interpolateCamera(start: Camera, end: Camera, progress: number): Camera {
+    return {
+      x: start.x + (end.x - start.x) * progress,
+      y: start.y + (end.y - start.y) * progress,
+      zoom: start.zoom + (end.zoom - start.zoom) * progress,
+    };
+  }
+
+  private getCameraDistance(cam1: Camera, cam2: Camera): number {
+    const dx = cam1.x - cam2.x;
+    const dy = cam1.y - cam2.y;
+    const dz = Math.abs(cam1.zoom - cam2.zoom) * 100; // Scale zoom difference
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+
+  // Get center position for a component (useful for focusing camera)
+  private getComponentCenter(component: ComponentBase): { x: number; y: number } {
+    return {
+      x: component.x + component.width / 2,
+      y: component.y + component.height / 2,
+    };
+  }
+
+  // Calculate optimal camera position to focus on a component
+  private getFocusCameraPosition(component: ComponentBase, zoom: number = 1): Camera {
+    const center = this.getComponentCenter(component);
+    return {
+      x: this.canvas.width / 2 - center.x * zoom,
+      y: this.canvas.height / 2 - center.y * zoom,
+      zoom: zoom,
+    };
+  }
+
+  // Enhanced transition configuration with dynamic duration based on distance
+  private calculateTransitionDuration(start: Camera, end: Camera): number {
+    const distance = this.getCameraDistance(start, end);
+    const baseDuration = this.transitionConfig.duration;
+    const maxDuration = baseDuration * 1.5;
+    const minDuration = baseDuration * 0.5;
+
+    // Scale duration based on distance, but keep within reasonable bounds
+    const scaleFactor = Math.min(distance / 500, 2);
+    return Math.max(minDuration, Math.min(maxDuration, baseDuration * scaleFactor));
+  }
+
+  // Easing functions for smooth animations
+  private easeInOutCubic(t: number): number {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  private easeOutCubic(t: number): number {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  private easeInOutQuart(t: number): number {
+    return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+  }
+
+  // Configuration for transition animations
+  private transitionConfig = {
+    duration: 800, // milliseconds
+    zoomOutFactor: 0.3,
+    focusZoom: 1.2,
+    easingFunction: this.easeInOutCubic.bind(this),
+  };
+
+  // Public method to configure transition parameters
+  public setTransitionConfig(config: Partial<typeof this.transitionConfig>) {
+    this.transitionConfig = { ...this.transitionConfig, ...config };
+  }
+
+  // Method to get current transition config (useful for debugging/tuning)
+  public getTransitionConfig() {
+    return { ...this.transitionConfig };
+  }
+
   animateToSchematicView(moduleComponent: ModuleComponent, callback: () => void) {
-    // Simple transition for now - could be enhanced with smooth camera movement
-    // Note: could use targetX/targetY for future smooth camera positioning
-    // const targetX = this.canvas.width / (2 * window.devicePixelRatio);
-    // const targetY = this.canvas.height / (2 * window.devicePixelRatio);
+    const startTime = performance.now();
+    const startCamera = { ...this.camera };
+    
+    // Calculate target position using utility methods
+    const focusCamera = this.getFocusCameraPosition(moduleComponent, this.transitionConfig.focusZoom);
+    const finalCamera = { x: 0, y: 0, zoom: 1 }; // Schematic view starts at origin
+    
+    // Intermediate zoom-out camera for cinematic effect
+    const midCamera = {
+      x: startCamera.x + (focusCamera.x - startCamera.x) * 0.3,
+      y: startCamera.y + (focusCamera.y - startCamera.y) * 0.3,
+      zoom: this.transitionConfig.zoomOutFactor,
+    };
 
-    // Quick fade-like effect by adjusting camera
-    const steps = 10;
-    let currentStep = 0;
+    // Calculate dynamic duration based on camera movement distance
+    const duration = this.calculateTransitionDuration(startCamera, finalCamera);
 
-    const animate = () => {
-      currentStep++;
-      const progress = currentStep / steps;
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
 
-      // Simple zoom out then in effect
       if (progress < 0.5) {
-        this.camera.zoom = 1 - progress;
+        // Phase 1: Zoom out while panning toward target (cinematic effect)
+        const phaseProgress = progress * 2;
+        const phaseEased = this.easeOutCubic(phaseProgress);
+        
+        this.camera = this.interpolateCamera(startCamera, midCamera, phaseEased);
       } else {
-        this.camera.zoom = (progress - 0.5) * 2;
+        // Phase 2: Zoom into target with final positioning
+        const phaseProgress = (progress - 0.5) * 2;
+        const phaseEased = this.easeInOutQuart(phaseProgress);
+        
+        // Transition from mid position to focus, then to final schematic position
+        const focusPhase = Math.min(phaseProgress * 1.5, 1);
+        const finalPhase = Math.max((phaseProgress - 0.6) / 0.4, 0);
+        
+        if (finalPhase === 0) {
+          this.camera = this.interpolateCamera(midCamera, focusCamera, focusPhase);
+        } else {
+          this.camera = this.interpolateCamera(focusCamera, finalCamera, this.easeInOutCubic(finalPhase));
+        }
       }
 
-      if (currentStep < steps) {
+      if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        this.camera.zoom = 1;
-        this.camera.x = 0;
-        this.camera.y = 0;
+        // Ensure final position is exact
+        this.camera = { ...finalCamera };
         callback();
       }
     };
@@ -1406,25 +1505,27 @@ export class MotherboardApp {
     requestAnimationFrame(animate);
   }
 
-  animateToMainView(callback: () => void) {
-    // Simple transition back to main view
-    const steps = 10;
-    let currentStep = 0;
+  animateToMainView(targetCamera: Camera, callback: () => void) {
+    const startTime = performance.now();
+    const startCamera = { ...this.camera };
+    
+    // Calculate dynamic duration based on camera movement distance
+    const duration = this.calculateTransitionDuration(startCamera, targetCamera);
+    
+    // Smooth transition back to the previous view's camera position
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = this.transitionConfig.easingFunction(progress);
 
-    const animate = () => {
-      currentStep++;
-      const progress = currentStep / steps;
+      // Smooth interpolation to target camera state using utility method
+      this.camera = this.interpolateCamera(startCamera, targetCamera, easedProgress);
 
-      // Simple fade effect
-      if (progress < 0.5) {
-        this.camera.zoom = 1 - progress * 0.5;
-      } else {
-        this.camera.zoom = 0.5 + (progress - 0.5);
-      }
-
-      if (currentStep < steps) {
+      if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
+        // Ensure final position is exact
+        this.camera = { ...targetCamera };
         callback();
       }
     };
