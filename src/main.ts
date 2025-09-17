@@ -1082,13 +1082,25 @@ export class MotherboardApp {
 
       const categoryColor = this.categories[connection.category ?? 'frontend']?.color || '#00ff88';
 
-      // Check if connection should be active (source is in-progress or done)
-      const isActive =
-        connection.from.component.status === 'in-progress' ||
-        connection.from.component.status === 'done';
-      const isPowered = connection.from.component.status === 'done';
+      // Check statuses
+      const fromStatus = connection.from.component.status;
+      const toStatus = connection.to.component.status;
+      const isActive = fromStatus === 'in-progress' || fromStatus === 'done';
+      const isPowered = fromStatus === 'done';
 
-      // Draw background trace (always visible)
+      // If both ends are DEFINED, render intention (dashed) trace and skip particles
+      if (fromStatus === 'defined' && toStatus === 'defined') {
+        this.drawIntentionTrace(fromX, fromY, toX, toY, categoryColor);
+        return;
+      }
+
+      // If source is DEFINED and not active yet, render intention trace
+      if (fromStatus === 'defined' && !isActive) {
+        this.drawIntentionTrace(fromX, fromY, toX, toY, categoryColor);
+        return;
+      }
+
+      // Otherwise render normal background and active traces
       this.drawTraceBackground(fromX, fromY, toX, toY, categoryColor, isActive);
 
       if (isActive) {
@@ -1099,6 +1111,18 @@ export class MotherboardApp {
         this.drawDataFlow(connection, fromX, fromY, toX, toY, categoryColor, isPowered);
       }
     });
+  }
+
+  // Intention (dashed) trace rendering for DEFINED components
+  drawIntentionTrace(fromX: number, fromY: number, toX: number, toY: number, color: string) {
+    // Use cyan tint for intention traces while falling back to provided category color
+    const intentionColor = '#00ffff';
+    this.ctx.strokeStyle = intentionColor + '66';
+    this.ctx.lineWidth = 2;
+    this.ctx.setLineDash([6, 6]);
+    this.drawOrthogonalTrace(fromX, fromY, toX, toY);
+    this.ctx.setLineDash([]);
+    this.ctx.shadowBlur = 0;
   }
 
   drawTempConnection() {

@@ -18,8 +18,9 @@ export function showDatasheet(app: any, component: ComponentBase) {
 
   titleEl.textContent = `${component.icon ?? ''} ${component.name ?? component.title ?? ''}`;
 
-  const statusOptions = ['todo', 'in-progress', 'done'];
+  const statusOptions = ['defined', 'todo', 'in-progress', 'done'];
   const statusLabels: Record<string, string> = {
+    defined: 'DEFINED',
     todo: 'TODO',
     'in-progress': 'IN PROGRESS',
     done: 'DONE',
