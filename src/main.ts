@@ -344,7 +344,7 @@ export class MotherboardApp {
       name: template.name,
       icon: template.icon,
       color: template.color,
-      status: 'todo', // todo, in-progress, done
+      status: 'defined', // default to defined instead of 'todo'
       title: `${template.name ?? type} ${components.length + 1}`,
       description: '',
       category: 'frontend', // Default category
@@ -491,8 +491,8 @@ export class MotherboardApp {
   }
 
   toggleComponentStatus(component: ComponentBase) {
-    const statusCycle = ['todo', 'in-progress', 'done'];
-    const currentIndex = statusCycle.indexOf(component.status ?? 'todo');
+    const statusCycle = ['defined', 'todo', 'in-progress', 'done'];
+    const currentIndex = statusCycle.indexOf(component.status ?? 'defined');
     const nextIndex = (currentIndex + 1) % statusCycle.length;
     component.status = statusCycle[nextIndex];
 
@@ -508,7 +508,7 @@ export class MotherboardApp {
 
   hideDatasheet() {
     // Delegate to datasheet module
-    hideDatasheetUI(this);
+    hideDatasheetUI();
   }
 
   generateId() {
@@ -655,7 +655,7 @@ export class MotherboardApp {
         icon: data.icon,
         color: data.color,
         pins: data.pins,
-        status: data.status || 'todo',
+        status: data.status || 'defined',
         category: data.category || 'frontend',
         description: data.description || '',
         createdAt: data.createdAt || new Date(),
@@ -800,14 +800,25 @@ export class MotherboardApp {
     const screenHeight = component.height * this.camera.zoom;
 
     // Component body
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
+    // Default body (may be overridden for certain states)
+    if (component.status === 'defined') {
+      // Transparent body for DEFINED (wireframe)
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+      this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
+    } else {
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
+    }
 
     // Component border based on status
     let borderColor = component.color ?? '#000000';
     let glowIntensity = 0;
 
     switch (component.status) {
+      case 'defined':
+        borderColor = '#00ffff'; // cyan outline for defined
+        glowIntensity = 0;
+        break;
       case 'todo':
         borderColor = component.color + '66'; // Semi-transparent
         break;
@@ -829,7 +840,14 @@ export class MotherboardApp {
       this.ctx.shadowBlur = 15 * glowIntensity;
     }
 
-    this.ctx.strokeRect(screenX, screenY, screenWidth, screenHeight);
+    if (component.status === 'defined') {
+      // Dashed outline for defined
+      this.ctx.setLineDash([6, 6]);
+      this.ctx.strokeRect(screenX, screenY, screenWidth, screenHeight);
+      this.ctx.setLineDash([]);
+    } else {
+      this.ctx.strokeRect(screenX, screenY, screenWidth, screenHeight);
+    }
     this.ctx.shadowBlur = 0;
 
     // Selection highlight
@@ -842,8 +860,15 @@ export class MotherboardApp {
     }
 
     // Component icon and text
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = `${16 * this.camera.zoom}px monospace`;
+    // Muted italic text for DEFINED
+    if (component.status === 'defined') {
+      this.ctx.fillStyle = 'rgba(200, 255, 255, 0.85)';
+      this.ctx.font = `${16 * this.camera.zoom}px monospace italic`;
+      this.ctx.globalAlpha = 0.85;
+    } else {
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = `${16 * this.camera.zoom}px monospace`;
+    }
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
 
@@ -854,7 +879,13 @@ export class MotherboardApp {
 
     // Component title (if there's space)
     if (screenHeight > 40) {
-      this.ctx.font = `${10 * this.camera.zoom}px monospace`;
+      if (component.status === 'defined') {
+        this.ctx.font = `${10 * this.camera.zoom}px monospace italic`;
+        this.ctx.fillStyle = 'rgba(200, 255, 255, 0.7)';
+      } else {
+        this.ctx.font = `${10 * this.camera.zoom}px monospace`;
+        this.ctx.fillStyle = '#ffffff';
+      }
       this.ctx.fillText(component.title ?? '', centerX, centerY + 15 * this.camera.zoom);
     }
 

@@ -62,7 +62,7 @@ export interface ComponentBase {
     output?: PinDef[];
     [k: string]: PinDef[] | undefined;
   };
-  status?: 'todo' | 'in-progress' | 'done' | string;
+  status?: 'defined' | 'todo' | 'in-progress' | 'done' | string;
   category?: string;
   description?: string;
   createdAt?: string | Date;
