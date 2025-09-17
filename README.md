@@ -5,26 +5,30 @@ A visual task management system that transforms project complexity into an intui
 ## 🎯 Core Concept
 
 This MVP implements the core vision of **Project: Motherboard** - a task tracker where:
+
 - **User Stories** become **Power Cores** (✨) - energy sources that drive your project
-- **Features/Services** become **Module ICs** (⬛) - black-box components with defined interfaces  
+- **Features/Services** become **Module ICs** (⬛) - black-box components with defined interfaces
 - **Individual Tasks** become **Task Resistors** (▬▬) - atomic units of work
 
 ## ✨ Features Implemented
 
 ### Core Circuit Board Interface
+
 - **3D-style Workbench View**: Pan, zoom, and orbit around your project circuit board
 - **Component Dragging**: Drag components from the Parts Tray onto the workbench
-- **Visual Status System**: 
+- **Visual Status System**:
   - TODO: Outlined components
   - IN PROGRESS: Pulsing magenta glow with energy particles
   - DONE: Solid green with power glow
 
 ### Interactive Components
+
 - **Power Cores** (✨): User story energy sources
 - **Module ICs** (⬛): Feature/service containers
 - **Task Resistors** (▬▬): Individual work items
 
 ### Smart UI
+
 - **Datasheet Panel**: Edit component properties, descriptions, and metadata
 - **Real-time Status Updates**: Double-click components to cycle through states
 - **Export Functionality**: Save your project as JSON
@@ -33,11 +37,13 @@ This MVP implements the core vision of **Project: Motherboard** - a task tracker
 ## 🚀 Quick Start
 
 1. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 2. **Start development server**:
+
    ```bash
    npm run dev
    ```
@@ -52,7 +58,7 @@ This MVP implements the core vision of **Project: Motherboard** - a task tracker
 1. **Place Components**: Drag from the Parts Tray (left panel) onto the workbench
 2. **Edit Properties**: Click any component to open its datasheet panel
 3. **Manage Status**: Double-click components to cycle: TODO → IN PROGRESS → DONE
-4. **Navigate**: 
+4. **Navigate**:
    - Right-click + drag to pan
    - Mouse wheel to zoom
    - Left-click + drag empty space to orbit
@@ -60,11 +66,13 @@ This MVP implements the core vision of **Project: Motherboard** - a task tracker
 ## 🧠 The Circuit Board Metaphor
 
 ### Visual Language
+
 - **Energy Flow**: Completed components glow and "power" connected systems
 - **Status Indicators**: Each state has distinct visual feedback
 - **Typed Connections**: Future implementation will include color-coded traces for different data types
 
 ### Systems Thinking
+
 - **Hierarchical Components**: From atomic tasks to complex features
 - **Dependency Visualization**: Clear input/output pin system
 - **Completion Cascades**: Finished work powers downstream components
@@ -91,8 +99,9 @@ The MVP provides the foundation for advanced features described in the design do
 ## 📋 Project Status
 
 This MVP demonstrates the core vision with:
+
 - ✅ Interactive component placement
-- ✅ Visual status management  
+- ✅ Visual status management
 - ✅ Circuit board navigation
 - ✅ Property editing
 - ✅ Export functionality
@@ -106,4 +115,4 @@ This is a greenfield project implementing a novel approach to project management
 
 ---
 
-*"Build your projects like electronic circuits - watch energy flow through completed work."*
+_"Build your projects like electronic circuits - watch energy flow through completed work."_

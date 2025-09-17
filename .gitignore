@@ -1,0 +1,111 @@
+# .gitignore for a Node + Vite + TypeScript project
+# Generated: comprehensive ignores for local dev, editors, OS, build artifacts, caches, and secrets
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp/
+.pnp.js
+
+# Optional lockfiles
+# Uncomment to ignore lockfiles if you intentionally don't commit them
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+out/
+public/build/
+lib/
+.esbuild/
+
+# Vite
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.*.local
+.env.local
+.env.test
+.env.production.local
+
+# Coverage and test outputs
+coverage/
+coverage-final.json
+nyc_output/
+.vitest/
+
+# Test snapshots
+__snapshots__/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.swp
+*~
+.#*
+
+# Misc caches
+.cache/
+.cache-loader/
+.cache/*
+.next/
+.parcel-cache/
+
+# Bundler / package artifacts
+*.tgz
+package-lock.json
+
+# Certificates, keys, secrets
+*.pem
+*.key
+*.crt
+
+# Debug history
+.node_repl_history
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Logs created by npm / yarn
+.pnpm-debug.log
+
+# JetBrains
+.idea/
+*.iml
+
+# System-specific
+Thumbs.db
+.DS_Store
+
+# Local VS Code workspace settings (uncomment if you want to keep workspace settings out)
+# .vscode/settings.json
+
+# Project files
+Tasks.md
+
+# End of .gitignore
