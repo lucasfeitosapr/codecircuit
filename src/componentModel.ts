@@ -13,8 +13,9 @@ export function getCurrentViewConnections(app: any) {
 export function addComponent(app: any, type: string, x: number, y: number) {
   const template = app.componentTypes[type];
   if (!template) return;
-  if (app.currentView.type === 'schematic' && type !== 'task-resistor') {
-    console.log('Only Task Resistors allowed in schematic view');
+  // In schematic view, allow Task Resistors and Module ICs (for nesting), but not Power Cores
+  if (app.currentView.type === 'schematic' && type === 'power-core') {
+    console.log('Power Cores only allowed on main board');
     return;
   }
 

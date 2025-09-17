@@ -129,7 +129,7 @@ export class MotherboardApp {
       components: this.components,
       connections: this.connections,
     };
-    this.updateViewIndicator();
+    this.updateBreadcrumbs();
   }
 
   init() {
@@ -322,9 +322,9 @@ export class MotherboardApp {
     const template = this.componentTypes[type];
     if (!template) return;
 
-    // In schematic view, only allow Task Resistors
-    if (this.currentView.type === 'schematic' && type !== 'task-resistor') {
-      console.log('Only Task Resistors allowed in schematic view');
+    // In schematic view, allow Task Resistors and Module ICs (for nesting), but not Power Cores
+    if (this.currentView.type === 'schematic' && type === 'power-core') {
+      console.log('Power Cores only allowed on main board');
       return;
     }
 
@@ -1534,28 +1534,194 @@ export class MotherboardApp {
   }
 
   updateBreadcrumbs() {
-    // Update the breadcrumb navigation in the UI
-    this.updateViewIndicator();
-  }
-
-  updateViewIndicator() {
-    // Update UI to show current view context
-    const logo = document.querySelector('.logo') as HTMLElement;
+    // Update the breadcrumb navigation in the UI with full path
+    const breadcrumbNav = document.getElementById('breadcrumb-nav') as HTMLElement;
     const backBtn = document.getElementById('back-btn') as HTMLElement;
 
-    if (!logo || !backBtn) return;
+    if (!breadcrumbNav || !backBtn) return;
 
-    if (this.currentView.type === 'main') {
-      logo.textContent = '⚡ Project: Motherboard';
-      backBtn.style.display = 'none';
-    } else if (this.currentView.type === 'schematic') {
-      if (this.currentView.component && this.currentView.component.title) {
-        logo.textContent = `⚡ ${this.currentView.component.title} [Schematic]`;
-      } else {
-        logo.textContent = '⚡ Project: Motherboard [Schematic]';
+    // Build breadcrumb path from view stack
+    const breadcrumbPath = this.buildBreadcrumbPath();
+    
+    // Clear existing breadcrumbs
+    breadcrumbNav.innerHTML = '';
+    
+    // Create breadcrumb items
+    breadcrumbPath.forEach((item, index) => {
+      // Add separator before each item (except first)
+      if (index > 0) {
+        const separator = document.createElement('span');
+        separator.className = 'breadcrumb-separator';
+        separator.textContent = '>';
+        breadcrumbNav.appendChild(separator);
       }
-      backBtn.style.display = 'inline-block';
+      
+      // Create breadcrumb item
+      const breadcrumbItem = document.createElement('span');
+      breadcrumbItem.className = `breadcrumb-item ${item.isCurrent ? 'current' : ''}`;
+      breadcrumbItem.setAttribute('data-view-index', index.toString());
+      
+      // Add depth indicator
+      const depthIndicator = document.createElement('span');
+      depthIndicator.className = 'depth-indicator';
+      depthIndicator.textContent = item.icon;
+      breadcrumbItem.appendChild(depthIndicator);
+      
+      // Add text content
+      const textNode = document.createTextNode(item.name);
+      breadcrumbItem.appendChild(textNode);
+      
+      // Add click handler for navigation (except current item)
+      if (!item.isCurrent) {
+        breadcrumbItem.addEventListener('click', () => {
+          this.navigateToBreadcrumbLevel(index);
+        });
+      }
+      
+      breadcrumbNav.appendChild(breadcrumbItem);
+    });
+    
+    // Update back button visibility
+    const isMainView = this.currentView.type === 'main';
+    backBtn.style.display = isMainView ? 'none' : 'inline-block';
+    
+    // Update parts tray context filtering
+    this.updatePartsTrayContext();
+  }
+
+  updatePartsTrayContext() {
+    // Update parts tray to show appropriate components for current context
+    const powerCoreItem = document.getElementById('power-core-item') as HTMLElement;
+    const moduleIcItem = document.getElementById('module-ic-item') as HTMLElement;
+    const taskResistorItem = document.getElementById('task-resistor-item') as HTMLElement;
+
+    if (!powerCoreItem || !moduleIcItem || !taskResistorItem) return;
+
+    const isMainView = this.currentView.type === 'main';
+    const currentDepth = this.viewStack.size() + (this.currentView.type === 'schematic' ? 1 : 0);
+
+    if (isMainView) {
+      // Main board: All components available
+      powerCoreItem.classList.remove('disabled');
+      moduleIcItem.classList.remove('disabled');
+      taskResistorItem.classList.remove('disabled');
+      
+      powerCoreItem.querySelector('.context-hint')!.textContent = 'Energy sources';
+      moduleIcItem.querySelector('.context-hint')!.textContent = 'Features & Systems';
+      taskResistorItem.querySelector('.context-hint')!.textContent = 'Not typical on main board';
+    } else {
+      // Schematic view: No Power Cores allowed
+      powerCoreItem.classList.add('disabled');
+      moduleIcItem.classList.remove('disabled');
+      taskResistorItem.classList.remove('disabled');
+      
+      powerCoreItem.querySelector('.context-hint')!.textContent = 'Main board only';
+      moduleIcItem.querySelector('.context-hint')!.textContent = `Sub-systems (Level ${currentDepth + 1})`;
+      taskResistorItem.querySelector('.context-hint')!.textContent = 'Individual tasks';
     }
+  }
+
+  buildBreadcrumbPath() {
+    const path = [];
+    
+    // Always start with main board
+    path.push({
+      name: 'Project: Motherboard',
+      icon: '⚡',
+      isCurrent: this.currentView.type === 'main',
+      viewIndex: 0
+    });
+    
+    // Add each level from view stack
+    const stack = this.viewStack.serialize();
+    stack.forEach((view: any, index: number) => {
+      if (view.type === 'schematic' && view.component) {
+        const depth = index + 1;
+        const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
+        const icon = depth < depthIcons.length ? depthIcons[depth] : `🔹${depth}`;
+        
+        path.push({
+          name: view.component.title || `Module ${depth}`,
+          icon: icon,
+          isCurrent: false,
+          viewIndex: depth
+        });
+      }
+    });
+    
+    // Mark current schematic view
+    if (this.currentView.type === 'schematic') {
+      const currentDepth = stack.length + 1;
+      const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
+      const icon = currentDepth < depthIcons.length ? depthIcons[currentDepth] : `🔹${currentDepth}`;
+      
+      path.push({
+        name: this.currentView.component?.title || `Module ${currentDepth}`,
+        icon: icon,
+        isCurrent: true,
+        viewIndex: currentDepth
+      });
+    }
+    
+    return path;
+  }
+
+  navigateToBreadcrumbLevel(targetIndex: number) {
+    // Navigate directly to a specific breadcrumb level
+    if (this.isTransitioning) return;
+    
+    const currentDepth = this.viewStack.size() + (this.currentView.type === 'schematic' ? 1 : 0);
+    
+    if (targetIndex === 0) {
+      // Navigate to main board
+      this.exitToMainBoard();
+    } else if (targetIndex < currentDepth) {
+      // Navigate to intermediate level by popping the right number of views
+      const levelsToExit = currentDepth - targetIndex;
+      for (let i = 0; i < levelsToExit; i++) {
+        this.exitSchematicView();
+      }
+    }
+  }
+
+  exitToMainBoard() {
+    // Exit all the way to main board
+    this.isTransitioning = true;
+    
+    const startTime = performance.now();
+    const startCamera = { ...this.camera };
+    const mainCamera = { x: 0, y: 0, zoom: 1 };
+    
+    // Calculate dynamic duration based on camera movement distance
+    const duration = this.calculateTransitionDuration(startCamera, mainCamera);
+    
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = this.transitionConfig.easingFunction(progress);
+      
+      // Interpolate camera position
+      this.camera = this.interpolateCamera(startCamera, mainCamera, easedProgress);
+      
+      if (progress >= 1) {
+        // Transition complete
+        this.viewStack.clear();
+        this.currentView = {
+          type: 'main',
+          component: null,
+          camera: { ...mainCamera },
+          components: this.components,
+          connections: this.connections,
+        };
+        this.camera = { ...mainCamera };
+        this.isTransitioning = false;
+        this.updateBreadcrumbs();
+      } else {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
   }
 
   updateFPS(currentTime: number) {
