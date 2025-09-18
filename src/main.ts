@@ -136,6 +136,7 @@ export class MotherboardApp {
     this.setupCanvas();
     // wire input listeners via the inputHandler module
     setupInputListeners(this);
+    this.setupKeyboardShortcuts();
     this.setupImportHandler();
     this.setupUI();
     this.animate();
@@ -1722,6 +1723,188 @@ export class MotherboardApp {
     };
     
     requestAnimationFrame(animate);
+  }
+
+  // Keyboard Shortcuts System
+  setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (event) => {
+      this.handleKeyboardShortcut(event);
+    });
+  }
+
+  handleKeyboardShortcut(event: KeyboardEvent) {
+    // Ignore keyboard shortcuts when typing in input fields
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+      return;
+    }
+
+    // Prevent default behavior for our shortcuts
+    const shortcutKeys = ['Escape', 'Tab', ' ', 'F1'];
+    if (shortcutKeys.includes(event.key)) {
+      event.preventDefault();
+    }
+
+    switch (event.key) {
+      case 'Escape':
+        this.handleEscapeKey();
+        break;
+      case 'Tab':
+        this.handleTabKey(event.shiftKey);
+        break;
+      case ' ': // Space key
+        this.handleSpaceKey();
+        break;
+      case 'F1':
+        this.handleHelpKey();
+        break;
+      case '?':
+        if (event.shiftKey) { // Shift + ? = ?
+          this.handleHelpKey();
+        }
+        break;
+    }
+  }
+
+  handleEscapeKey() {
+    // ESC key: Exit current context or close modals
+    
+    // Priority 1: Close help overlay if open
+    const helpOverlay = document.getElementById('help-overlay') as HTMLElement;
+    if (helpOverlay && helpOverlay.classList.contains('active')) {
+      helpOverlay.classList.remove('active');
+      return;
+    }
+
+    // Priority 2: Exit connection mode if active
+    if (this.isConnecting) {
+      this.isConnecting = false;
+      this.connectionStart = null;
+      const connectionModeIndicator = document.getElementById('connection-mode') as HTMLElement;
+      if (connectionModeIndicator) {
+        connectionModeIndicator.style.display = 'none';
+      }
+      return;
+    }
+
+    // Priority 3: Clear component selection
+    if (this.selectedComponent) {
+      this.selectedComponent = null;
+      hideDatasheetUI();
+      return;
+    }
+
+    // Priority 4: Exit schematic view if in one
+    if (this.currentView.type === 'schematic') {
+      this.exitSchematicView();
+      return;
+    }
+  }
+
+  handleTabKey(shiftPressed: boolean) {
+    // TAB key: Cycle between views (Shift+TAB for reverse)
+    if (this.isTransitioning) return;
+
+    const viewStackSize = this.viewStack.size();
+    
+    if (viewStackSize === 0) {
+      // No views to cycle through
+      return;
+    }
+
+    if (shiftPressed) {
+      // Shift+Tab: Go back one level
+      if (this.currentView.type === 'schematic') {
+        this.exitSchematicView();
+      }
+    } else {
+      // Tab: Navigate deeper or cycle through Module ICs
+      if (this.currentView.type === 'main') {
+        // Find first Module IC and enter it
+        const moduleICs = this.components.filter(c => c.type === 'module-ic');
+        if (moduleICs.length > 0) {
+          this.enterSchematicView(moduleICs[0] as ModuleComponent);
+        }
+      } else {
+        // In schematic view - find next Module IC or exit to main
+        const currentComponents = this.getCurrentViewComponents();
+        const moduleICs = currentComponents.filter(c => c.type === 'module-ic');
+        if (moduleICs.length > 0) {
+          this.enterSchematicView(moduleICs[0] as ModuleComponent);
+        } else {
+          this.exitSchematicView();
+        }
+      }
+    }
+  }
+
+  handleSpaceKey() {
+    // SPACE key: Toggle status of selected component
+    if (this.selectedComponent && this.selectedComponent.type !== 'power-core') {
+      this.toggleComponentStatus(this.selectedComponent);
+      
+      // Update datasheet if open
+      if (document.getElementById('datasheet-panel')?.classList.contains('active')) {
+        showDatasheetUI(this, this.selectedComponent);
+      }
+    } else if (!this.selectedComponent) {
+      // No component selected - show status hint
+      this.showTemporaryMessage('Select a component first, then press SPACE to toggle its status');
+    }
+  }
+
+  handleHelpKey() {
+    // F1 or Shift+?: Toggle help overlay
+    const helpOverlay = document.getElementById('help-overlay') as HTMLElement;
+    if (helpOverlay) {
+      if (helpOverlay.classList.contains('active')) {
+        helpOverlay.classList.remove('active');
+      } else {
+        helpOverlay.classList.add('active');
+      }
+    }
+  }
+
+  showTemporaryMessage(message: string, duration: number = 2000) {
+    // Show a temporary message to the user
+    let messageEl = document.getElementById('temp-message') as HTMLElement;
+    
+    if (!messageEl) {
+      messageEl = document.createElement('div');
+      messageEl.id = 'temp-message';
+      messageEl.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #00ff88;
+        border-radius: 8px;
+        padding: 15px 25px;
+        color: #00ff88;
+        font-family: 'Courier New', monospace;
+        z-index: 3000;
+        text-align: center;
+        max-width: 400px;
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+      `;
+      document.body.appendChild(messageEl);
+    }
+    
+    messageEl.textContent = message;
+    messageEl.style.display = 'block';
+    
+    // Clear any existing timeout
+    if (messageEl.dataset.timeoutId) {
+      clearTimeout(parseInt(messageEl.dataset.timeoutId));
+    }
+    
+    // Set new timeout
+    const timeoutId = setTimeout(() => {
+      messageEl.style.display = 'none';
+    }, duration);
+    
+    messageEl.dataset.timeoutId = timeoutId.toString();
   }
 
   updateFPS(currentTime: number) {
