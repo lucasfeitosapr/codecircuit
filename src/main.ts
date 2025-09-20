@@ -1,6 +1,7 @@
 import { ViewStack } from './viewStack';
 import { eventBus } from './events/EventBus';
 import { Events } from './events/eventTypes';
+import { stateManager } from './state/StateManager';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from './utils';
 import {
   drawGrid as rendererDrawGrid,
@@ -120,6 +121,15 @@ export class MotherboardApp {
 
     this.init();
     this.initializeMainView();
+
+    try {
+      // initialize state manager snapshot from current app state (Phase-1)
+      stateManager.setSnapshot({ components: this.components, connections: this.connections, view: this.currentView });
+    } catch (err) {
+      // avoid affecting runtime if snapshotting fails
+      // eslint-disable-next-line no-console
+      console.error('Failed to initialize stateManager snapshot', err);
+    }
   }
 
   initializeMainView() {
@@ -514,6 +524,12 @@ export class MotherboardApp {
 
     if (this.selectedComponent === component) {
       this.showDatasheet(component);
+    }
+    try {
+      eventBus.emit(Events.ComponentUpdated, { id: component.id, changes: { status: component.status }, source: 'legacy' });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to emit ComponentUpdated from toggleComponentStatus', err);
     }
   }
 
