@@ -7,6 +7,9 @@ import type { Connection, PinHit } from './types';
  * move connection-related logic out of the large main.ts file.
  */
 
+import { eventBus } from './events/EventBus';
+import { Events } from './events/eventTypes';
+
 export function createConnection(app: any, startPin: PinHit, endPin: PinHit) {
   // Prevent connecting to the same component
   if (startPin.component === endPin.component) return;
@@ -59,6 +62,11 @@ export function createConnection(app: any, startPin: PinHit, endPin: PinHit) {
     if (app.currentView.component.internalConnections !== connections) {
       app.currentView.component.internalConnections.push(conn);
     }
+  }
+  try {
+    eventBus.emit(Events.ConnectionCreated, { id: conn.id, from: conn.from, to: conn.to, type: conn.category, metadata: {}, source: 'legacy' });
+  } catch (err) {
+    console.error('Failed to emit ConnectionCreated', err);
   }
 }
 

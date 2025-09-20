@@ -1,4 +1,6 @@
 import { ViewStack } from './viewStack';
+import { eventBus } from './events/EventBus';
+import { Events } from './events/eventTypes';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from './utils';
 import {
   drawGrid as rendererDrawGrid,
@@ -361,6 +363,13 @@ export class MotherboardApp {
     components.push(component);
     this.selectedComponent = component;
     this.showDatasheet(component);
+    try {
+      eventBus.emit(Events.ComponentCreated, { id: component.id, type: component.type, model: component, source: 'legacy' });
+    } catch (err) {
+      // swallow to avoid changing behavior
+      // eslint-disable-next-line no-console
+      console.error('Failed to emit ComponentCreated from main.addComponent', err);
+    }
   }
 
   getComponentAt(x: number, y: number) {
@@ -489,6 +498,12 @@ export class MotherboardApp {
         this.currentView.component.internalConnections.push(connection);
       }
     }
+      try {
+        eventBus.emit(Events.ConnectionCreated, { id: connection.id, from: connection.from, to: connection.to, type: connection.category, metadata: {}, source: 'legacy' });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to emit ConnectionCreated from main.createConnection', err);
+      }
   }
 
   toggleComponentStatus(component: ComponentBase) {
