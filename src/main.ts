@@ -16,6 +16,8 @@ import { isNewRendererEnabled } from './config/featureFlags';
 import BackgroundLayer from './rendering/layers/BackgroundLayer';
 import ImplementationLayer from './rendering/layers/ImplementationLayer';
 import ConnectionsLayer from './rendering/layers/ConnectionsLayer';
+import RuntimeLayer from './rendering/layers/RuntimeLayer';
+import UILayer from './rendering/layers/UILayer';
 // Import plugins to ensure they're registered
 import './components/plugins/PowerCorePlugin';
 import './components/plugins/ModuleICPlugin';
@@ -55,6 +57,8 @@ export class MotherboardApp {
   isTransitioning: boolean;
   componentTypes: Record<string, Partial<ComponentBase>>;
   categories: Record<string, { name: string; color: string }>;
+  runtimeLayer: RuntimeLayer;
+  uiLayer: UILayer;
 
   constructor() {
     this.canvas = document.getElementById('circuit-board') as HTMLCanvasElement;
@@ -128,6 +132,10 @@ export class MotherboardApp {
       research: { name: 'Research', color: '#00aaff' },
     };
 
+    // Initialize Phase 3 layers
+    this.runtimeLayer = new RuntimeLayer();
+    this.uiLayer = new UILayer();
+
     this.init();
     this.initializeMainView();
 
@@ -136,6 +144,8 @@ export class MotherboardApp {
       layeredRenderer.registerLayer(BackgroundLayer.name, BackgroundLayer as any);
       layeredRenderer.registerLayer(ImplementationLayer.name, ImplementationLayer as any);
       layeredRenderer.registerLayer(ConnectionsLayer.name, ConnectionsLayer as any);
+      layeredRenderer.registerLayer(RuntimeLayer.name, RuntimeLayer as any);
+      layeredRenderer.registerLayer(UILayer.name, UILayer as any);
     } catch (e) {
       // ignore if already registered
     }
@@ -300,12 +310,21 @@ export class MotherboardApp {
         this.connectionStart = null;
         this.canvas.style.cursor = 'grab';
         this.updateConnectionModeUI();
+        this.uiLayer.clearConnectionIntents();
       } else {
         // Start connection
         this.isConnecting = true;
         this.connectionStart = pinHit;
         this.canvas.style.cursor = 'crosshair';
         this.updateConnectionModeUI();
+        
+        // Add connection intent
+        this.uiLayer.clearConnectionIntents();
+        this.uiLayer.addConnectionIntent({
+          startPin: pinHit,
+          isValid: true,
+          category: pinHit.category
+        });
       }
       return;
     }
@@ -332,10 +351,19 @@ export class MotherboardApp {
           x: mouseX - clickedComponent.x,
           y: mouseY - clickedComponent.y,
         };
+        
+        // Add selection box and alignment guides
+        this.uiLayer.clearSelectionBoxes();
+        this.uiLayer.clearGuideLines();
+        this.uiLayer.addSelectionBox(clickedComponent, 'single');
+        this.uiLayer.addAlignmentGuides(clickedComponent, this.getCurrentViewComponents());
       }
     } else {
       this.selectedComponent = null;
       this.hideDatasheet();
+      this.uiLayer.clearSelectionBoxes();
+      this.uiLayer.clearGuideLines();
+      
       // Cancel connection if clicking on empty space
       if (this.isConnecting) {
         this.isConnecting = false;
@@ -347,6 +375,13 @@ export class MotherboardApp {
   }
 
   onMouseMove(e: MouseEvent) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left - this.camera.x) / this.camera.zoom;
+    const mouseY = (e.clientY - rect.top - this.camera.y) / this.camera.zoom;
+    
+    // Update mouse position for connection intents
+    this.mousePos = { x: mouseX, y: mouseY };
+    
     if (this.isPanning) {
       this.camera.x = e.clientX - this.panStart.x;
       this.camera.y = e.clientY - this.panStart.y;
@@ -354,12 +389,27 @@ export class MotherboardApp {
     }
 
     if (this.isDragging && this.selectedComponent) {
-      const rect = this.canvas.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - this.camera.x) / this.camera.zoom;
-      const mouseY = (e.clientY - rect.top - this.camera.y) / this.camera.zoom;
-
       this.selectedComponent.x = mouseX - this.dragOffset.x;
       this.selectedComponent.y = mouseY - this.dragOffset.y;
+      
+      // Update selection box position
+      this.uiLayer.clearSelectionBoxes();
+      this.uiLayer.addSelectionBox(this.selectedComponent, 'single');
+      this.uiLayer.addAlignmentGuides(this.selectedComponent, this.getCurrentViewComponents());
+    }
+    
+    // Update connection intent if connecting
+    if (this.isConnecting && this.connectionStart) {
+      const pinHit = this.getPinAt(mouseX, mouseY);
+      const isValid = pinHit && pinHit.component !== this.connectionStart.component && pinHit.pinType !== this.connectionStart.pinType;
+      
+      this.uiLayer.clearConnectionIntents();
+      this.uiLayer.addConnectionIntent({
+        startPin: this.connectionStart,
+        endPin: pinHit,
+        isValid: isValid || false,
+        category: this.connectionStart.category
+      });
     }
   }
 
@@ -429,6 +479,13 @@ export class MotherboardApp {
     components.push(component);
     this.selectedComponent = component;
     this.showDatasheet(component);
+    
+    // Add runtime effects for new component
+    const centerX = component.x + component.width / 2;
+    const centerY = component.y + component.height / 2;
+    this.runtimeLayer.glowEffect(centerX, centerY, component.color, 1000);
+    this.runtimeLayer.pulseComponent(component.id, component.color, 800);
+    
     try {
       eventBus.emit(Events.ComponentCreated, { id: component.id, type: component.type, model: component, source: 'legacy' });
     } catch (err) {
@@ -564,6 +621,21 @@ export class MotherboardApp {
         this.currentView.component.internalConnections.push(connection);
       }
     }
+    
+    // Add runtime effects for new connection
+    const categoryColor = this.categories[connection.category ?? 'frontend']?.color || '#00ff88';
+    this.runtimeLayer.energyFlow(
+      connection.from.x,
+      connection.from.y,
+      connection.to.x,
+      connection.to.y,
+      categoryColor
+    );
+    
+    // Add glow effects at connection points
+    this.runtimeLayer.glowEffect(connection.from.x, connection.from.y, categoryColor, 600);
+    this.runtimeLayer.glowEffect(connection.to.x, connection.to.y, categoryColor, 600);
+    
       try {
         eventBus.emit(Events.ConnectionCreated, { id: connection.id, from: connection.from, to: connection.to, type: connection.category, metadata: {}, source: 'legacy' });
       } catch (err) {
@@ -576,7 +648,24 @@ export class MotherboardApp {
     const statusCycle = ['defined', 'todo', 'in-progress', 'done'];
     const currentIndex = statusCycle.indexOf(component.status ?? 'defined');
     const nextIndex = (currentIndex + 1) % statusCycle.length;
+    const oldStatus = component.status;
     component.status = statusCycle[nextIndex];
+
+    // Add runtime effects for status changes
+    const centerX = component.x + component.width / 2;
+    const centerY = component.y + component.height / 2;
+    
+    if (component.status === 'done' && oldStatus !== 'done') {
+      // Success effect when completing
+      this.runtimeLayer.sparkEffect(centerX, centerY, '#00ff88');
+      this.runtimeLayer.pulseComponent(component.id, '#00ff88', 600);
+    } else if (component.status === 'in-progress' && oldStatus !== 'in-progress') {
+      // Progress effect when starting
+      this.runtimeLayer.pulseComponent(component.id, '#ffaa00', 400);
+    } else if (component.status === 'todo' && oldStatus !== 'todo') {
+      // Task effect when marking as todo
+      this.runtimeLayer.glowEffect(centerX, centerY, '#4488ff', 500);
+    }
 
     if (this.selectedComponent === component) {
       this.showDatasheet(component);
