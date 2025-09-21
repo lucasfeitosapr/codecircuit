@@ -1,6 +1,8 @@
 import { isNewRendererEnabled } from '../config/featureFlags';
 import * as legacyRenderer from '../renderer';
 
+// Cache bust: 2024-01-20 - Removed all console logs
+
 export type RenderFrame = {
   timestamp: number;
   camera?: any;
@@ -23,6 +25,10 @@ export class LayeredRenderer {
 
   unregisterLayer(name: string) {
     this.layers.delete(name);
+  }
+
+  getRegisteredLayers(): string[] {
+    return Array.from(this.layers.keys());
   }
 
   render(ctx: CanvasRenderingContext2D | WebGLRenderingContext, frame: RenderFrame) {

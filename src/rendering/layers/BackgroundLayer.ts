@@ -12,15 +12,18 @@ export const BackgroundLayer = {
       const camera = frame?.camera ?? { x: 0, y: 0, zoom: 1 };
       const canvas = (frame as any)?.canvas;
       
-      // Clear canvas first
-      if (canvas) {
-        c.clearRect(
-          0,
-          0,
-          canvas.width / window.devicePixelRatio,
-          canvas.height / window.devicePixelRatio
-        );
+      // If no canvas provided, skip rendering
+      if (!canvas) {
+        return;
       }
+      
+      // Clear canvas first
+      c.clearRect(
+        0,
+        0,
+        canvas.width / window.devicePixelRatio,
+        canvas.height / window.devicePixelRatio
+      );
 
       // Draw appropriate background based on view type
       const viewType = (frame as any)?.payload?.viewType ?? 'main';

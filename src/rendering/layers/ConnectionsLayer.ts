@@ -10,6 +10,8 @@ export const ConnectionsLayer = {
       const camera = frame?.camera ?? { x: 0, y: 0, zoom: 1 };
       const c = ctx as CanvasRenderingContext2D;
 
+      // Removed debug logging to avoid console spam
+
       // Handle temporary connection (dashed line while creating connections)
       const isConnecting = (frame as any)?.payload?.isConnecting ?? false;
       const connectionStart = (frame as any)?.payload?.connectionStart;
@@ -21,9 +23,17 @@ export const ConnectionsLayer = {
       }
 
       for (const connection of connections) {
-        const from = connection.from;
-        const to = connection.to;
+        const from: any = (connection as any).from;
+        const to: any = (connection as any).to;
         if (!from || !to) continue;
+
+        // If connections are specified by id strings, skip the advanced path.
+        // The simple fallback below renders using models.
+        const hasCoords = typeof from === 'object' && typeof to === 'object' &&
+          from.x != null && from.y != null && to.x != null && to.y != null;
+        if (!hasCoords) {
+          continue;
+        }
 
         const fromX = (from.x) * camera.zoom + camera.x;
         const fromY = (from.y) * camera.zoom + camera.y;
@@ -84,6 +94,33 @@ export const ConnectionsLayer = {
           // Data flow particles
           drawDataFlow(c, connection as any, fromX, fromY, toX, toY, categoryColor, isPowered, camera);
         }
+      }
+
+      // Fallback: Simple connection rendering if no connections were drawn
+      if (connections.length > 0) {
+        const models = (frame as any)?.payload?.models ?? [];
+        connections.forEach(connection => {
+          const fromComp = models.find((m: any) => m.id === connection.from);
+          const toComp = models.find((m: any) => m.id === connection.to);
+          
+          if (fromComp && toComp) {
+            const fromX = fromComp.x + 60; // Right side of source
+            const fromY = fromComp.y + 20; // Middle of source
+            const toX = toComp.x; // Left side of target
+            const toY = toComp.y + 20; // Middle of target
+            
+            c.strokeStyle = '#00ff88';
+            c.lineWidth = 2;
+            c.setLineDash(connection.type === 'cache' ? [5, 5] : []);
+            
+            c.beginPath();
+            c.moveTo(fromX, fromY);
+            c.lineTo(toX, toY);
+            c.stroke();
+            
+            c.setLineDash([]); // Reset dash
+          }
+        });
       }
     } catch (e) {
       // eslint-disable-next-line no-console

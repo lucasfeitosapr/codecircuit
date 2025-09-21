@@ -2290,8 +2290,7 @@ export class MotherboardApp {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
   new MotherboardApp();
-  console.log('🚀 Project: Motherboard MVP initialized');
-  console.log('💡 Drag components from the Parts Tray to get started!');
+  // Removed initialization logs to avoid console spam
 });
 
 export default MotherboardApp;

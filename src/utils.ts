@@ -31,3 +31,7 @@ export function getPointOnPath(points: { x: number; y: number }[], ratio: number
 
   return points[points.length - 1];
 }
+
+export function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
