@@ -2,6 +2,9 @@ import { ViewStack } from './viewStack';
 import { eventBus } from './events/EventBus';
 import { Events } from './events/eventTypes';
 import { stateManager } from './state/StateManager';
+import { ExportImportManager } from './core/ExportImportManager';
+import { createViewportManager, getViewportManager, type ViewportManager } from './core/ViewportManager';
+import { ConnectionManager, createConnectionManager } from './core/ConnectionManager';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from './utils';
 import {
   drawGrid as rendererDrawGrid,
@@ -37,20 +40,22 @@ import type {
 */
 
 export class MotherboardApp {
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
+  // Viewport management (extracted to ViewportManager)
+  viewportManager: ViewportManager;
+  
+  // Application state
   components: ComponentBase[];
   connections: Connection[];
   selectedComponent: ComponentBase | null;
   isDragging: boolean;
   dragOffset: { x: number; y: number };
-  camera: Camera;
   isPanning: boolean;
   panStart: { x: number; y: number };
   lastTime: number;
   fps: number;
-  isConnecting: boolean;
-  connectionStart: PinHit | null;
+  // Connection state now managed by ConnectionManager
+  // isConnecting: boolean;
+  // connectionStart: PinHit | null;
   mousePos: { x: number; y: number };
   viewStack: ViewStack;
   currentView: ViewState;
@@ -59,22 +64,58 @@ export class MotherboardApp {
   categories: Record<string, { name: string; color: string }>;
   runtimeLayer: RuntimeLayer;
   uiLayer: UILayer;
+  exportImportManager: ExportImportManager;
+  connectionManager: ConnectionManager;
+
+  // Convenience getters for viewport properties
+  get canvas(): HTMLCanvasElement {
+    return this.viewportManager.canvas;
+  }
+
+  get ctx(): CanvasRenderingContext2D {
+    return this.viewportManager.ctx;
+  }
+
+  get camera(): Camera {
+    return this.viewportManager.camera;
+  }
+
+  // Legacy compatibility setters for testing (DEPRECATED)
+  set canvas(value: HTMLCanvasElement) {
+    console.warn('Setting canvas directly is deprecated. Canvas is now managed by ViewportManager.');
+    // For backward compatibility during transition
+    (this.viewportManager as any).canvas = value;
+  }
+
+  set ctx(value: CanvasRenderingContext2D) {
+    console.warn('Setting ctx directly is deprecated. Context is now managed by ViewportManager.');
+    // For backward compatibility during transition
+    (this.viewportManager as any).ctx = value;
+  }
 
   constructor() {
-    this.canvas = document.getElementById('circuit-board') as HTMLCanvasElement;
-    this.ctx = this.canvas.getContext('2d')! as CanvasRenderingContext2D;
+    // Initialize ViewportManager for canvas and camera management
+    // In test environments, use existing instance if available
+    try {
+      this.viewportManager = createViewportManager('circuit-board', eventBus);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('ViewportManager instance already exists')) {
+        this.viewportManager = getViewportManager();
+      } else {
+        throw error;
+      }
+    }
+    
     this.components = [];
     this.connections = [];
     this.selectedComponent = null;
     this.isDragging = false;
     this.dragOffset = { x: 0, y: 0 };
-    this.camera = { x: 0, y: 0, zoom: 1 };
     this.isPanning = false;
     this.panStart = { x: 0, y: 0 };
     this.lastTime = 0;
     this.fps = 0;
-    this.isConnecting = false;
-    this.connectionStart = null;
+    // Connection state now managed by ConnectionManager
     this.mousePos = { x: 0, y: 0 };
 
     // View management for schematic navigation
@@ -136,6 +177,10 @@ export class MotherboardApp {
     this.runtimeLayer = new RuntimeLayer();
     this.uiLayer = new UILayer();
 
+    // Phase 5: Initialize managers that are needed during init()
+    this.exportImportManager = new ExportImportManager();
+    this.connectionManager = createConnectionManager(eventBus, this.categories);
+
     this.init();
     this.initializeMainView();
 
@@ -196,6 +241,10 @@ export class MotherboardApp {
     } catch (e) {
       // ignore in non-browser or unexpected environments
     }
+
+    // Phase 5: Setup event handlers for managers (after init)
+    this.setupExportImportEventHandlers();
+    this.setupConnectionManagerEventHandlers();
   }
 
   initializeMainView() {
@@ -205,14 +254,16 @@ export class MotherboardApp {
       component: null,
       camera: { x: 0, y: 0, zoom: 1 },
       components: this.components,
-      connections: this.connections,
+      connections: [], // Will be managed by ConnectionManager
     };
     this.updateBreadcrumbs();
   }
 
   init() {
-    this.setupCanvas();
-    // wire input listeners via the inputHandler module
+    // Initialize ViewportManager (replaces setupCanvas)
+    this.viewportManager.initialize();
+    
+    // Wire input listeners via the inputHandler module
     setupInputListeners(this);
     this.setupKeyboardShortcuts();
     this.setupImportHandler();
@@ -221,17 +272,9 @@ export class MotherboardApp {
   }
 
   setupCanvas() {
-    const resizeCanvas = () => {
-      const rect = this.canvas.getBoundingClientRect();
-      this.canvas.width = rect.width * window.devicePixelRatio;
-      this.canvas.height = rect.height * window.devicePixelRatio;
-      this.canvas.style.width = rect.width + 'px';
-      this.canvas.style.height = rect.height + 'px';
-      this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    };
-
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    // DEPRECATED: Canvas setup is now handled by ViewportManager
+    // This method is kept for backward compatibility but does nothing
+    console.warn('setupCanvas() is deprecated. Canvas setup is now handled by ViewportManager.');
   }
 
   setupEventListeners() {
@@ -282,15 +325,22 @@ export class MotherboardApp {
     const exportBtn = document.getElementById('export-btn');
     if (exportBtn) {
       exportBtn.addEventListener('click', () => {
-        this.exportProject();
+        // Phase 5: Use new ExportImportManager instead of legacy method
+        eventBus.emit(Events.PROJECT_EXPORT_REQUESTED, {
+          timestamp: Date.now()
+        });
       });
     }
   }
 
   onMouseDown(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left - this.camera.x) / this.camera.zoom;
-    const mouseY = (e.clientY - rect.top - this.camera.y) / this.camera.zoom;
+    const worldCoord = this.viewportManager.screenToWorld({ 
+      x: e.clientX - rect.left, 
+      y: e.clientY - rect.top 
+    });
+    const mouseX = worldCoord.x;
+    const mouseY = worldCoord.y;
 
     if (e.button === 2) {
       // Right click - panning
@@ -303,18 +353,16 @@ export class MotherboardApp {
     // Check if clicking on a pin first
     const pinHit = this.getPinAt(mouseX, mouseY);
     if (pinHit) {
-      if (this.isConnecting && this.connectionStart) {
+      const connectionState = this.connectionManager.getConnectionState();
+      if (connectionState.isConnecting && connectionState.connectionStart) {
         // End connection
-        this.createConnection(this.connectionStart, pinHit);
-        this.isConnecting = false;
-        this.connectionStart = null;
+        this.connectionManager.endConnection(pinHit);
         this.canvas.style.cursor = 'grab';
         this.updateConnectionModeUI();
         this.uiLayer.clearConnectionIntents();
       } else {
         // Start connection
-        this.isConnecting = true;
-        this.connectionStart = pinHit;
+        this.connectionManager.startConnection(pinHit);
         this.canvas.style.cursor = 'crosshair';
         this.updateConnectionModeUI();
         
@@ -323,7 +371,7 @@ export class MotherboardApp {
         this.uiLayer.addConnectionIntent({
           startPin: pinHit,
           isValid: true,
-          category: pinHit.category
+          category: pinHit.category ?? 'frontend'
         });
       }
       return;
@@ -365,9 +413,8 @@ export class MotherboardApp {
       this.uiLayer.clearGuideLines();
       
       // Cancel connection if clicking on empty space
-      if (this.isConnecting) {
-        this.isConnecting = false;
-        this.connectionStart = null;
+      if (this.connectionManager.getConnectionState().isConnecting) {
+        this.connectionManager.cancelConnection();
         this.canvas.style.cursor = 'grab';
         this.updateConnectionModeUI();
       }
@@ -376,15 +423,24 @@ export class MotherboardApp {
 
   onMouseMove(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left - this.camera.x) / this.camera.zoom;
-    const mouseY = (e.clientY - rect.top - this.camera.y) / this.camera.zoom;
+    const worldCoord = this.viewportManager.screenToWorld({ 
+      x: e.clientX - rect.left, 
+      y: e.clientY - rect.top 
+    });
+    const mouseX = worldCoord.x;
+    const mouseY = worldCoord.y;
     
     // Update mouse position for connection intents
     this.mousePos = { x: mouseX, y: mouseY };
     
     if (this.isPanning) {
-      this.camera.x = e.clientX - this.panStart.x;
-      this.camera.y = e.clientY - this.panStart.y;
+      const newCameraX = e.clientX - this.panStart.x;
+      const newCameraY = e.clientY - this.panStart.y;
+      this.viewportManager.setCamera({ 
+        x: newCameraX, 
+        y: newCameraY, 
+        zoom: this.camera.zoom 
+      });
       return;
     }
 
@@ -399,16 +455,17 @@ export class MotherboardApp {
     }
     
     // Update connection intent if connecting
-    if (this.isConnecting && this.connectionStart) {
+    const connectionState = this.connectionManager.getConnectionState();
+    if (connectionState.isConnecting && connectionState.connectionStart) {
       const pinHit = this.getPinAt(mouseX, mouseY);
-      const isValid = pinHit && pinHit.component !== this.connectionStart.component && pinHit.pinType !== this.connectionStart.pinType;
+      const isValid = pinHit && this.connectionManager.validateConnection(connectionState.connectionStart, pinHit).isValid;
       
       this.uiLayer.clearConnectionIntents();
       this.uiLayer.addConnectionIntent({
-        startPin: this.connectionStart,
+        startPin: connectionState.connectionStart,
         endPin: pinHit,
         isValid: isValid || false,
-        category: this.connectionStart.category
+        category: connectionState.connectionStart.category ?? 'frontend'
       });
     }
   }
@@ -422,19 +479,8 @@ export class MotherboardApp {
   }
 
   onWheel(e: WheelEvent) {
-    e.preventDefault();
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    const rect = this.canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const worldX = (mouseX - this.camera.x) / this.camera.zoom;
-    const worldY = (mouseY - this.camera.y) / this.camera.zoom;
-
-    this.camera.zoom = Math.max(0.1, Math.min(3, this.camera.zoom * zoomFactor));
-
-    this.camera.x = mouseX - worldX * this.camera.zoom;
-    this.camera.y = mouseY - worldY * this.camera.zoom;
+    // Delegate wheel handling to ViewportManager
+    this.viewportManager.handleWheelEvent(e);
   }
 
   addComponent(type: string, x: number, y: number) {
@@ -507,53 +553,8 @@ export class MotherboardApp {
   }
 
   getPinAt(x: number, y: number): PinHit | null {
-    const pinRadius = 8; // Hit detection radius
-    const components = this.getCurrentViewComponents();
-
-    for (const component of components) {
-      // Check input pins
-      if (component.pins.input) {
-        for (let i = 0; i < component.pins.input.length; i++) {
-          const pin = component.pins.input[i];
-          const pinX = component.x + pin.x;
-          const pinY = component.y + pin.y;
-          const distance = Math.sqrt((x - pinX) ** 2 + (y - pinY) ** 2);
-
-          if (distance < pinRadius) {
-            return {
-              component: component,
-              pinType: 'input',
-              pinIndex: i,
-              x: pinX,
-              y: pinY,
-              category: component.category || 'frontend',
-            };
-          }
-        }
-      }
-
-      // Check output pins
-      if (component.pins.output) {
-        for (let i = 0; i < component.pins.output.length; i++) {
-          const pin = component.pins.output[i];
-          const pinX = component.x + pin.x;
-          const pinY = component.y + pin.y;
-          const distance = Math.sqrt((x - pinX) ** 2 + (y - pinY) ** 2);
-
-          if (distance < pinRadius) {
-            return {
-              component: component,
-              pinType: 'output',
-              pinIndex: i,
-              x: pinX,
-              y: pinY,
-              category: component.category || 'frontend',
-            };
-          }
-        }
-      }
-    }
-    return null;
+    // Delegate to ConnectionManager
+    return this.connectionManager.getPinAt(x, y, this.getCurrentViewComponents());
   }
 
   getCurrentViewComponents() {
@@ -561,87 +562,37 @@ export class MotherboardApp {
   }
 
   getCurrentViewConnections() {
-    return this.currentView.connections;
+    // For main view, return the legacy connections array
+    // For schematic views, use the ConnectionManager
+    if (this.currentView.type === 'main') {
+      return this.connections;
+    } else {
+      return this.connectionManager.getConnectionsForView(this.currentView);
+    }
   }
 
   createConnection(startPin: PinHit, endPin: PinHit) {
-    // Prevent connecting to the same component
-    if (startPin.component === endPin.component) return;
-
-    // Prevent output to output or input to input connections
-    if (startPin.pinType === endPin.pinType) return;
-
-    // Ensure we're connecting output to input
-    let outputPin: PinHit, inputPin: PinHit;
-    if (startPin.pinType === 'output') {
-      outputPin = startPin;
-      inputPin = endPin;
-    } else {
-      outputPin = endPin;
-      inputPin = startPin;
-    }
-
-    // Use the current view's connections array
-    const connections = this.getCurrentViewConnections();
-
-    // Check for existing connection (same endpoints)
-    const existingConnection = connections.find(
-      (conn: Connection) =>
-        conn.from.component === outputPin.component &&
-        conn.from.pinIndex === outputPin.pinIndex &&
-        conn.to.component === inputPin.component &&
-        conn.to.pinIndex === inputPin.pinIndex
-    );
-
-    if (existingConnection) return;
-
-    // Create new connection
-    const connection: Connection = {
-      id: this.generateId(),
-      from: outputPin,
-      to: inputPin,
-      category: outputPin.category ?? 'frontend', // Connection inherits category from output
-      createdAt: new Date(),
-    };
-
-    // Push into the view-specific connections
-    connections.push(connection);
-
-    // Ensure the global top-level connections array is updated when on main view
-    if (this.currentView.type === 'main') {
-      if (this.connections !== connections) {
-        this.connections.push(connection);
-      }
-    } else if (this.currentView.type === 'schematic' && this.currentView.component) {
-      // persist into module internalConnections as well (keep consistency)
-      if (!this.currentView.component.internalConnections) {
-        this.currentView.component.internalConnections = [];
-      }
-      if (this.currentView.component.internalConnections !== connections) {
-        this.currentView.component.internalConnections.push(connection);
-      }
-    }
-    
-    // Add runtime effects for new connection
-    const categoryColor = this.categories[connection.category ?? 'frontend']?.color || '#00ff88';
-    this.runtimeLayer.energyFlow(
-      connection.from.x,
-      connection.from.y,
-      connection.to.x,
-      connection.to.y,
-      categoryColor
-    );
-    
-    // Add glow effects at connection points
-    this.runtimeLayer.glowEffect(connection.from.x, connection.from.y, categoryColor, 600);
-    this.runtimeLayer.glowEffect(connection.to.x, connection.to.y, categoryColor, 600);
-    
+    // Delegate to ConnectionManager (it handles all connection state management)
+    const connection = this.connectionManager.createConnection(startPin, endPin);
+    if (connection) {
+      // Add to legacy connections array for backward compatibility
+      this.connections.push(connection);
+      
+      // Emit the legacy ConnectionCreated event for backward compatibility
       try {
-        eventBus.emit(Events.ConnectionCreated, { id: connection.id, from: connection.from, to: connection.to, type: connection.category, metadata: {}, source: 'legacy' });
+        eventBus.emit(Events.ConnectionCreated, { 
+          id: connection.id, 
+          from: connection.from, 
+          to: connection.to, 
+          type: connection.category, 
+          metadata: {}, 
+          source: 'legacy' 
+        });
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Failed to emit ConnectionCreated from main.createConnection', err);
       }
+    }
+    return connection;
   }
 
   toggleComponentStatus(component: ComponentBase) {
@@ -926,27 +877,122 @@ export class MotherboardApp {
     const importBtn = document.getElementById('import-btn');
     if (importBtn) {
       importBtn.addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.addEventListener('change', e => {
-          const file = (e.target as HTMLInputElement).files?.[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = event => {
-              try {
-                const projectData = JSON.parse(event.target?.result as string);
-                this.importProjectData(projectData);
-              } catch (error) {
-                alert('Error reading project file: ' + error);
-              }
-            };
-            reader.readAsText(file);
-          }
+        // Phase 5: Use new ExportImportManager instead of legacy method
+        eventBus.emit(Events.PROJECT_IMPORT_REQUESTED, {
+          timestamp: Date.now()
         });
-        input.click();
       });
     }
+  }
+
+  // Phase 5: Setup event handlers for the new ExportImportManager
+  setupExportImportEventHandlers() {
+    // Handle requests for current project state
+    eventBus.on(Events.PROJECT_STATE_REQUEST, (payload: { callback: (components: any[], connections: any[]) => void, timestamp: number }) => {
+      payload.callback(this.components, this.connections);
+    });
+
+    // Handle project import completion
+    eventBus.on(Events.PROJECT_IMPORTED, (payload: { components: any[], connections: any[], projectData: any, componentCount: number, connectionCount: number, timestamp: number }) => {
+      // Replace current project state with imported data
+      this.components = payload.components;
+      this.connections = payload.connections;
+      
+      // Update current view to reflect new components
+      this.currentView.components = this.components;
+      this.currentView.connections = this.connections;
+      
+      // Reset camera and selection
+      this.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
+      this.selectedComponent = null;
+      
+      console.log(`✅ Project imported: ${payload.componentCount} components, ${payload.connectionCount} connections`);
+    });
+
+    // Handle import errors
+    eventBus.on(Events.PROJECT_IMPORT_ERROR, (payload: { error: string, filename?: string, projectData?: any, timestamp: number }) => {
+      console.error('❌ Import error:', payload.error);
+      alert(`Import Error: ${payload.error}`);
+    });
+
+    // Handle export completion
+    eventBus.on(Events.PROJECT_EXPORTED, (payload: { projectData: any, componentCount: number, connectionCount: number, timestamp: number }) => {
+      console.log(`✅ Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`);
+    });
+
+    // Handle download completion
+    eventBus.on(Events.PROJECT_DOWNLOAD_COMPLETED, (payload: { filename: string, size: number, timestamp: number }) => {
+      console.log(`✅ Download completed: ${payload.filename} (${payload.size} bytes)`);
+    });
+  }
+
+  // Phase 5: Setup event handlers for the new ConnectionManager
+  setupConnectionManagerEventHandlers() {
+    // Handle connection creation requests from UI
+    eventBus.on(Events.CONNECTION_CREATE_REQUESTED, (payload: any) => {
+      const pinHit = this.connectionManager.getPinAt(payload.x, payload.y, this.getCurrentViewComponents());
+      if (pinHit) {
+        if (this.connectionManager.getConnectionState().isConnecting) {
+          // End connection
+          this.connectionManager.endConnection(pinHit);
+        } else {
+          // Start connection
+          this.connectionManager.startConnection(pinHit);
+        }
+      }
+    });
+
+    // Handle connection state changes for UI updates
+    eventBus.on('connection.start', () => {
+      this.updateConnectionModeUI();
+    });
+
+    eventBus.on('connection.cancelled', () => {
+      this.updateConnectionModeUI();
+      this.uiLayer.clearConnectionIntents();
+    });
+
+    // Handle successful connection creation
+    eventBus.on(Events.ConnectionCreated, (payload: any) => {
+      // Connection already added to main array by createConnection method
+      
+      // Add runtime effects for new connection
+      const categoryColor = this.categories[payload.type ?? 'frontend']?.color || '#00ff88';
+      this.runtimeLayer.energyFlow(
+        payload.from.x,
+        payload.from.y,
+        payload.to.x,
+        payload.to.y,
+        categoryColor
+      );
+      
+      // Add glow effects at connection points
+      this.runtimeLayer.glowEffect(payload.from.x, payload.from.y, categoryColor, 600);
+      this.runtimeLayer.glowEffect(payload.to.x, payload.to.y, categoryColor, 600);
+      
+      this.updateConnectionModeUI();
+    });
+
+    // Handle pin interactions for UI feedback
+    eventBus.on('pin.interaction', (payload: any) => {
+      // Update cursor or visual feedback based on pin interaction
+      if (payload.action === 'hover' && this.connectionManager.getConnectionState().isConnecting) {
+        // Visual feedback for potential connection target
+        const isValid = this.connectionManager.validateConnection(
+          this.connectionManager.getConnectionState().connectionStart!,
+          payload.pin
+        ).isValid;
+        
+        // Update UI layer with connection intent
+        this.uiLayer.clearConnectionIntents();
+        this.uiLayer.addConnectionIntent({
+          startPin: this.connectionManager.getConnectionState().connectionStart!,
+          endPin: payload.pin,
+          isValid,
+          category: this.connectionManager.getConnectionState().connectionStart!.category ?? 'frontend'
+        });
+      }
+    });
   }
 
   drawGrid() {
@@ -976,7 +1022,7 @@ export class MotherboardApp {
       camera: this.camera,
       categories: this.categories,
       selectedComponentId: this.selectedComponent?.id ?? null,
-      connections: this.getCurrentViewConnections().map((connection: Connection) => {
+      connections: this.getCurrentViewConnections().filter(conn => conn && conn.from && conn.to).map((connection: Connection) => {
         const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
         const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
         return {
@@ -1012,16 +1058,15 @@ export class MotherboardApp {
 
         layeredRenderer.render(this.ctx, { 
           timestamp: performance.now(), 
-          camera: this.camera, 
-          canvas: this.canvas,
+          camera: this.camera,
           payload: { 
             models: visibleModels, 
             connections: visibleConnections, 
             categories: this.categories, 
             selectedComponentId: this.selectedComponent?.id ?? null,
             viewType: this.currentView.type,
-            isConnecting: this.isConnecting,
-            connectionStart: this.connectionStart,
+            isConnecting: this.connectionManager.getConnectionState().isConnecting,
+            connectionStart: this.connectionManager.getConnectionState().connectionStart,
             mousePos: this.mousePos
           } 
         });
@@ -1052,7 +1097,8 @@ export class MotherboardApp {
     this.drawConnections();
 
     // Draw temporary connection line
-    if (this.isConnecting && this.connectionStart) {
+    const connectionState = this.connectionManager.getConnectionState();
+    if (connectionState.isConnecting && connectionState.connectionStart) {
       this.drawTempConnection();
     }
 
@@ -1070,7 +1116,15 @@ export class MotherboardApp {
 
   drawConnections() {
     const connections = this.getCurrentViewConnections();
+    if (!connections) return;
+    
     connections.forEach((connection: Connection) => {
+      // Skip undefined or invalid connections
+      if (!connection || !connection.from || !connection.to) {
+        console.warn('Skipping invalid connection:', connection);
+        return;
+      }
+      
       // Dynamically calculate pin positions based on current component positions
       const fromPin = connection.from;
       const toPin = connection.to;
@@ -1136,14 +1190,17 @@ export class MotherboardApp {
   }
 
   drawTempConnection() {
-    // Guard: connectionStart may be null
-    if (!this.connectionStart) return;
-    const fromX = this.connectionStart.x * this.camera.zoom + this.camera.x;
-    const fromY = this.connectionStart.y * this.camera.zoom + this.camera.y;
+    // Get connection state from ConnectionManager
+    const connectionState = this.connectionManager.getConnectionState();
+    if (!connectionState.connectionStart) return;
+    
+    const connectionStart = connectionState.connectionStart;
+    const fromX = connectionStart.x * this.camera.zoom + this.camera.x;
+    const fromY = connectionStart.y * this.camera.zoom + this.camera.y;
     const toX = this.mousePos.x * this.camera.zoom + this.camera.x;
     const toY = this.mousePos.y * this.camera.zoom + this.camera.y;
 
-    const cat = this.connectionStart.category ?? 'frontend';
+    const cat = connectionStart.category ?? 'frontend';
     const categoryColor = this.categories[cat]?.color || '#00ff88';
 
     this.ctx.strokeStyle = categoryColor + '80'; // Semi-transparent
@@ -1291,7 +1348,8 @@ export class MotherboardApp {
   updateConnectionModeUI() {
     const indicator = document.getElementById('connection-mode');
     if (!indicator) return;
-    if (this.isConnecting) {
+    const connectionState = this.connectionManager.getConnectionState();
+    if (connectionState.isConnecting) {
       indicator.style.display = 'block';
     } else {
       indicator.style.display = 'none';
@@ -1333,7 +1391,7 @@ export class MotherboardApp {
       };
 
       // Update camera to schematic view
-      this.camera = { ...this.currentView.camera };
+      this.viewportManager.setCamera({ ...this.currentView.camera });
       this.isTransitioning = false;
       this.updateBreadcrumbs();
     });
@@ -1375,7 +1433,7 @@ export class MotherboardApp {
             : previousView.component?.internalConnections ?? [],
       };
 
-      this.camera = { ...previousView.camera };
+      this.viewportManager.setCamera({ ...previousView.camera });
       this.selectedComponent = previousView.selectedComponent;
       this.isTransitioning = false;
       this.updateBreadcrumbs();
@@ -1486,7 +1544,7 @@ export class MotherboardApp {
         const phaseProgress = progress * 2;
         const phaseEased = this.easeOutCubic(phaseProgress);
         
-        this.camera = this.interpolateCamera(startCamera, midCamera, phaseEased);
+        this.viewportManager.setCamera(this.interpolateCamera(startCamera, midCamera, phaseEased));
       } else {
         // Phase 2: Zoom into target with final positioning
         const phaseProgress = (progress - 0.5) * 2;
@@ -1496,9 +1554,9 @@ export class MotherboardApp {
         const finalPhase = Math.max((phaseProgress - 0.6) / 0.4, 0);
         
         if (finalPhase === 0) {
-          this.camera = this.interpolateCamera(midCamera, focusCamera, focusPhase);
+          this.viewportManager.setCamera(this.interpolateCamera(midCamera, focusCamera, focusPhase));
         } else {
-          this.camera = this.interpolateCamera(focusCamera, finalCamera, this.easeInOutCubic(finalPhase));
+          this.viewportManager.setCamera(this.interpolateCamera(focusCamera, finalCamera, this.easeInOutCubic(finalPhase)));
         }
       }
 
@@ -1506,7 +1564,7 @@ export class MotherboardApp {
         requestAnimationFrame(animate);
       } else {
         // Ensure final position is exact
-        this.camera = { ...finalCamera };
+        this.viewportManager.setCamera({ ...finalCamera });
         callback();
       }
     };
@@ -1528,13 +1586,13 @@ export class MotherboardApp {
       const easedProgress = this.transitionConfig.easingFunction(progress);
 
       // Smooth interpolation to target camera state using utility method
-      this.camera = this.interpolateCamera(startCamera, targetCamera, easedProgress);
+      this.viewportManager.setCamera(this.interpolateCamera(startCamera, targetCamera, easedProgress));
 
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         // Ensure final position is exact
-        this.camera = { ...targetCamera };
+        this.viewportManager.setCamera({ ...targetCamera });
         callback();
       }
     };
@@ -1710,7 +1768,7 @@ export class MotherboardApp {
       const easedProgress = this.transitionConfig.easingFunction(progress);
       
       // Interpolate camera position
-      this.camera = this.interpolateCamera(startCamera, mainCamera, easedProgress);
+      this.viewportManager.setCamera(this.interpolateCamera(startCamera, mainCamera, easedProgress));
       
       if (progress >= 1) {
         // Transition complete
@@ -1722,7 +1780,7 @@ export class MotherboardApp {
           components: this.components,
           connections: this.connections,
         };
-        this.camera = { ...mainCamera };
+        this.viewportManager.setCamera({ ...mainCamera });
         this.isTransitioning = false;
         this.updateBreadcrumbs();
       } else {
@@ -1785,9 +1843,8 @@ export class MotherboardApp {
     }
 
     // Priority 2: Exit connection mode if active
-    if (this.isConnecting) {
-      this.isConnecting = false;
-      this.connectionStart = null;
+    if (this.connectionManager.getConnectionState().isConnecting) {
+      this.connectionManager.cancelConnection();
       const connectionModeIndicator = document.getElementById('connection-mode') as HTMLElement;
       if (connectionModeIndicator) {
         connectionModeIndicator.style.display = 'none';
