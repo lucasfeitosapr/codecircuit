@@ -27,7 +27,6 @@ import type {
   Connection,
   PinHit,
   ModuleComponent,
-  PinDef,
 } from './types';
 
 /* src/main.ts
@@ -1012,13 +1011,13 @@ export class MotherboardApp {
 
       // If both ends are DEFINED, render intention (dashed) trace and skip particles
       if (fromStatus === 'defined' && toStatus === 'defined') {
-        this.drawIntentionTrace(fromX, fromY, toX, toY, categoryColor);
+        this.drawIntentionTrace(fromX, fromY, toX, toY);
         return;
       }
 
       // If source is DEFINED and not active yet, render intention trace
       if (fromStatus === 'defined' && !isActive) {
-        this.drawIntentionTrace(fromX, fromY, toX, toY, categoryColor);
+        this.drawIntentionTrace(fromX, fromY, toX, toY);
         return;
       }
 
@@ -1036,7 +1035,7 @@ export class MotherboardApp {
   }
 
   // Intention (dashed) trace rendering for DEFINED components
-  drawIntentionTrace(fromX: number, fromY: number, toX: number, toY: number, color: string) {
+  drawIntentionTrace(fromX: number, fromY: number, toX: number, toY: number) {
     // Use cyan tint for intention traces while falling back to provided category color
     const intentionColor = '#00ffff';
     this.ctx.strokeStyle = intentionColor + '66';
@@ -1402,7 +1401,6 @@ export class MotherboardApp {
       } else {
         // Phase 2: Zoom into target with final positioning
         const phaseProgress = (progress - 0.5) * 2;
-        const phaseEased = this.easeInOutQuart(phaseProgress);
         
         // Transition from mid position to focus, then to final schematic position
         const focusPhase = Math.min(phaseProgress * 1.5, 1);

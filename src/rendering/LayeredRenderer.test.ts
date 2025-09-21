@@ -14,7 +14,9 @@ describe('LayeredRenderer', () => {
     try {
       // @ts-ignore
       layeredRenderer['layers'].clear();
-    } catch (e) {}
+    } catch (e) {
+      // Ignore cleanup errors
+    }
   });
 
   afterEach(() => {
@@ -22,7 +24,9 @@ describe('LayeredRenderer', () => {
     try {
       // @ts-ignore
       layeredRenderer['layers'].clear();
-    } catch (e) {}
+    } catch (e) {
+      // Ignore cleanup errors
+    }
   });
 
   it('delegates to legacy renderer when feature flag is off', () => {

@@ -1,8 +1,6 @@
-import type { RenderFrame } from '../LayeredRenderer';
-
 export const BlueprintLayer = {
   name: 'blueprint',
-  render(ctx: CanvasRenderingContext2D | WebGLRenderingContext, frame: RenderFrame) {
+  render(ctx: CanvasRenderingContext2D | WebGLRenderingContext) {
     // Minimal no-op render that can be spied on in tests
     // e.g., draw a small marker for debug
     try {

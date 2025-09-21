@@ -1,7 +1,7 @@
 // src/camera-transitions.test.ts
 // Unit tests for smooth camera transitions
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // Mock the MotherboardApp class methods for testing
 class MockMotherboardApp {

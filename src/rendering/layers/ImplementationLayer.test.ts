@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import ImplementationLayer from './ImplementationLayer';
 import { componentSystem } from '../../components/ComponentSystem';
 
@@ -8,7 +8,9 @@ describe('ImplementationLayer', () => {
   afterEach(() => {
     try {
       componentSystem.unregister(pluginId);
-    } catch (e) {}
+    } catch (e) {
+      // Ignore cleanup errors
+    }
     vi.restoreAllMocks();
   });
 

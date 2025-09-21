@@ -93,7 +93,6 @@ describe('Integration: basic UI interactions', () => {
 
     // Find components by type to avoid ordering/positioning assumptions
     const c1: ComponentBase = (app.components.find((c: any) => c.type === 'task-resistor') || app.components[0]) as ComponentBase;
-    const c2: ComponentBase = (app.components.find((c: any) => c.type === 'power-core') || app.components[1]) as ComponentBase;
 
     // Click on first component to show datasheet (simulate mousedown at component center)
     const rect = canvas.getBoundingClientRect();

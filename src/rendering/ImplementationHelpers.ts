@@ -1,4 +1,4 @@
-import { hexToRgb, getPointOnPath } from '../utils';
+import { hexToRgb } from '../utils';
 
 export type RenderOptions = {
   camera: any;
