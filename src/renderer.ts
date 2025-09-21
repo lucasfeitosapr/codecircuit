@@ -64,3 +64,21 @@ export function drawSchematicBackground(ctx: any, camera: any, canvas: any) {
   ctx.fillStyle = 'rgba(50, 100, 150, 0.02)';
   ctx.fillRect(0, 0, w, h);
 }
+
+// Legacy single entrypoint used by the LayeredRenderer adapter while migrating.
+export function render(ctx: any, frame: any) {
+  try {
+    const canvas = (ctx && (ctx.canvas || ctx)) as any;
+    const camera = frame?.camera ?? { x: 0, y: 0, zoom: 1 };
+    // Keep the legacy behaviour minimal: draw schematic background and grid if available
+    drawSchematicBackground(ctx, camera, canvas);
+    try {
+      drawGrid(ctx, camera, canvas);
+    } catch (e) {
+      // ignore
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('renderer.render failed', e);
+  }
+}

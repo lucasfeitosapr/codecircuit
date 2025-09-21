@@ -1,7 +1,13 @@
+export type RenderFrame = {
+  timestamp: number;
+  camera?: any;
+};
+
 export type PluginDescriptor = {
   id: string;
   displayName: string;
-  render?: (model: any) => any;
+  // New render signature for plugin renderers
+  render?: (ctx: CanvasRenderingContext2D | WebGLRenderingContext, frame: RenderFrame, model?: any) => void;
   evaluate?: (model: any, emit: (event: string, payload?: any) => void) => void | Promise<void>;
   serialize?: (model: any) => any;
   deserialize?: (data: any) => any;

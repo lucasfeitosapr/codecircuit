@@ -10,6 +10,11 @@ import {
 } from './renderer';
 import { setupInputListeners } from './inputHandler';
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
+import { layeredRenderer } from './rendering/LayeredRenderer';
+import { renderComponent } from './rendering/ImplementationHelpers';
+import { isNewRendererEnabled } from './config/featureFlags';
+import ImplementationLayer from './rendering/layers/ImplementationLayer';
+import ConnectionsLayer from './rendering/layers/ConnectionsLayer';
 import type {
   ViewState,
   Camera,
@@ -122,6 +127,14 @@ export class MotherboardApp {
     this.init();
     this.initializeMainView();
 
+    // Register implementation layer (idempotent during app lifecycle)
+    try {
+      layeredRenderer.registerLayer(ImplementationLayer.name, ImplementationLayer as any);
+      layeredRenderer.registerLayer(ConnectionsLayer.name, ConnectionsLayer as any);
+    } catch (e) {
+      // ignore if already registered
+    }
+
     try {
       // initialize state manager snapshot from current app state (Phase-1)
       stateManager.setSnapshot({ components: this.components, connections: this.connections, view: this.currentView });
@@ -129,6 +142,44 @@ export class MotherboardApp {
       // avoid affecting runtime if snapshotting fails
       // eslint-disable-next-line no-console
       console.error('Failed to initialize stateManager snapshot', err);
+    }
+
+    // Optional demo seeding: append `?seedDemo=true` to the URL to populate sample components for smoke tests
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('seedDemo') === 'true') {
+          // richer, idempotent seeding: components + connections + varied statuses
+          if (this.components.length === 0) {
+            this.addComponent('power-core', 100, 100);
+            this.addComponent('module-ic', 320, 120);
+            this.addComponent('task-resistor', 220, 220);
+
+            // set statuses to show different visuals
+            const p = this.components[0];
+            const m = this.components[1];
+            const r = this.components[2];
+            if (p) p.status = 'done';
+            if (m) m.status = 'in-progress';
+            if (r) r.status = 'todo';
+
+            // add connections: power-core -> module-ic, module-ic -> task-resistor
+            try {
+              const fromPin = { component: p, pinType: 'output' as 'output', pinIndex: 0, x: p.x + (p.pins?.output?.[0]?.x ?? 0), y: p.y + (p.pins?.output?.[0]?.y ?? 0), category: p.category };
+              const toPin = { component: m, pinType: 'input' as 'input', pinIndex: 0, x: m.x + (m.pins?.input?.[0]?.x ?? 0), y: m.y + (m.pins?.input?.[0]?.y ?? 0), category: m.category };
+              this.createConnection(fromPin, toPin);
+
+              const fromPin2 = { component: m, pinType: 'output' as 'output', pinIndex: 0, x: m.x + (m.pins?.output?.[0]?.x ?? 0), y: m.y + (m.pins?.output?.[0]?.y ?? 0), category: m.category };
+              const toPin2 = { component: r, pinType: 'input' as 'input', pinIndex: 0, x: r.x + (r.pins?.input?.[0]?.x ?? 0), y: r.y + (r.pins?.input?.[0]?.y ?? 0), category: r.category };
+              this.createConnection(fromPin2, toPin2);
+            } catch (e) {
+              // ignore any seeding errors
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // ignore in non-browser or unexpected environments
     }
   }
 
@@ -826,107 +877,43 @@ export class MotherboardApp {
   }
 
   drawComponent(component: ComponentBase) {
-    const screenX = component.x * this.camera.zoom + this.camera.x;
-    const screenY = component.y * this.camera.zoom + this.camera.y;
-    const screenWidth = component.width * this.camera.zoom;
-    const screenHeight = component.height * this.camera.zoom;
+    try {
+      // Use new centralized implementation helper for unified visuals
+      renderComponent(this.ctx, { timestamp: performance.now(), camera: this.camera }, component, {
+        camera: this.camera,
+        categories: this.categories,
+        selectedComponentId: this.selectedComponent?.id ?? null,
+        connections: this.getCurrentViewConnections().map((connection: Connection) => {
+          const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
+          const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
+          return {
+            ...connection,
+            from: { ...connection.from, x: connection.from.x ?? (connection.from.component.x + (fromPinDef?.x ?? 0)), y: connection.from.y ?? (connection.from.component.y + (fromPinDef?.y ?? 0)), component: connection.from.component },
+            to: { ...connection.to, x: connection.to.x ?? (connection.to.component.x + (toPinDef?.x ?? 0)), y: connection.to.y ?? (connection.to.component.y + (toPinDef?.y ?? 0)), component: connection.to.component },
+          } as Connection;
+        }),
+      });
+    } catch (e) {
+      // Fallback to legacy inline draw behavior if helper fails
+      try {
+        // replicate minimal legacy rendering to avoid changing UX if helper throws
+        const screenX = component.x * this.camera.zoom + this.camera.x;
+        const screenY = component.y * this.camera.zoom + this.camera.y;
+        const screenWidth = component.width * this.camera.zoom;
+        const screenHeight = component.height * this.camera.zoom;
 
-    // Component body
-    // Default body (may be overridden for certain states)
-    if (component.status === 'defined') {
-      // Transparent body for DEFINED (wireframe)
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-      this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
-    } else {
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
-    }
-
-    // Component border based on status
-    let borderColor = component.color ?? '#000000';
-    let glowIntensity = 0;
-
-    switch (component.status) {
-      case 'defined':
-        borderColor = '#00ffff'; // cyan outline for defined
-        glowIntensity = 0;
-        break;
-      case 'todo':
-        borderColor = component.color + '66'; // Semi-transparent
-        break;
-      case 'in-progress':
-        borderColor = '#ff00ff';
-        glowIntensity = 0.6 + 0.4 * Math.sin(Date.now() * 0.005);
-        break;
-      case 'done':
-        borderColor = '#00ff88';
-        glowIntensity = 0.8;
-        break;
-    }
-
-    this.ctx.strokeStyle = borderColor;
-    this.ctx.lineWidth = 2;
-
-    if (glowIntensity > 0) {
-      this.ctx.shadowColor = borderColor;
-      this.ctx.shadowBlur = 15 * glowIntensity;
-    }
-
-    if (component.status === 'defined') {
-      // Dashed outline for defined
-      this.ctx.setLineDash([6, 6]);
-      this.ctx.strokeRect(screenX, screenY, screenWidth, screenHeight);
-      this.ctx.setLineDash([]);
-    } else {
-      this.ctx.strokeRect(screenX, screenY, screenWidth, screenHeight);
-    }
-    this.ctx.shadowBlur = 0;
-
-    // Selection highlight
-    if (this.selectedComponent === component) {
-      this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 3;
-      this.ctx.setLineDash([5, 5]);
-      this.ctx.strokeRect(screenX - 2, screenY - 2, screenWidth + 4, screenHeight + 4);
-      this.ctx.setLineDash([]);
-    }
-
-    // Component icon and text
-    // Muted italic text for DEFINED
-    if (component.status === 'defined') {
-      this.ctx.fillStyle = 'rgba(200, 255, 255, 0.85)';
-      this.ctx.font = `${16 * this.camera.zoom}px monospace italic`;
-      this.ctx.globalAlpha = 0.85;
-    } else {
-      this.ctx.fillStyle = '#ffffff';
-      this.ctx.font = `${16 * this.camera.zoom}px monospace`;
-    }
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-
-    const centerX = screenX + screenWidth / 2;
-    const centerY = screenY + screenHeight / 2;
-
-    this.ctx.fillText(component.icon ?? '', centerX, centerY - 5 * this.camera.zoom);
-
-    // Component title (if there's space)
-    if (screenHeight > 40) {
-      if (component.status === 'defined') {
-        this.ctx.font = `${10 * this.camera.zoom}px monospace italic`;
-        this.ctx.fillStyle = 'rgba(200, 255, 255, 0.7)';
-      } else {
-        this.ctx.font = `${10 * this.camera.zoom}px monospace`;
-        this.ctx.fillStyle = '#ffffff';
+        if (component.status === 'defined') {
+          this.ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+          this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
+        } else {
+          this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+          this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
+        }
+        this.ctx.strokeStyle = component.color ?? '#000';
+        this.ctx.strokeRect(screenX, screenY, screenWidth, screenHeight);
+      } catch (err) {
+        // final fallback
       }
-      this.ctx.fillText(component.title ?? '', centerX, centerY + 15 * this.camera.zoom);
-    }
-
-    // Draw pins
-    this.drawPins(component, screenX, screenY);
-
-    // Energy particles for in-progress components
-    if (component.status === 'in-progress') {
-      this.drawEnergyParticles(component, screenX, screenY, screenWidth, screenHeight);
     }
   }
 
@@ -1055,6 +1042,34 @@ export class MotherboardApp {
   }
 
   render() {
+    // Use LayeredRenderer (feature-flagged) or fallback to legacy drawing
+    if (isNewRendererEnabled()) {
+      try {
+      const visibleModels = this.getCurrentViewComponents();
+      // precompute simple connection pin positions for ConnectionsLayer
+      const visibleConnections = this.getCurrentViewConnections().map((connection: Connection) => {
+        const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
+        const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
+        const fromX = (connection.from.component.x + (fromPinDef?.x ?? 0));
+        const fromY = (connection.from.component.y + (fromPinDef?.y ?? 0));
+        const toX = (connection.to.component.x + (toPinDef?.x ?? 0));
+        const toY = (connection.to.component.y + (toPinDef?.y ?? 0));
+        return {
+          ...connection,
+          from: { ...connection.from, x: fromX, y: fromY, component: connection.from.component },
+          to: { ...connection.to, x: toX, y: toY, component: connection.to.component },
+        };
+      });
+
+  layeredRenderer.render(this.ctx, { timestamp: performance.now(), camera: this.camera, payload: { models: visibleModels, connections: visibleConnections, categories: this.categories, selectedComponentId: this.selectedComponent?.id ?? null } });
+        return;
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('LayeredRenderer render failed, falling back to legacy renderer', e);
+      }
+    }
+
+    // Legacy render path (unchanged behaviour)
     // Clear canvas
     this.ctx.clearRect(
       0,
