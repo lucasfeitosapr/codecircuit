@@ -10,6 +10,9 @@ export const ImplementationLayer = {
       const selectedComponentId = (frame as any)?.payload?.selectedComponentId ?? null;
       const connections = (frame as any)?.payload?.connections ?? [];
 
+
+
+
       // Augment the incoming frame.payload in-place so callers that rely on reference equality
       // (tests, legacy code) continue to work while providing plugins the extra fields.
       const fp = (frame as any).payload = { ...(frame as any).payload };

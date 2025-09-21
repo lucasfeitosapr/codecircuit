@@ -10,6 +10,16 @@ export const ConnectionsLayer = {
       const camera = frame?.camera ?? { x: 0, y: 0, zoom: 1 };
       const c = ctx as CanvasRenderingContext2D;
 
+      // Handle temporary connection (dashed line while creating connections)
+      const isConnecting = (frame as any)?.payload?.isConnecting ?? false;
+      const connectionStart = (frame as any)?.payload?.connectionStart;
+      const mousePos = (frame as any)?.payload?.mousePos;
+      const categories = (frame as any)?.payload?.categories ?? {};
+
+      if (isConnecting && connectionStart && mousePos) {
+        drawTempConnection(c, connectionStart, mousePos, camera, categories);
+      }
+
       for (const connection of connections) {
         const from = connection.from;
         const to = connection.to;
@@ -158,6 +168,30 @@ function drawDataFlow(
     c.arc(burstPos.x, burstPos.y, 3 * camera.zoom, 0, Math.PI * 2);
     c.fill();
   }
+}
+
+function drawTempConnection(
+  c: CanvasRenderingContext2D,
+  connectionStart: any,
+  mousePos: any,
+  camera: any,
+  categories: any
+) {
+  const fromX = connectionStart.x * camera.zoom + camera.x;
+  const fromY = connectionStart.y * camera.zoom + camera.y;
+  const toX = mousePos.x * camera.zoom + camera.x;
+  const toY = mousePos.y * camera.zoom + camera.y;
+
+  const cat = connectionStart.category ?? 'frontend';
+  const categoryColor = categories[cat]?.color || '#00ff88';
+
+  c.strokeStyle = categoryColor + '80'; // Semi-transparent
+  c.lineWidth = 2;
+  c.setLineDash([5, 5]);
+
+  drawOrthogonal(c, fromX, fromY, toX, toY);
+
+  c.setLineDash([]);
 }
 
 export default ConnectionsLayer;

@@ -13,8 +13,13 @@ import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } fr
 import { layeredRenderer } from './rendering/LayeredRenderer';
 import { renderComponent } from './rendering/ImplementationHelpers';
 import { isNewRendererEnabled } from './config/featureFlags';
+import BackgroundLayer from './rendering/layers/BackgroundLayer';
 import ImplementationLayer from './rendering/layers/ImplementationLayer';
 import ConnectionsLayer from './rendering/layers/ConnectionsLayer';
+// Import plugins to ensure they're registered
+import './components/plugins/PowerCorePlugin';
+import './components/plugins/ModuleICPlugin';
+import './components/plugins/TaskResistorPlugin';
 import type {
   ViewState,
   Camera,
@@ -127,8 +132,9 @@ export class MotherboardApp {
     this.init();
     this.initializeMainView();
 
-    // Register implementation layer (idempotent during app lifecycle)
+    // Register layers (idempotent during app lifecycle)
     try {
+      layeredRenderer.registerLayer(BackgroundLayer.name, BackgroundLayer as any);
       layeredRenderer.registerLayer(ImplementationLayer.name, ImplementationLayer as any);
       layeredRenderer.registerLayer(ConnectionsLayer.name, ConnectionsLayer as any);
     } catch (e) {
@@ -877,191 +883,60 @@ export class MotherboardApp {
   }
 
   drawComponent(component: ComponentBase) {
-    try {
-      // Use new centralized implementation helper for unified visuals
-      renderComponent(this.ctx, { timestamp: performance.now(), camera: this.camera }, component, {
-        camera: this.camera,
-        categories: this.categories,
-        selectedComponentId: this.selectedComponent?.id ?? null,
-        connections: this.getCurrentViewConnections().map((connection: Connection) => {
-          const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
-          const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
-          return {
-            ...connection,
-            from: { ...connection.from, x: connection.from.x ?? (connection.from.component.x + (fromPinDef?.x ?? 0)), y: connection.from.y ?? (connection.from.component.y + (fromPinDef?.y ?? 0)), component: connection.from.component },
-            to: { ...connection.to, x: connection.to.x ?? (connection.to.component.x + (toPinDef?.x ?? 0)), y: connection.to.y ?? (connection.to.component.y + (toPinDef?.y ?? 0)), component: connection.to.component },
-          } as Connection;
-        }),
-      });
-    } catch (e) {
-      // Fallback to legacy inline draw behavior if helper fails
-      try {
-        // replicate minimal legacy rendering to avoid changing UX if helper throws
-        const screenX = component.x * this.camera.zoom + this.camera.x;
-        const screenY = component.y * this.camera.zoom + this.camera.y;
-        const screenWidth = component.width * this.camera.zoom;
-        const screenHeight = component.height * this.camera.zoom;
-
-        if (component.status === 'defined') {
-          this.ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-          this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
-        } else {
-          this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-          this.ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
-        }
-        this.ctx.strokeStyle = component.color ?? '#000';
-        this.ctx.strokeRect(screenX, screenY, screenWidth, screenHeight);
-      } catch (err) {
-        // final fallback
-      }
-    }
+    // Use new centralized implementation helper for unified visuals
+    renderComponent(this.ctx, { timestamp: performance.now(), camera: this.camera }, component, {
+      camera: this.camera,
+      categories: this.categories,
+      selectedComponentId: this.selectedComponent?.id ?? null,
+      connections: this.getCurrentViewConnections().map((connection: Connection) => {
+        const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
+        const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
+        return {
+          ...connection,
+          from: { ...connection.from, x: connection.from.x ?? (connection.from.component.x + (fromPinDef?.x ?? 0)), y: connection.from.y ?? (connection.from.component.y + (fromPinDef?.y ?? 0)), component: connection.from.component },
+          to: { ...connection.to, x: connection.to.x ?? (connection.to.component.x + (toPinDef?.x ?? 0)), y: connection.to.y ?? (connection.to.component.y + (toPinDef?.y ?? 0)), component: connection.to.component },
+        } as Connection;
+      }),
+    });
   }
 
-  drawPins(component: ComponentBase, screenX: number, screenY: number) {
-    const pinSize = 4 * this.camera.zoom;
-    const categoryColor = this.categories[component.category ?? 'frontend']?.color || '#ffaa00';
-    const isActive = component.status === 'in-progress' || component.status === 'done';
 
-    this.ctx.fillStyle = categoryColor;
-
-    // Enhanced glow effect for active components
-    if (isActive) {
-      this.ctx.shadowColor = categoryColor;
-      this.ctx.shadowBlur =
-        component.status === 'done' ? 10 * this.camera.zoom : 6 * this.camera.zoom;
-    } else {
-      this.ctx.shadowBlur = 3 * this.camera.zoom;
-      this.ctx.shadowColor = categoryColor;
-    }
-
-    // Draw input pins
-    if (component.pins.input) {
-      component.pins.input.forEach((pin: PinDef, index: number) => {
-        const pinX = screenX + pin.x * this.camera.zoom;
-        const pinY = screenY + pin.y * this.camera.zoom;
-
-        // Check if this pin has incoming active connections
-        const connections = this.getCurrentViewConnections();
-        const hasActiveInput = connections.some(
-          (conn: Connection) =>
-            conn.to.component === component &&
-            conn.to.pinIndex === index &&
-            (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
-        );
-
-        if (hasActiveInput) {
-          // Draw pulsing effect for pins receiving data (smoother pulse)
-          const pulseIntensity = 0.7 + 0.3 * Math.sin(Date.now() * 0.004);
-          this.ctx.shadowBlur = 10 * this.camera.zoom * pulseIntensity;
-
-          // Draw larger glowing pin
-          this.ctx.fillRect(
-            pinX - pinSize * 0.6,
-            pinY - pinSize * 0.6,
-            pinSize * 1.2,
-            pinSize * 1.2
-          );
-        } else {
-          this.ctx.fillRect(pinX - pinSize / 2, pinY - pinSize / 2, pinSize, pinSize);
-        }
-      });
-    }
-
-    // Draw output pins
-    if (component.pins.output) {
-      component.pins.output.forEach((pin: PinDef, index: number) => {
-        const pinX = screenX + pin.x * this.camera.zoom;
-        const pinY = screenY + pin.y * this.camera.zoom;
-
-        // Check if this pin has outgoing active connections
-        const connections = this.getCurrentViewConnections();
-        const hasActiveOutput =
-          connections.some(
-            (conn: Connection) => conn.from.component === component && conn.from.pinIndex === index
-          ) && isActive;
-
-        if (hasActiveOutput) {
-          // Draw enhanced effect for pins sending data (smoother pulse)
-          const pulseIntensity =
-            component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
-          this.ctx.shadowBlur = 12 * this.camera.zoom * pulseIntensity;
-
-          // Draw larger glowing pin with gentler pulse effect
-          const size = pinSize * (1.1 + 0.05 * Math.sin(Date.now() * 0.005));
-          this.ctx.fillRect(pinX - size / 2, pinY - size / 2, size, size);
-        } else {
-          this.ctx.fillRect(pinX - pinSize / 2, pinY - pinSize / 2, pinSize, pinSize);
-        }
-      });
-    }
-
-    this.ctx.shadowBlur = 0;
-  }
-
-  drawEnergyParticles(
-    component: ComponentBase,
-    screenX: number,
-    screenY: number,
-    screenWidth: number,
-    screenHeight: number
-  ) {
-    const time = Date.now() * 0.0008; // Slower internal particle movement
-    const particleCount = 3;
-    const categoryColor = this.categories[component.category ?? 'frontend']?.color || '#ff00ff';
-
-    for (let i = 0; i < particleCount; i++) {
-      const phase = (time + i * 0.6) % 2; // More spaced out timing
-      let x: number, y: number, alpha: number;
-
-      if (phase < 1.2) {
-        // Particles flowing horizontally with smooth motion
-        const progress = phase / 1.2;
-        const smoothProgress = progress * progress * (3 - 2 * progress); // Smooth curve
-        x = screenX + screenWidth * smoothProgress;
-        y = screenY + screenHeight / 2 + Math.sin(time * 2 + i) * 2; // Gentler wave
-        alpha = 0.8 - progress * 0.2;
-      } else {
-        // Particles fading out more gradually
-        const fadePhase = (phase - 1.2) / 0.8;
-        x = screenX + screenWidth;
-        y = screenY + screenHeight / 2;
-        alpha = 0.6 * (1 - fadePhase);
-      }
-
-      this.ctx.fillStyle = `rgba(${this.hexToRgb(categoryColor)}, ${alpha})`;
-      this.ctx.shadowColor = categoryColor;
-      this.ctx.shadowBlur = 4 * this.camera.zoom * alpha;
-
-      const size = (2 + Math.sin(time * 3 + i) * 0.3) * this.camera.zoom;
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, size, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-
-    this.ctx.shadowBlur = 0;
-  }
 
   render() {
     // Use LayeredRenderer (feature-flagged) or fallback to legacy drawing
     if (isNewRendererEnabled()) {
       try {
-      const visibleModels = this.getCurrentViewComponents();
-      // precompute simple connection pin positions for ConnectionsLayer
-      const visibleConnections = this.getCurrentViewConnections().map((connection: Connection) => {
-        const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
-        const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
-        const fromX = (connection.from.component.x + (fromPinDef?.x ?? 0));
-        const fromY = (connection.from.component.y + (fromPinDef?.y ?? 0));
-        const toX = (connection.to.component.x + (toPinDef?.x ?? 0));
-        const toY = (connection.to.component.y + (toPinDef?.y ?? 0));
-        return {
-          ...connection,
-          from: { ...connection.from, x: fromX, y: fromY, component: connection.from.component },
-          to: { ...connection.to, x: toX, y: toY, component: connection.to.component },
-        };
-      });
+        const visibleModels = this.getCurrentViewComponents();
+        // precompute simple connection pin positions for ConnectionsLayer
+        const visibleConnections = this.getCurrentViewConnections().map((connection: Connection) => {
+          const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
+          const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
+          const fromX = (connection.from.component.x + (fromPinDef?.x ?? 0));
+          const fromY = (connection.from.component.y + (fromPinDef?.y ?? 0));
+          const toX = (connection.to.component.x + (toPinDef?.x ?? 0));
+          const toY = (connection.to.component.y + (toPinDef?.y ?? 0));
+          return {
+            ...connection,
+            from: { ...connection.from, x: fromX, y: fromY, component: connection.from.component },
+            to: { ...connection.to, x: toX, y: toY, component: connection.to.component },
+          };
+        });
 
-  layeredRenderer.render(this.ctx, { timestamp: performance.now(), camera: this.camera, payload: { models: visibleModels, connections: visibleConnections, categories: this.categories, selectedComponentId: this.selectedComponent?.id ?? null } });
+        layeredRenderer.render(this.ctx, { 
+          timestamp: performance.now(), 
+          camera: this.camera, 
+          canvas: this.canvas,
+          payload: { 
+            models: visibleModels, 
+            connections: visibleConnections, 
+            categories: this.categories, 
+            selectedComponentId: this.selectedComponent?.id ?? null,
+            viewType: this.currentView.type,
+            isConnecting: this.isConnecting,
+            connectionStart: this.connectionStart,
+            mousePos: this.mousePos
+          } 
+        });
         return;
       } catch (e) {
         // eslint-disable-next-line no-console
