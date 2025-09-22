@@ -25,4 +25,5 @@ export const TaskResistorPlugin: PluginDescriptor = {
   deserialize: (data) => data,
 };
 
-componentSystem.register(TaskResistorPlugin);
+// PHASE 2: Temporarily disabled to prevent dual registration conflicts with V2 plugins
+// componentSystem.register(TaskResistorPlugin);

@@ -28,4 +28,5 @@ export const PowerCorePlugin: PluginDescriptor = {
   deserialize: (data) => data,
 };
 
-componentSystem.register(PowerCorePlugin);
+// PHASE 2: Temporarily disabled to prevent dual registration conflicts with V2 plugins
+// componentSystem.register(PowerCorePlugin);

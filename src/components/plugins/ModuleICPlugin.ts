@@ -14,7 +14,7 @@ export const ModuleICPlugin: PluginDescriptor = {
           connections: (frame as any).payload?.connections ?? [],
         });
       } else {
-        return { shape: 'rounded-rect', color: '#66ccff', model };
+        return { shape: 'chip', color: '#66cc66', model };
       }
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -25,4 +25,5 @@ export const ModuleICPlugin: PluginDescriptor = {
   deserialize: (data) => data,
 };
 
-componentSystem.register(ModuleICPlugin);
+// PHASE 2: Temporarily disabled to prevent dual registration conflicts with V2 plugins
+// componentSystem.register(ModuleICPlugin);
