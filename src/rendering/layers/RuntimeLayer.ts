@@ -39,6 +39,7 @@ export interface Particle {
 
 export default class RuntimeLayer {
   static name = 'runtime';
+  name = RuntimeLayer.name;
   
   private animations: Map<string, Animation> = new Map();
   private particles: Map<string, Particle> = new Map();

@@ -10,6 +10,7 @@ export const Events = {
   ComponentUpdated: 'component.updated',
   ComponentDeleted: 'component.deleted',
   ConnectionCreated: 'connection.created',
+  ConnectionDeleted: 'connection.deleted',
   ConnectionUpdated: 'connection.updated',
   CommandDispatched: 'command.dispatched',
   RuntimePulse: 'runtime.pulse',

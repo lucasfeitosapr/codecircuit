@@ -8,6 +8,7 @@ import { ConnectionManager, createConnectionManager } from './core/ConnectionMan
 import { ComponentLifecycleManager, createComponentLifecycleManager } from './core/ComponentLifecycleManager';
 import { InputEventCoordinator, createInputEventCoordinator } from './core/InputEventCoordinator';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from './utils';
+import * as rendererHelpers from './ui/rendererHelpers';
 import {
   drawGrid as rendererDrawGrid,
   drawSchematicBackground as rendererDrawSchematicBackground,
@@ -228,7 +229,25 @@ export class MotherboardApp {
 
     try {
       // initialize state manager snapshot from current app state (Phase-1)
-      stateManager.setSnapshot({ components: this.components, connections: this.connections, view: this.currentView });
+      // StateManager expects records keyed by id; convert arrays to maps keyed by component/connection id
+      const componentsById = this.components.reduce((acc: Record<string, any>, c: any) => {
+        acc[c.id] = c;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const connectionsById = this.connections.reduce((acc: Record<string, any>, conn: any) => {
+        acc[conn.id] = conn;
+        return acc;
+      }, {} as Record<string, any>);
+
+      stateManager.setSnapshot({
+        components: componentsById,
+        connections: connectionsById,
+        view: this.currentView,
+  selectedComponentId: (this.selectedComponent as any)?.id ?? null,
+  selectedComponentIds: this.selectedComponent ? [(this.selectedComponent as any).id] : [],
+        camera: { x: this.camera.x, y: this.camera.y, zoom: this.camera.zoom },
+      } as any);
     } catch (err) {
       // avoid affecting runtime if snapshotting fails
       // eslint-disable-next-line no-console
@@ -1083,101 +1102,16 @@ export class MotherboardApp {
 
   drawConnections() {
     const connections = this.getCurrentViewConnections();
-    if (!connections) return;
-    
-    connections.forEach((connection: Connection) => {
-      // Skip undefined or invalid connections
-      if (!connection || !connection.from || !connection.to) {
-        console.warn('Skipping invalid connection:', connection);
-        return;
-      }
-      
-      // Dynamically calculate pin positions based on current component positions
-      const fromPin = connection.from;
-      const toPin = connection.to;
-
-      // Get current pin positions
-      const fromComponent = fromPin.component;
-      const toComponent = toPin.component;
-
-      // Guard: pin arrays may be undefined (defensive)
-      if (!fromComponent.pins?.output || !toComponent.pins?.input) return;
-
-      const fromPinDef = fromComponent.pins.output[fromPin.pinIndex];
-      const toPinDef = toComponent.pins.input[toPin.pinIndex];
-
-      const fromX = (fromComponent.x + fromPinDef.x) * this.camera.zoom + this.camera.x;
-      const fromY = (fromComponent.y + fromPinDef.y) * this.camera.zoom + this.camera.y;
-      const toX = (toComponent.x + toPinDef.x) * this.camera.zoom + this.camera.x;
-      const toY = (toComponent.y + toPinDef.y) * this.camera.zoom + this.camera.y;
-
-      const categoryColor = this.categories[connection.category ?? 'frontend']?.color || '#00ff88';
-
-      // Check statuses
-      const fromStatus = connection.from.component.status;
-      const toStatus = connection.to.component.status;
-      const isActive = fromStatus === 'in-progress' || fromStatus === 'done';
-      const isPowered = fromStatus === 'done';
-
-      // If both ends are DEFINED, render intention (dashed) trace and skip particles
-      if (fromStatus === 'defined' && toStatus === 'defined') {
-        this.drawIntentionTrace(fromX, fromY, toX, toY);
-        return;
-      }
-
-      // If source is DEFINED and not active yet, render intention trace
-      if (fromStatus === 'defined' && !isActive) {
-        this.drawIntentionTrace(fromX, fromY, toX, toY);
-        return;
-      }
-
-      // Otherwise render normal background and active traces
-      this.drawTraceBackground(fromX, fromY, toX, toY, categoryColor, isActive);
-
-      if (isActive) {
-        // Draw glowing active trace
-        this.drawActiveTrace(fromX, fromY, toX, toY, categoryColor, isPowered);
-
-        // Draw data flow particles
-        this.drawDataFlow(connection, fromX, fromY, toX, toY, categoryColor, isPowered);
-      }
-    });
+    rendererHelpers.drawConnections(this, connections);
   }
 
   // Intention (dashed) trace rendering for DEFINED components
   drawIntentionTrace(fromX: number, fromY: number, toX: number, toY: number) {
-    // Use cyan tint for intention traces while falling back to provided category color
-    const intentionColor = '#00ffff';
-    this.ctx.strokeStyle = intentionColor + '66';
-    this.ctx.lineWidth = 2;
-    this.ctx.setLineDash([6, 6]);
-    this.drawOrthogonalTrace(fromX, fromY, toX, toY);
-    this.ctx.setLineDash([]);
-    this.ctx.shadowBlur = 0;
+    rendererHelpers.drawIntentionTrace(this, fromX, fromY, toX, toY);
   }
 
   drawTempConnection() {
-    // Get connection state from ConnectionManager
-    const connectionState = this.connectionManager.getConnectionState();
-    if (!connectionState.connectionStart) return;
-    
-    const connectionStart = connectionState.connectionStart;
-    const fromX = connectionStart.x * this.camera.zoom + this.camera.x;
-    const fromY = connectionStart.y * this.camera.zoom + this.camera.y;
-    const mousePos = this.inputEventCoordinator.getMousePosition();
-    const toX = mousePos.x * this.camera.zoom + this.camera.x;
-    const toY = mousePos.y * this.camera.zoom + this.camera.y;
-
-    const cat = connectionStart.category ?? 'frontend';
-    const categoryColor = this.categories[cat]?.color || '#00ff88';
-
-    this.ctx.strokeStyle = categoryColor + '80'; // Semi-transparent
-    this.ctx.lineWidth = 2;
-    this.ctx.setLineDash([5, 5]);
-
-    this.drawOrthogonalTrace(fromX, fromY, toX, toY);
-
-    this.ctx.setLineDash([]);
+    rendererHelpers.drawTempConnection(this);
   }
 
   drawOrthogonalTrace(fromX: number, fromY: number, toX: number, toY: number) {
@@ -1193,12 +1127,7 @@ export class MotherboardApp {
     color: string,
     isActive: boolean
   ) {
-    // Draw the background trace
-    this.ctx.strokeStyle = isActive ? color + '40' : color + '20'; // More transparent when inactive
-    this.ctx.lineWidth = 2;
-    this.ctx.shadowBlur = 0;
-
-    this.drawOrthogonalTrace(fromX, fromY, toX, toY);
+    rendererHelpers.drawTraceBackground(this, fromX, fromY, toX, toY, color, isActive);
   }
 
   drawActiveTrace(
@@ -1209,25 +1138,7 @@ export class MotherboardApp {
     color: string,
     isPowered: boolean
   ) {
-    // Draw the glowing active trace with smoother pulsing
-    const glowIntensity = isPowered ? 1.0 : 0.6;
-    const pulseEffect = isPowered ? 1.0 : 0.7 + 0.3 * Math.sin(Date.now() * 0.003); // Slower pulse
-
-    // Multiple glow layers for better effect
-    for (let i = 0; i < 3; i++) {
-      // fallback: ensure valid hex processing happens elsewhere during stricter typing
-      const alphaHex = Math.floor((70 - i * 15) * glowIntensity * pulseEffect)
-        .toString(16)
-        .padStart(2, '0');
-      this.ctx.strokeStyle = color + alphaHex;
-      this.ctx.lineWidth = (3 - i * 0.5) * this.camera.zoom; // Gentler width variation
-      this.ctx.shadowColor = color;
-      this.ctx.shadowBlur = (12 - i * 3) * glowIntensity * pulseEffect; // Softer glow
-
-      this.drawOrthogonalTrace(fromX, fromY, toX, toY);
-    }
-
-    this.ctx.shadowBlur = 0;
+    rendererHelpers.drawActiveTrace(this, fromX, fromY, toX, toY, color, isPowered);
   }
 
   drawDataFlow(
@@ -1239,70 +1150,7 @@ export class MotherboardApp {
     color: string,
     isPowered: boolean
   ) {
-    const time = Date.now() * 0.0015; // Slower base speed
-    const speed = isPowered ? 0.6 : 0.3; // Much slower flow rates
-    const particleCount = isPowered ? 4 : 3; // Fewer particles for cleaner look
-    const particleSize = isPowered ? 2.5 : 2;
-
-    // Calculate path points (same as orthogonal trace)
-    const midX = fromX + (toX - fromX) * 0.7;
-    const pathPoints = [
-      { x: fromX, y: fromY },
-      { x: midX, y: fromY },
-      { x: midX, y: toY },
-      { x: toX, y: toY },
-    ];
-
-    // Draw flowing data packets with smoother spacing
-    for (let i = 0; i < particleCount; i++) {
-      const offset = (time * speed + i * 0.35) % 1; // More spaced out
-      const pos = this.getPointOnPath(pathPoints, offset);
-
-      // Smooth alpha transition
-      const alpha = 0.9 * (1 - Math.pow(offset, 1.5)); // Smoother fade
-      this.ctx.fillStyle = `rgba(${this.hexToRgb(color)}, ${alpha})`;
-      this.ctx.shadowColor = color;
-      this.ctx.shadowBlur = 6 * this.camera.zoom * alpha;
-
-      this.ctx.beginPath();
-      this.ctx.arc(pos.x, pos.y, particleSize * this.camera.zoom, 0, Math.PI * 2);
-      this.ctx.fill();
-
-      // Smoother trailing effect
-      for (let j = 1; j <= 2; j++) {
-        // Fewer trail particles
-        const trailOffset = Math.max(0, offset - j * 0.08); // More spaced trails
-        if (trailOffset > 0) {
-          const trailPos = this.getPointOnPath(pathPoints, trailOffset);
-          const trailAlpha = alpha * (0.5 - j * 0.2);
-          const trailSize = particleSize * (0.8 - j * 0.2);
-
-          this.ctx.fillStyle = `rgba(${this.hexToRgb(color)}, ${trailAlpha})`;
-          this.ctx.shadowBlur = 3 * this.camera.zoom * trailAlpha;
-
-          this.ctx.beginPath();
-          this.ctx.arc(trailPos.x, trailPos.y, trailSize * this.camera.zoom, 0, Math.PI * 2);
-          this.ctx.fill();
-        }
-      }
-    }
-
-    // Less frequent data bursts for smoother look
-    if (isPowered && Math.random() < 0.03) {
-      // Reduced from 0.1 to 0.03
-      const burstOffset = Math.random();
-      const burstPos = this.getPointOnPath(pathPoints, burstOffset);
-
-      this.ctx.fillStyle = `rgba(${this.hexToRgb(color)}, 0.6)`;
-      this.ctx.shadowColor = color;
-      this.ctx.shadowBlur = 12 * this.camera.zoom;
-
-      this.ctx.beginPath();
-      this.ctx.arc(burstPos.x, burstPos.y, 4 * this.camera.zoom, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-
-    this.ctx.shadowBlur = 0;
+    rendererHelpers.drawDataFlow(this, connection, fromX, fromY, toX, toY, color, isPowered);
   }
 
   getPointOnPath(points: { x: number; y: number }[], ratio: number) {
@@ -1979,357 +1827,53 @@ export class MotherboardApp {
 
   // Pin mapping and dynamic pin management
   showPinMappingUI(moduleComponent: ModuleComponent) {
-    const panel = document.getElementById('datasheet-panel') as HTMLElement | null;
-    const titleEl = document.getElementById('datasheet-title') as HTMLElement | null;
-    const content = document.getElementById('datasheet-content') as HTMLElement | null;
-
-    if (!panel || !titleEl || !content) return;
-
-    titleEl.textContent = `🔌 Pin Mapping: ${moduleComponent.title || moduleComponent.name}`;
-
-    // Initialize pinMap if it doesn't exist
-    if (!moduleComponent.pinMap) {
-      moduleComponent.pinMap = {};
-    }
-
-    const inputPins = moduleComponent.pins.input || [];
-    const outputPins = moduleComponent.pins.output || [];
-    const internalComponents = moduleComponent.internalComponents || [];
-
-    content.innerHTML = `
-      <div class="pin-mapping-container">
-        <div class="pin-section">
-          <h4>🔵 Input Pins</h4>
-          <div id="input-pins">
-            ${inputPins
-              .map(
-                (pin, index) => `
-              <div class="pin-config" data-pin-type="input" data-pin-index="${index}">
-                <div class="pin-header">
-                  <span>Input ${index + 1}</span>
-                  <button class="pin-remove-btn" onclick="this.closest('.pin-config').remove()">×</button>
-                </div>
-                <label>Label:</label>
-                <input type="text" class="pin-label" value="${
-                  pin.label || ''
-                }" placeholder="Pin label">
-                <label>Type:</label>
-                <select class="pin-type">
-                  <option value="energy" ${pin.type === 'energy' ? 'selected' : ''}>Energy</option>
-                  <option value="data" ${pin.type === 'data' ? 'selected' : ''}>Data</option>
-                  <option value="control" ${
-                    pin.type === 'control' ? 'selected' : ''
-                  }>Control</option>
-                </select>
-                <label>Connect to internal:</label>
-                <select class="pin-mapping">
-                  <option value="">-- Not connected --</option>
-                  ${internalComponents
-                    .map(
-                      comp =>
-                        comp.pins.input
-                          ?.map(
-                            (internalPin, internalIndex) =>
-                              `<option value="${comp.id}:input:${internalIndex}">${
-                                comp.title || comp.name
-                              } Input ${internalIndex + 1}</option>`
-                          )
-                          .join('') || ''
-                    )
-                    .join('')}
-                </select>
-              </div>
-            `
-              )
-              .join('')}
-          </div>
-          <button class="control-btn add-pin-btn" id="add-input-pin">+ Add Input Pin</button>
-        </div>
-
-        <div class="pin-section">
-          <h4>🔴 Output Pins</h4>
-          <div id="output-pins">
-            ${outputPins
-              .map(
-                (pin, index) => `
-              <div class="pin-config" data-pin-type="output" data-pin-index="${index}">
-                <div class="pin-header">
-                  <span>Output ${index + 1}</span>
-                  <button class="pin-remove-btn" onclick="this.closest('.pin-config').remove()">×</button>
-                </div>
-                <label>Label:</label>
-                <input type="text" class="pin-label" value="${
-                  pin.label || ''
-                }" placeholder="Pin label">
-                <label>Type:</label>
-                <select class="pin-type">
-                  <option value="energy" ${pin.type === 'energy' ? 'selected' : ''}>Energy</option>
-                  <option value="data" ${pin.type === 'data' ? 'selected' : ''}>Data</option>
-                  <option value="control" ${
-                    pin.type === 'control' ? 'selected' : ''
-                  }>Control</option>
-                </select>
-                <label>Connect from internal:</label>
-                <select class="pin-mapping">
-                  <option value="">-- Not connected --</option>
-                  ${internalComponents
-                    .map(
-                      comp =>
-                        comp.pins.output
-                          ?.map(
-                            (internalPin, internalIndex) =>
-                              `<option value="${comp.id}:output:${internalIndex}">${
-                                comp.title || comp.name
-                              } Output ${internalIndex + 1}</option>`
-                          )
-                          .join('') || ''
-                    )
-                    .join('')}
-                </select>
-              </div>
-            `
-              )
-              .join('')}
-          </div>
-          <button class="control-btn add-pin-btn" id="add-output-pin">+ Add Output Pin</button>
-        </div>
-
-        <div class="pin-actions">
-          <button class="control-btn" id="apply-pin-config">Apply Changes</button>
-          <button class="control-btn" id="cancel-pin-config">Cancel</button>
-        </div>
-      </div>
-
-      <style>
-        .pin-mapping-container {
-          max-height: 70vh;
-          overflow-y: auto;
+    // Delegate to the extracted pinMapping module to keep main.ts small.
+    void import('./ui/pinMapping')
+      .then(mod => {
+        if (mod && typeof mod.showPinMappingUI === 'function') {
+          mod.showPinMappingUI(this, moduleComponent);
         }
-        .pin-section {
-          margin-bottom: 20px;
-          padding: 15px;
-          background: rgba(0, 255, 136, 0.05);
-          border: 1px solid rgba(0, 255, 136, 0.2);
-          border-radius: 8px;
-        }
-        .pin-section h4 {
-          margin-bottom: 10px;
-          color: #00ff88;
-        }
-        .pin-config {
-          background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(0, 255, 136, 0.3);
-          border-radius: 6px;
-          padding: 10px;
-          margin-bottom: 10px;
-        }
-        .pin-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          font-weight: bold;
-        }
-        .pin-remove-btn {
-          background: rgba(255, 0, 0, 0.2);
-          border: 1px solid #ff4444;
-          color: #ff4444;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          cursor: pointer;
-          font-size: 14px;
-        }
-        .pin-config label {
-          display: block;
-          margin: 8px 0 4px 0;
-          font-size: 12px;
-          opacity: 0.8;
-        }
-        .pin-config input, .pin-config select {
-          width: 100%;
-          padding: 6px;
-          background: rgba(0, 0, 0, 0.5);
-          border: 1px solid rgba(0, 255, 136, 0.3);
-          color: #00ff88;
-          border-radius: 4px;
-          margin-bottom: 8px;
-        }
-        .add-pin-btn {
-          width: 100%;
-          margin-top: 10px;
-          background: rgba(0, 255, 136, 0.1);
-          border-color: #00ff88;
-        }
-        .pin-actions {
-          display: flex;
-          gap: 10px;
-          margin-top: 20px;
-        }
-        .pin-actions button {
-          flex: 1;
-        }
-      </style>
-    `;
-
-    // Set up event listeners
-    this.setupPinMappingHandlers(moduleComponent);
-
-    panel.classList.add('active');
+      })
+      .catch(() => {
+        // noop
+      });
   }
 
   private setupPinMappingHandlers(moduleComponent: ModuleComponent) {
-    // Add input pin handler
-    const addInputBtn = document.getElementById('add-input-pin');
-    if (addInputBtn) {
-      addInputBtn.addEventListener('click', () => {
-        this.addPinToUI('input', moduleComponent);
+    // Delegate setup to the extracted pinMapping module
+    void import('./ui/pinMapping')
+      .then(mod => {
+        if (mod && typeof mod.setupPinMappingHandlers === 'function') {
+          mod.setupPinMappingHandlers(this, moduleComponent);
+        }
+      })
+      .catch(() => {
+        // noop
       });
-    }
-
-    // Add output pin handler
-    const addOutputBtn = document.getElementById('add-output-pin');
-    if (addOutputBtn) {
-      addOutputBtn.addEventListener('click', () => {
-        this.addPinToUI('output', moduleComponent);
-      });
-    }
-
-    // Apply changes handler
-    const applyBtn = document.getElementById('apply-pin-config');
-    if (applyBtn) {
-      applyBtn.addEventListener('click', () => {
-        this.applyPinConfiguration(moduleComponent);
-      });
-    }
-
-    // Cancel handler
-    const cancelBtn = document.getElementById('cancel-pin-config');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => {
-        this.hideDatasheet();
-      });
-    }
   }
 
   private addPinToUI(pinType: 'input' | 'output', moduleComponent: ModuleComponent) {
-    const container = document.getElementById(`${pinType}-pins`);
-    if (!container) return;
-
-    const pinIndex = container.children.length;
-    const internalComponents = moduleComponent.internalComponents || [];
-
-    const pinElement = document.createElement('div');
-    pinElement.className = 'pin-config';
-    pinElement.setAttribute('data-pin-type', pinType);
-    pinElement.setAttribute('data-pin-index', pinIndex.toString());
-
-    const oppositeType = pinType === 'input' ? 'output' : 'input';
-    const oppositeLabel = pinType === 'input' ? 'from internal' : 'to internal';
-
-    pinElement.innerHTML = `
-      <div class="pin-header">
-        <span>${pinType.charAt(0).toUpperCase() + pinType.slice(1)} ${pinIndex + 1}</span>
-        <button class="pin-remove-btn" onclick="this.closest('.pin-config').remove()">×</button>
-      </div>
-      <label>Label:</label>
-      <input type="text" class="pin-label" placeholder="Pin label">
-      <label>Type:</label>
-      <select class="pin-type">
-        <option value="energy">Energy</option>
-        <option value="data">Data</option>
-        <option value="control">Control</option>
-      </select>
-      <label>Connect ${oppositeLabel}:</label>
-      <select class="pin-mapping">
-        <option value="">-- Not connected --</option>
-        ${internalComponents
-          .map(
-            comp =>
-              comp.pins[oppositeType]
-                ?.map(
-                  (internalPin, internalIndex) =>
-                    `<option value="${comp.id}:${oppositeType}:${internalIndex}">${
-                      comp.title || comp.name
-                    } ${oppositeType.charAt(0).toUpperCase() + oppositeType.slice(1)} ${
-                      internalIndex + 1
-                    }</option>`
-                )
-                .join('') || ''
-          )
-          .join('')}
-      </select>
-    `;
-
-    container.appendChild(pinElement);
+    void import('./ui/pinMapping')
+      .then(mod => {
+        if (mod && typeof mod.addPinToUI === 'function') {
+          mod.addPinToUI(pinType, moduleComponent);
+        }
+      })
+      .catch(() => {
+        // noop
+      });
   }
 
   private applyPinConfiguration(moduleComponent: ModuleComponent) {
-    try {
-      // Collect input pin configurations
-      const inputConfigs = Array.from(document.querySelectorAll('[data-pin-type="input"]'));
-      const outputConfigs = Array.from(document.querySelectorAll('[data-pin-type="output"]'));
-
-      // Update input pins
-      const newInputPins = inputConfigs.map((config, index) => {
-        const labelInput = config.querySelector('.pin-label') as HTMLInputElement;
-        const typeSelect = config.querySelector('.pin-type') as HTMLSelectElement;
-
-        return {
-          x: 0,
-          y: (index + 1) * (moduleComponent.height / (inputConfigs.length + 1)),
-          type: typeSelect.value,
-          label: labelInput.value || `Input ${index + 1}`,
-        };
-      });
-
-      // Update output pins
-      const newOutputPins = outputConfigs.map((config, index) => {
-        const labelInput = config.querySelector('.pin-label') as HTMLInputElement;
-        const typeSelect = config.querySelector('.pin-type') as HTMLSelectElement;
-
-        return {
-          x: moduleComponent.width,
-          y: (index + 1) * (moduleComponent.height / (outputConfigs.length + 1)),
-          type: typeSelect.value,
-          label: labelInput.value || `Output ${index + 1}`,
-        };
-      });
-
-      // Update the component's pins
-      moduleComponent.pins = {
-        input: newInputPins,
-        output: newOutputPins,
-      };
-
-      // Update pin mappings
-      moduleComponent.pinMap = {};
-
-      inputConfigs.forEach((config, index) => {
-        const mappingSelect = config.querySelector('.pin-mapping') as HTMLSelectElement;
-        if (mappingSelect.value) {
-          moduleComponent.pinMap![`input:${index}`] = mappingSelect.value;
+    void import('./ui/pinMapping')
+      .then(mod => {
+        if (mod && typeof mod.applyPinConfiguration === 'function') {
+          mod.applyPinConfiguration(this, moduleComponent);
         }
+      })
+      .catch(() => {
+        // noop
       });
-
-      outputConfigs.forEach((config, index) => {
-        const mappingSelect = config.querySelector('.pin-mapping') as HTMLSelectElement;
-        if (mappingSelect.value) {
-          moduleComponent.pinMap![`output:${index}`] = mappingSelect.value;
-        }
-      });
-
-      console.log('✅ Pin configuration updated successfully');
-      this.hideDatasheet();
-
-      // Refresh the component display
-      if (this.selectedComponent === moduleComponent) {
-        this.showDatasheet(moduleComponent);
-      }
-    } catch (error) {
-      console.error('❌ Failed to apply pin configuration:', error);
-      alert('Failed to apply pin configuration: ' + error);
-    }
   }
 }
 

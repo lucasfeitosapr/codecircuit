@@ -46,6 +46,7 @@ export interface ConnectionIntent {
 
 export default class UILayer {
   static name = 'ui';
+  name = UILayer.name;
   
   private selectionBoxes: Map<string, SelectionBox> = new Map();
   private guideLines: Map<string, GuideLine> = new Map();

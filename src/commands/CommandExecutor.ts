@@ -230,7 +230,8 @@ export class CommandExecutor {
       return { isValid: true, errors: [], warnings: [] };
     }
 
-    return await validator.validate(command);
+    // Validator is typed for AnyCommand; cast command to satisfy signature
+    return await (validator as any).validate(command as AnyCommand);
   }
 
   /**
