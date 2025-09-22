@@ -296,13 +296,17 @@ export class ExportImportManager {
       this.validateProjectData(projectData);
 
       // Deserialize components
-      const components = projectData.components 
+      const allComponents = projectData.components 
         ? this.deserializeComponents(projectData.components)
         : [];
 
-      // Deserialize connections
+      // Filter out internal components that appear at the root level
+      // These should only exist inside their parent Module ICs
+      const mainLevelComponents = this.filterMainLevelComponents(allComponents);
+
+      // Deserialize connections using all components for reference resolution
       const connections = projectData.connections 
-        ? this.deserializeConnections(projectData.connections, components)
+        ? this.deserializeConnections(projectData.connections, allComponents)
         : [];
 
       // Update project metadata
@@ -313,12 +317,12 @@ export class ExportImportManager {
         this.projectVersion = projectData.version;
       }
 
-      // Emit import completion event with new project state
+      // Emit import completion event with filtered main-level components
       eventBus.emit(Events.PROJECT_IMPORTED, {
-        components,
+        components: mainLevelComponents,
         connections,
         projectData,
-        componentCount: components.length,
+        componentCount: mainLevelComponents.length,
         connectionCount: connections.length,
         timestamp: Date.now()
       });
@@ -447,6 +451,32 @@ export class ExportImportManager {
         };
       })
       .filter(conn => conn !== null) as Connection[];
+  }
+
+  /**
+   * Filter main-level components, removing any that should be internal to Module ICs
+   */
+  private filterMainLevelComponents(allComponents: ComponentBase[]): ComponentBase[] {
+    // Collect all IDs of components that should be internal
+    const internalComponentIds = new Set<string>();
+    
+    allComponents.forEach(component => {
+      if (component.type === 'module-ic') {
+        const moduleComponent = component as ModuleComponent;
+        if (moduleComponent.internalComponents) {
+          moduleComponent.internalComponents.forEach(internal => {
+            internalComponentIds.add(internal.id);
+          });
+        }
+      }
+    });
+
+    // Return only components that are not marked as internal
+    const mainComponents = allComponents.filter(comp => !internalComponentIds.has(comp.id));
+    
+    console.log(`🔧 Filtered components: ${allComponents.length} total → ${mainComponents.length} main-level (${internalComponentIds.size} internal)`);
+    
+    return mainComponents;
   }
 
   /**

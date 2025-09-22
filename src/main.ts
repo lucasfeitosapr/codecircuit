@@ -25,10 +25,13 @@ import ImplementationLayer from './rendering/layers/ImplementationLayer';
 import ConnectionsLayer from './rendering/layers/ConnectionsLayer';
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
-// Import plugins to ensure they're registered
-import './components/plugins/PowerCorePlugin';
-import './components/plugins/ModuleICPlugin';
-import './components/plugins/TaskResistorPlugin';
+
+// Import V2 plugins for event-driven architecture  
+import { DecisionPointPluginV2 } from './components/plugins/DecisionPointPluginV2';
+import { PowerCorePluginV2 } from './components/plugins/PowerCorePluginV2';
+import { ModuleICPluginV2 } from './components/plugins/ModuleICPluginV2'; 
+import { TaskResistorPluginV2 } from './components/plugins/TaskResistorPluginV2';
+import { ComponentRegistry, createComponentRegistry } from './components/ComponentRegistry';
 import type {
   ViewState,
   Camera,
@@ -73,6 +76,7 @@ export class MotherboardApp {
   connectionManager: ConnectionManager;
   componentLifecycleManager: ComponentLifecycleManager;
   inputEventCoordinator: InputEventCoordinator;
+  componentRegistry: ComponentRegistry;
 
   // Convenience getters for viewport properties
   get canvas(): HTMLCanvasElement {
@@ -137,52 +141,9 @@ export class MotherboardApp {
     };
     this.isTransitioning = false;
 
-    this.componentTypes = {
-      'power-core': {
-        name: 'Power Core',
-        icon: '✨',
-        color: '#ffaa00',
-        width: 80,
-        height: 40,
-        pins: { output: [{ x: 80, y: 20, type: 'energy' }] },
-      },
-      'module-ic': {
-        name: 'Module IC',
-        icon: '⬛',
-        color: '#4444ff',
-        width: 100,
-        height: 60,
-        pins: {
-          input: [{ x: 0, y: 30, type: 'energy' }],
-          output: [{ x: 100, y: 30, type: 'energy' }],
-        },
-      },
-      'task-resistor': {
-        name: 'Task Resistor',
-        icon: '▬▬',
-        color: '#ff4444',
-        width: 60,
-        height: 20,
-        pins: {
-          input: [{ x: 0, y: 10, type: 'energy' }],
-          output: [{ x: 60, y: 10, type: 'energy' }],
-        },
-      },
-      'decision-point': {
-        name: 'Decision Point',
-        icon: '◆',
-        color: '#4ECDC4',
-        width: 60,
-        height: 60,
-        pins: {
-          input: [{ x: 30, y: 0, type: 'input' }],
-          output: [
-            { x: 60, y: 30, type: 'success' },
-            { x: 0, y: 30, type: 'failure' }
-          ],
-        },
-      },
-    };
+    // ComponentTypes now populated automatically by plugin registration
+    // This eliminates the 5-file manual coordination problem!
+    this.componentTypes = {};
 
     this.categories = {
       frontend: { name: 'Frontend', color: '#00ff88' },
@@ -202,6 +163,9 @@ export class MotherboardApp {
     // Phase 5: Initialize managers that are needed during init()
     this.exportImportManager = new ExportImportManager();
     this.connectionManager = createConnectionManager(eventBus, this.categories);
+    
+    // Phase 5A: Initialize ComponentRegistry for event-driven plugin coordination
+    this.componentRegistry = createComponentRegistry(eventBus);
     
     // Phase 6C: Initialize ComponentLifecycleManager
     this.componentLifecycleManager = createComponentLifecycleManager(
@@ -247,6 +211,9 @@ export class MotherboardApp {
 
     // Phase 7A: Register Extended Component Plugins
     this.initializeExtendedComponents();
+    
+    // Phase 2A: Initialize V2 Plugin System (Event-Driven Architecture) 
+    this.setupPluginSystem();
 
     // Register layers (idempotent during app lifecycle)
     try {
@@ -419,6 +386,39 @@ export class MotherboardApp {
         });
       });
     }
+  }
+
+  setupPluginSystem() {
+    // Phase 5B: Event-driven plugin coordination
+    // Listen for plugin registrations to automatically update componentTypes
+    eventBus.on(Events.PLUGIN_REGISTERED, (payload: any) => {
+      const { pluginType, metadata } = payload;
+      
+      // Convert plugin metadata to componentType format
+      const componentType = {
+        name: metadata.displayName,
+        icon: metadata.icon,
+        color: metadata.color,
+        width: metadata.width || 60,
+        height: metadata.height || 40,
+        pins: metadata.pins || { input: [], output: [] }
+      };
+      
+      // Add to componentTypes (replacing manual coordination)
+      this.componentTypes[pluginType] = componentType;
+      
+      console.log(`✅ ComponentType auto-updated: ${metadata.displayName} (${pluginType})`);
+    });
+
+    // Register V2 plugins - single registration triggers all coordination
+    this.componentRegistry.register(new DecisionPointPluginV2());
+    this.componentRegistry.register(new PowerCorePluginV2());
+    this.componentRegistry.register(new ModuleICPluginV2());
+    this.componentRegistry.register(new TaskResistorPluginV2());
+
+    console.log('🚀 Event-driven plugin system initialized');
+    console.log('📊 ComponentTypes populated:', Object.keys(this.componentTypes));
+    console.log('🔧 V2 Plugins registered:', this.componentRegistry.getPluginTypes());
   }
 
   onMouseDown(e: MouseEvent) {
@@ -786,15 +786,35 @@ export class MotherboardApp {
       this.components = payload.components;
       this.connections = payload.connections;
       
-      // Update current view to reflect new components
-      this.currentView.components = this.components;
-      this.currentView.connections = this.connections;
+      // Separate main-level components from internal components
+      const mainComponents = payload.components.filter(comp => {
+        // Main components are those not contained within any Module IC
+        return !this.isComponentInternal(comp, payload.components);
+      });
+      
+      // Update current view to reflect only main-level components
+      this.currentView.components = mainComponents;
+      this.currentView.connections = this.connections.filter(conn => {
+        // Only include connections between main-level components
+        const fromMain = mainComponents.some(c => c.id === conn.from.component.id);
+        const toMain = mainComponents.some(c => c.id === conn.to.component.id);
+        return fromMain && toMain;
+      });
+      
+      // Ensure Module ICs have their internal components properly isolated
+      payload.components.forEach(component => {
+        if (component.type === 'module-ic' && component.internalComponents) {
+          // Internal components should NOT appear in main view
+          console.log(`📦 Module IC "${component.name}" has ${component.internalComponents.length} internal components`);
+        }
+      });
       
       // Reset camera and selection
       this.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
       this.selectedComponent = null;
       
       console.log(`✅ Project imported: ${payload.componentCount} components, ${payload.connectionCount} connections`);
+      console.log(`📍 Main view has ${mainComponents.length} components, ${this.currentView.connections.length} connections`);
     });
 
     // Handle import errors
@@ -928,10 +948,17 @@ export class MotherboardApp {
       connections: this.getCurrentViewConnections().filter(conn => conn && conn.from && conn.to).map((connection: Connection) => {
         const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
         const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
+        
+        // Defensive handling for pin definition mismatches during V2 integration
+        const fromX = connection.from.x ?? (connection.from.component.x + (fromPinDef?.x ?? 0));
+        const fromY = connection.from.y ?? (connection.from.component.y + (fromPinDef?.y ?? 0));
+        const toX = connection.to.x ?? (connection.to.component.x + (toPinDef?.x ?? 0));
+        const toY = connection.to.y ?? (connection.to.component.y + (toPinDef?.y ?? 0));
+        
         return {
           ...connection,
-          from: { ...connection.from, x: connection.from.x ?? (connection.from.component.x + (fromPinDef?.x ?? 0)), y: connection.from.y ?? (connection.from.component.y + (fromPinDef?.y ?? 0)), component: connection.from.component },
-          to: { ...connection.to, x: connection.to.x ?? (connection.to.component.x + (toPinDef?.x ?? 0)), y: connection.to.y ?? (connection.to.component.y + (toPinDef?.y ?? 0)), component: connection.to.component },
+          from: { ...connection.from, x: fromX, y: fromY, component: connection.from.component },
+          to: { ...connection.to, x: toX, y: toY, component: connection.to.component },
         } as Connection;
       }),
     });
@@ -1263,6 +1290,18 @@ export class MotherboardApp {
     } else {
       indicator.style.display = 'none';
     }
+  }
+
+  // Component Hierarchy Helper Methods
+  private isComponentInternal(component: ComponentBase, allComponents: ComponentBase[]): boolean {
+    // Check if this component is contained within any Module IC
+    return allComponents.some(containerComponent => {
+      if (containerComponent.type === 'module-ic') {
+        const moduleComponent = containerComponent as ModuleComponent;
+        return moduleComponent.internalComponents?.some(internal => internal.id === component.id) || false;
+      }
+      return false;
+    });
   }
 
   // Schematic View Navigation Methods
@@ -2264,7 +2303,9 @@ export class MotherboardApp {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
-  new MotherboardApp();
+  const app = new MotherboardApp();
+  // Make app globally accessible for debugging
+  (window as any).app = app;
   // Removed initialization logs to avoid console spam
 });
 
