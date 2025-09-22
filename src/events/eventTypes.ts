@@ -1,4 +1,10 @@
 export const Events = {
+  // Phase 1: Event-Driven Architecture Foundation
+  PLUGIN_REGISTERED: 'plugin:registered',
+  PLUGIN_UNREGISTERED: 'plugin:unregistered',
+  UI_PARTS_TRAY_UPDATE: 'ui:parts_tray_update',
+  UI_COMPONENT_TYPES_UPDATE: 'ui:component_types_update',
+  
   // Legacy events (Phase 1-4)
   ComponentCreated: 'component.created',
   ComponentUpdated: 'component.updated',
@@ -308,4 +314,47 @@ export interface ViewportCanvasSetupCompletedPayload {
   width: number;
   height: number;
   timestamp: number;
+}
+
+// Phase 1: Event-Driven Architecture Coordination Events
+export interface PluginMetadata {
+  displayName: string;
+  icon: string;
+  color: string;
+  category: string;
+  width?: number;
+  height?: number;
+  pins?: {
+    input?: Array<{ x: number; y: number; type: string; label?: string }>;
+    output?: Array<{ x: number; y: number; type: string; label?: string }>;
+  };
+}
+
+export interface PluginRegisteredPayload {
+  pluginType: string;
+  metadata: PluginMetadata;
+  timestamp: number;
+}
+
+export interface PluginUnregisteredPayload {
+  pluginType: string;
+  timestamp: number;
+}
+
+export interface UIPartsTrayUpdatePayload {
+  plugins: PluginMetadata[];
+  timestamp: number;
+}
+
+export interface UIComponentTypesUpdatePayload {
+  componentTypes: Record<string, any>;
+  timestamp: number;
+}
+
+// Phase 1: Component System Events Interface
+export interface ComponentSystemEvents {
+  [Events.PLUGIN_REGISTERED]: PluginRegisteredPayload;
+  [Events.PLUGIN_UNREGISTERED]: PluginUnregisteredPayload;
+  [Events.UI_PARTS_TRAY_UPDATE]: UIPartsTrayUpdatePayload;
+  [Events.UI_COMPONENT_TYPES_UPDATE]: UIComponentTypesUpdatePayload;
 }
