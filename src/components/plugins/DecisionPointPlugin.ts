@@ -177,6 +177,9 @@ export function renderDecisionPoint(
     canvasCtx.fillText(title, 0, -screenSize/2 - 8 * camera.zoom);
   }
   
+  // Render input and output pins
+  renderDecisionPointPins(canvasCtx, component, screenSize, camera.zoom);
+
   // Output indicators (only if there's enough space)
   if (screenSize > 40) {
     renderOutputIndicators(canvasCtx, component, screenSize, camera.zoom);
@@ -198,6 +201,47 @@ export function renderDecisionPoint(
   }
   
   canvasCtx.restore();
+}
+
+/**
+ * Renders input and output pins for the Decision Point
+ * Called within a transformed context where origin is at diamond center
+ */
+function renderDecisionPointPins(ctx: CanvasRenderingContext2D, component: DecisionPointComponent, screenSize: number, zoom: number = 1): void {
+  const pinSize = 4 * zoom;
+  const pinColor = '#4ECDC4'; // Teal color matching the Decision Point
+  const originalSize = screenSize / zoom; // Get original component size
+  
+  ctx.fillStyle = pinColor;
+  ctx.shadowColor = pinColor;
+  ctx.shadowBlur = 6 * zoom;
+  
+  // Input pin at top (center) - coordinates relative to diamond center
+  if (component.pins?.input?.[0]) {
+    const inputPin = component.pins.input[0];
+    // Convert from component coordinates to centered coordinates
+    const pinX = (inputPin.x - originalSize/2) * zoom;
+    const pinY = (inputPin.y - originalSize/2) * zoom;
+    
+    ctx.beginPath();
+    ctx.arc(pinX, pinY, pinSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Output pins at left and right - coordinates relative to diamond center
+  if (component.pins?.output) {
+    component.pins.output.forEach((pin, index) => {
+      // Convert from component coordinates to centered coordinates
+      const pinX = (pin.x - originalSize/2) * zoom;
+      const pinY = (pin.y - originalSize/2) * zoom;
+      
+      ctx.beginPath();
+      ctx.arc(pinX, pinY, pinSize, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  
+  ctx.shadowBlur = 0;
 }
 
 /**

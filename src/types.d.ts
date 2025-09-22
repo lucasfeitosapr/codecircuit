@@ -1,5 +1,15 @@
 // src/types.d.ts
-// Consolidated shared types for runtime and persistence.
+// Consolidated types for runtime and persistence.
+
+export interface PinRef {
+  component: ComponentBase;
+  pinType: 'input' | 'output' | string; // Allow custom pin types like 'success', 'failure'
+  pinIndex: number;
+  x: number;
+  y: number;
+  category?: string;
+  isInputPin?: boolean; // Track which array the pin came from (for accurate classification)
+};
 
 export type Camera = {
   x: number;
@@ -17,17 +27,7 @@ export type PinDef = {
 // Serialized pin reference (used for export/import)
 export type PinSerialized = {
   componentId: string;
-  pinType: 'input' | 'output';
-  pinIndex: number;
-  x: number;
-  y: number;
-  category?: string;
-};
-
-// Runtime pin reference (live object reference)
-export type PinRef = {
-  component: ComponentBase;
-  pinType: 'input' | 'output';
+  pinType: 'input' | 'output' | string;
   pinIndex: number;
   x: number;
   y: number;

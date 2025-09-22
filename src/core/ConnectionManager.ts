@@ -93,18 +93,29 @@ export class ConnectionManager {
       if (component.pins.input) {
         for (let i = 0; i < component.pins.input.length; i++) {
           const pin = component.pins.input[i];
-          const pinX = component.x + pin.x;
-          const pinY = component.y + pin.y;
+          let pinX = component.x + pin.x;
+          let pinY = component.y + pin.y;
+          
+          // Special handling for Decision Point - match rendering coordinate system
+          if (component.type === 'decision-point') {
+            // Decision Point renders from center, so pin coordinates need adjustment
+            const centerX = component.x + component.width/2;
+            const centerY = component.y + component.height/2;
+            pinX = centerX + (pin.x - component.width/2);
+            pinY = centerY + (pin.y - component.height/2);
+          }
+          
           const distance = Math.sqrt((x - pinX) ** 2 + (y - pinY) ** 2);
 
           if (distance < pinRadius) {
             const pinHit: PinHit = {
               component: component,
-              pinType: 'input',
+              pinType: pin.type || 'input', // Use actual pin type, fallback to 'input'
               pinIndex: i,
               x: pinX,
               y: pinY,
               category: component.category || 'frontend',
+              isInputPin: true, // Mark that this came from input array
             };
             
             // Emit pin interaction event
@@ -123,18 +134,29 @@ export class ConnectionManager {
       if (component.pins.output) {
         for (let i = 0; i < component.pins.output.length; i++) {
           const pin = component.pins.output[i];
-          const pinX = component.x + pin.x;
-          const pinY = component.y + pin.y;
+          let pinX = component.x + pin.x;
+          let pinY = component.y + pin.y;
+          
+          // Special handling for Decision Point - match rendering coordinate system
+          if (component.type === 'decision-point') {
+            // Decision Point renders from center, so pin coordinates need adjustment
+            const centerX = component.x + component.width/2;
+            const centerY = component.y + component.height/2;
+            pinX = centerX + (pin.x - component.width/2);
+            pinY = centerY + (pin.y - component.height/2);
+          }
+          
           const distance = Math.sqrt((x - pinX) ** 2 + (y - pinY) ** 2);
 
           if (distance < pinRadius) {
             const pinHit: PinHit = {
               component: component,
-              pinType: 'output',
+              pinType: pin.type || 'output', // Use actual pin type, fallback to 'output'
               pinIndex: i,
               x: pinX,
               y: pinY,
               category: component.category || 'frontend',
+              isInputPin: false, // Mark that this came from output array
             };
             
             // Emit pin interaction event
@@ -246,13 +268,21 @@ export class ConnectionManager {
       };
     }
 
-    // Cannot connect pins of the same type
-    if (startPin.pinType === endPin.pinType) {
+    // Check logical pin compatibility (output-to-input connections)
+    const startIsOutput = this.isOutputPin(startPin);
+    const endIsInput = this.isInputPin(endPin);
+    const startIsInput = this.isInputPin(startPin);
+    const endIsOutput = this.isOutputPin(endPin);
+
+    // Allow output-to-input connections (including custom types like success/failure to input)
+    const isValidConnection = (startIsOutput && endIsInput) || (startIsInput && endIsOutput);
+    
+    if (!isValidConnection) {
       return {
         startPin,
         endPin,
         isValid: false,
-        reason: 'Cannot connect pins of the same type',
+        reason: 'Can only connect output pins to input pins',
         timestamp
       };
     }
@@ -286,9 +316,9 @@ export class ConnectionManager {
       return null;
     }
 
-    // Ensure output to input connection
+    // Ensure output to input connection using proper classification
     let outputPin: PinHit, inputPin: PinHit;
-    if (startPin.pinType === 'output') {
+    if (this.isOutputPin(startPin)) {
       outputPin = startPin;
       inputPin = endPin;
     } else {
@@ -312,9 +342,9 @@ export class ConnectionManager {
    * Find existing connection between two pins
    */
   findConnection(startPin: PinHit, endPin: PinHit): Connection | null {
-    // Normalize to output->input order
+    // Normalize to output->input order using proper classification
     let outputPin: PinHit, inputPin: PinHit;
-    if (startPin.pinType === 'output') {
+    if (this.isOutputPin(startPin)) {
       outputPin = startPin;
       inputPin = endPin;
     } else {
@@ -529,6 +559,37 @@ export class ConnectionManager {
 
   private generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  /**
+   * Check if a pin is logically an input pin (accepts connections)
+   */
+  private isInputPin(pin: PinHit): boolean {
+    // Use the reliable flag set by getPinAt() to determine which array the pin came from
+    if (pin.isInputPin !== undefined) {
+      return pin.isInputPin;
+    }
+    
+    // Fallback for older code that doesn't set the flag
+    return pin.pinType === 'input';
+  }
+
+  /**
+   * Check if a pin is logically an output pin (provides connections)
+   */
+  private isOutputPin(pin: PinHit): boolean {
+    // Custom pin types that act as outputs (Decision Point success/failure)
+    if (pin.pinType === 'success' || pin.pinType === 'failure') {
+      return true;
+    }
+    
+    // Use the reliable flag set by getPinAt() to determine which array the pin came from
+    if (pin.isInputPin !== undefined) {
+      return !pin.isInputPin; // Output pins have isInputPin: false
+    }
+    
+    // Fallback for older code that doesn't set the flag
+    return pin.pinType === 'output';
   }
 }
 

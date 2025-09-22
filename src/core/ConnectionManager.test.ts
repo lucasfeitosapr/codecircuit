@@ -84,7 +84,7 @@ describe('ConnectionManager', () => {
       const outputPin = connectionManager.getPinAt(180, 120, mockComponents); // comp1 output pin
       expect(outputPin).not.toBeNull();
       expect(outputPin?.component.id).toBe('comp1');
-      expect(outputPin?.pinType).toBe('output');
+      expect(outputPin?.pinType).toBe('energy'); // Now uses actual pin type from component
       expect(outputPin?.pinIndex).toBe(0);
       expect(outputPin?.category).toBe('backend');
     });
@@ -94,7 +94,7 @@ describe('ConnectionManager', () => {
       const inputPin = connectionManager.getPinAt(200, 180, mockComponents); // comp2 input pin
       expect(inputPin).not.toBeNull();
       expect(inputPin?.component.id).toBe('comp2');
-      expect(inputPin?.pinType).toBe('input');
+      expect(inputPin?.pinType).toBe('energy'); // Now uses actual pin type from component
       expect(inputPin?.pinIndex).toBe(0);
       expect(inputPin?.category).toBe('frontend');
     });
@@ -264,7 +264,7 @@ describe('ConnectionManager', () => {
       const validation = connectionManager.validateConnection(outputPin, anotherOutputPin);
       
       expect(validation.isValid).toBe(false);
-      expect(validation.reason).toBe('Cannot connect pins of the same type');
+      expect(validation.reason).toBe('Can only connect output pins to input pins'); // Updated message
     });
 
     it('should reject duplicate connection', () => {

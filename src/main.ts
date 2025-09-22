@@ -312,13 +312,13 @@ export class MotherboardApp {
   }
 
   initializeMainView() {
-    // Set up the main board view
+    // Set up the main board view with defensive array copying
     this.currentView = {
       type: 'main',
       component: null,
       camera: { x: 0, y: 0, zoom: 1 },
-      components: this.components,
-      connections: [], // Will be managed by ConnectionManager
+      components: [...this.components], // Create defensive copy to prevent reference issues
+      connections: [...this.connections], // Create defensive copy
     };
     this.updateBreadcrumbs();
   }
@@ -446,6 +446,12 @@ export class MotherboardApp {
     const component = this.componentLifecycleManager.createComponent(type, x, y, this.currentView);
     
     if (component) {
+      // For main view, also sync with global arrays to maintain backward compatibility
+      // Only if currentView.components is not the same reference as this.components
+      if (this.currentView.type === 'main' && this.currentView.components !== this.components) {
+        this.components.push(component);
+      }
+      
       this.selectedComponent = component;
       this.showDatasheet(component);
     }
@@ -836,7 +842,22 @@ export class MotherboardApp {
 
     // Handle successful connection creation
     eventBus.on(Events.ConnectionCreated, (payload: any) => {
-      // Connection already added to main array by createConnection method
+      // Add connection to main array if not already there (for drag-and-drop connections)
+      if (payload.connection && !this.connections.find(c => c.id === payload.connection.id)) {
+        this.connections.push(payload.connection);
+        console.log('✅ Connection added to main array:', payload.connection.id);
+      }
+      
+      // Add connection to current view if not main view
+      if (payload.connection && this.currentView.type !== 'main') {
+        if (!this.currentView.connections) {
+          this.currentView.connections = [];
+        }
+        if (!this.currentView.connections.find(c => c.id === payload.connection.id)) {
+          this.currentView.connections.push(payload.connection);
+          console.log('✅ Connection added to schematic view:', payload.connection.id);
+        }
+      }
       
       // Add runtime effects for new connection
       const categoryColor = this.categories[payload.type ?? 'frontend']?.color || '#00ff88';
@@ -1248,12 +1269,15 @@ export class MotherboardApp {
   enterSchematicView(moduleComponent: ModuleComponent) {
     if (this.isTransitioning) return;
 
-    // Save current view state
+    // Save current view state with proper array copying
     const currentViewState = {
       type: this.currentView.type,
       component: this.currentView.component,
       camera: { ...this.camera },
       selectedComponent: this.selectedComponent,
+      // Create defensive copies to prevent reference issues
+      components: [...this.currentView.components],
+      connections: [...this.currentView.connections],
     };
     this.viewStack.push(currentViewState);
 
@@ -1274,8 +1298,9 @@ export class MotherboardApp {
         type: 'schematic',
         component: moduleComponent,
         camera: { x: 0, y: 0, zoom: 1 },
-        components: moduleComponent.internalComponents ?? [],
-        connections: moduleComponent.internalConnections ?? [],
+        // Create defensive copies to prevent contamination
+        components: [...(moduleComponent.internalComponents ?? [])],
+        connections: [...(moduleComponent.internalConnections ?? [])],
       };
 
       // Update camera to schematic view
@@ -1288,7 +1313,7 @@ export class MotherboardApp {
   exitSchematicView() {
     if (this.isTransitioning || this.viewStack.size() === 0) return;
 
-    // Save current schematic state
+    // Save current schematic state to the component's internal structure
     if (this.currentView.type === 'schematic' && this.currentView.component) {
       this.currentView.component.internalComponents = [...this.currentView.components];
       this.currentView.component.internalConnections = [...this.currentView.connections];
@@ -1307,19 +1332,24 @@ export class MotherboardApp {
     this.selectedComponent = null;
 
     this.animateToMainView(previousView.camera, () => {
+      // Restore the previous view with proper array isolation
       this.currentView = {
         type: previousView.type,
         component: previousView.component,
         camera: { ...previousView.camera },
-        components:
-          previousView.type === 'main'
-            ? this.components
-            : previousView.component?.internalComponents ?? [],
-        connections:
-          previousView.type === 'main'
-            ? this.connections
-            : previousView.component?.internalConnections ?? [],
+        components: [...(previousView.components || [])], // Use saved components from viewStack
+        connections: [...(previousView.connections || [])], // Use saved connections from viewStack
       };
+
+      // For main view, also sync with global arrays to maintain backward compatibility
+      if (previousView.type === 'main') {
+        // Restore global arrays from the saved state
+        this.components.length = 0; // Clear existing
+        this.components.push(...this.currentView.components);
+        
+        this.connections.length = 0; // Clear existing  
+        this.connections.push(...this.currentView.connections);
+      }
 
       this.viewportManager.setCamera({ ...previousView.camera });
       this.selectedComponent = previousView.selectedComponent;
