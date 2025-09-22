@@ -29,6 +29,7 @@ import ConnectionsLayer from './rendering/layers/ConnectionsLayer';
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
 import { ProjectSerializer } from './utils/ProjectSerializer';
+import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
 
 // Import V2 plugins for event-driven architecture  
 import { DecisionPointPluginV2 } from './components/plugins/DecisionPointPluginV2';
@@ -799,134 +800,61 @@ export class MotherboardApp {
     });
   }
 
+  // Helper method to create renderer context
+  private getRendererContext(): LegacyRendererContext {
+    return {
+      ctx: this.ctx,
+      canvas: this.canvas,
+      camera: this.camera,
+      categories: this.categories,
+      selectedComponent: this.selectedComponent,
+      currentView: this.currentView,
+      connectionManager: this.connectionManager,
+      inputEventCoordinator: this.inputEventCoordinator,
+      isTransitioning: this.isTransitioning,
+      getCurrentViewComponents: () => this.getCurrentViewComponents(),
+      getCurrentViewConnections: () => this.getCurrentViewConnections()
+    };
+  }
+
+  // Delegated drawing methods (extracted to LegacyRenderer)
   drawGrid() {
-    // delegate to renderer helper
-    rendererDrawGrid(this.ctx, this.camera, this.canvas);
+    LegacyRenderer.drawGrid(this.getRendererContext());
   }
 
   drawSchematicBackground() {
-    // delegate to renderer helper
-    rendererDrawSchematicBackground(this.ctx, this.camera, this.canvas);
+    LegacyRenderer.drawSchematicBackground(this.getRendererContext());
   }
 
   drawTransitionOverlay() {
-    // Simple overlay during transitions
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    this.ctx.fillRect(
-      0,
-      0,
-      this.canvas.width / window.devicePixelRatio,
-      this.canvas.height / window.devicePixelRatio
-    );
+    LegacyRenderer.drawTransitionOverlay(this.getRendererContext());
   }
 
   drawComponent(component: ComponentBase) {
-    // Delegate to the extracted component renderer helper
-    renderComponentWrapper(this.ctx, this.camera, this, component);
+    LegacyRenderer.drawComponent(this.getRendererContext(), component);
   }
 
 
 
   render() {
-    // Debug: Check if render is being called during component drag
-    if (this.inputEventCoordinator.getInteractionState().isDragging) {
-      console.log('🖼️ Main render() called during drag');
-    }
-    
-    // Use LayeredRenderer (feature-flagged) or fallback to legacy drawing
-    if (isNewRendererEnabled()) {
-      try {
-        const visibleModels = this.getCurrentViewComponents();
-        // precompute simple connection pin positions for ConnectionsLayer
-        const visibleConnections = this.getCurrentViewConnections().map((connection: Connection) => {
-          const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
-          const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
-          const fromX = (connection.from.component.x + (fromPinDef?.x ?? 0));
-          const fromY = (connection.from.component.y + (fromPinDef?.y ?? 0));
-          const toX = (connection.to.component.x + (toPinDef?.x ?? 0));
-          const toY = (connection.to.component.y + (toPinDef?.y ?? 0));
-          return {
-            ...connection,
-            from: { ...connection.from, x: fromX, y: fromY, component: connection.from.component },
-            to: { ...connection.to, x: toX, y: toY, component: connection.to.component },
-          };
-        });
-
-        layeredRenderer.render(this.ctx, { 
-          timestamp: performance.now(), 
-          camera: this.camera,
-          payload: { 
-            models: visibleModels, 
-            connections: visibleConnections, 
-            categories: this.categories, 
-            selectedComponentId: this.selectedComponent?.id ?? null,
-            viewType: this.currentView.type,
-            isConnecting: this.connectionManager.getConnectionState().isConnecting,
-            connectionStart: this.connectionManager.getConnectionState().connectionStart,
-            mousePos: this.inputEventCoordinator.getMousePosition()
-          } 
-        });
-        return;
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('LayeredRenderer render failed, falling back to legacy renderer', e);
-      }
-    }
-
-    // Legacy render path (unchanged behaviour)
-    // Clear canvas
-    this.ctx.clearRect(
-      0,
-      0,
-      this.canvas.width / window.devicePixelRatio,
-      this.canvas.height / window.devicePixelRatio
-    );
-
-    // Draw different background for schematic view
-    if (this.currentView.type === 'schematic') {
-      this.drawSchematicBackground();
-    } else {
-      this.drawGrid();
-    }
-
-    // Draw connections
-    this.drawConnections();
-
-    // Draw temporary connection line
-    const connectionState = this.connectionManager.getConnectionState();
-    if (connectionState.isConnecting && connectionState.connectionStart) {
-      this.drawTempConnection();
-    }
-
-    // Draw components from current view
-    const components = this.getCurrentViewComponents();
-    components.forEach((component: ComponentBase) => {
-      this.drawComponent(component);
-    });
-
-    // Draw transition overlay if transitioning
-    if (this.isTransitioning) {
-      this.drawTransitionOverlay();
-    }
+    // Delegate all rendering to the extracted LegacyRenderer module
+    LegacyRenderer.render(this.getRendererContext());
   }
 
   drawConnections() {
-    const connections = this.getCurrentViewConnections();
-    rendererHelpers.drawConnections(this, connections);
+    LegacyRenderer.drawConnections(this.getRendererContext());
   }
 
-  // Intention (dashed) trace rendering for DEFINED components
   drawIntentionTrace(fromX: number, fromY: number, toX: number, toY: number) {
-    rendererHelpers.drawIntentionTrace(this, fromX, fromY, toX, toY);
+    LegacyRenderer.drawIntentionTrace(this.getRendererContext(), fromX, fromY, toX, toY);
   }
 
   drawTempConnection() {
-    rendererHelpers.drawTempConnection(this);
+    LegacyRenderer.drawTempConnection(this.getRendererContext());
   }
 
   drawOrthogonalTrace(fromX: number, fromY: number, toX: number, toY: number) {
-    // delegate to renderer helper
-    rendererDrawOrthogonalTrace(this.ctx, fromX, fromY, toX, toY);
+    LegacyRenderer.drawOrthogonalTrace(this.getRendererContext(), fromX, fromY, toX, toY);
   }
 
   drawTraceBackground(
@@ -937,7 +865,7 @@ export class MotherboardApp {
     color: string,
     isActive: boolean
   ) {
-    rendererHelpers.drawTraceBackground(this, fromX, fromY, toX, toY, color, isActive);
+    LegacyRenderer.drawTraceBackground(this.getRendererContext(), fromX, fromY, toX, toY, color, isActive);
   }
 
   drawActiveTrace(
@@ -948,7 +876,7 @@ export class MotherboardApp {
     color: string,
     isPowered: boolean
   ) {
-    rendererHelpers.drawActiveTrace(this, fromX, fromY, toX, toY, color, isPowered);
+    LegacyRenderer.drawActiveTrace(this.getRendererContext(), fromX, fromY, toX, toY, color, isPowered);
   }
 
   drawDataFlow(
@@ -960,7 +888,7 @@ export class MotherboardApp {
     color: string,
     isPowered: boolean
   ) {
-    rendererHelpers.drawDataFlow(this, connection, fromX, fromY, toX, toY, color, isPowered);
+    LegacyRenderer.drawDataFlow(this.getRendererContext(), connection, fromX, fromY, toX, toY, color, isPowered);
   }
 
   getPointOnPath(points: { x: number; y: number }[], ratio: number) {
