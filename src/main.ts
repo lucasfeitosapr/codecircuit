@@ -18,6 +18,8 @@ import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } fr
 import { layeredRenderer } from './rendering/LayeredRenderer';
 import { renderComponent } from './rendering/ImplementationHelpers';
 import { isNewRendererEnabled } from './config/featureFlags';
+import { componentSystem } from './components/ComponentSystem';
+import { DecisionPointPlugin } from './components/plugins/DecisionPointPlugin';
 import BackgroundLayer from './rendering/layers/BackgroundLayer';
 import ImplementationLayer from './rendering/layers/ImplementationLayer';
 import ConnectionsLayer from './rendering/layers/ConnectionsLayer';
@@ -166,6 +168,20 @@ export class MotherboardApp {
           output: [{ x: 60, y: 10, type: 'energy' }],
         },
       },
+      'decision-point': {
+        name: 'Decision Point',
+        icon: '◆',
+        color: '#4ECDC4',
+        width: 60,
+        height: 60,
+        pins: {
+          input: [{ x: 30, y: 0, type: 'input' }],
+          output: [
+            { x: 60, y: 30, type: 'success' },
+            { x: 0, y: 30, type: 'failure' }
+          ],
+        },
+      },
     };
 
     this.categories = {
@@ -228,6 +244,9 @@ export class MotherboardApp {
 
     this.init();
     this.initializeMainView();
+
+    // Phase 7A: Register Extended Component Plugins
+    this.initializeExtendedComponents();
 
     // Register layers (idempotent during app lifecycle)
     try {
@@ -302,6 +321,30 @@ export class MotherboardApp {
       connections: [], // Will be managed by ConnectionManager
     };
     this.updateBreadcrumbs();
+  }
+
+  /**
+   * Phase 7A: Initialize Extended Component System
+   * Registers all extended component plugins for professional architecture visualization
+   */
+  initializeExtendedComponents() {
+    try {
+      // Register Decision Point ◆ plugin (idempotent)
+      if (!componentSystem.get('decision-point')) {
+        componentSystem.register(DecisionPointPlugin);
+      }
+      
+      console.log('✅ Phase 7A: Extended Components initialized successfully');
+      console.log(`   - Decision Point ◆ registered`);
+      
+      // Emit event for UI updates
+      eventBus.emit(Events.EXTENDED_COMPONENTS_INITIALIZED, {
+        plugins: componentSystem.list().map(p => ({ id: p.id, displayName: p.displayName }))
+      });
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize extended components:', error);
+    }
   }
 
   init() {
@@ -876,6 +919,11 @@ export class MotherboardApp {
 
 
   render() {
+    // Debug: Check if render is being called during component drag
+    if (this.inputEventCoordinator.getInteractionState().isDragging) {
+      console.log('🖼️ Main render() called during drag');
+    }
+    
     // Use LayeredRenderer (feature-flagged) or fallback to legacy drawing
     if (isNewRendererEnabled()) {
       try {

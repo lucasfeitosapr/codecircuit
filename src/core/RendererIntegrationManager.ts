@@ -44,6 +44,9 @@ export class RendererIntegrationManager {
     eventBus.on(Events.ConnectionCreated, this.listeners.requestRender);
     eventBus.on(Events.ConnectionUpdated, this.listeners.requestRender);
     eventBus.on(Events.VIEWPORT_CAMERA_UPDATED, this.listeners.requestRender);
+    
+    eventBus.on(Events.COMPONENT_DRAG_UPDATED, this.listeners.requestRender);
+    eventBus.on(Events.COMPONENT_DRAG_COMPLETED, this.listeners.requestRender);
   }
 
   /**

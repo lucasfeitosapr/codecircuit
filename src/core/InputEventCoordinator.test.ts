@@ -31,8 +31,8 @@ describe('InputEventCoordinator', () => {
       // Canvas and viewport
       canvas: canvas,
       viewportManager: {
+        camera: { x: 0, y: 0, zoom: 1 },
         screenToWorld: vi.fn().mockReturnValue({ x: 100, y: 100 }),
-        getCamera: vi.fn().mockReturnValue({ x: 0, y: 0, zoom: 1 }),
         setCamera: vi.fn(),
         handleWheelEvent: vi.fn()
       },
@@ -87,6 +87,9 @@ describe('InputEventCoordinator', () => {
       // Component types and state
       components: [],
       connections: []
+      ,
+      // Component lifecycle manager stub
+      componentLifecycleManager: { createComponent: vi.fn() }
     };
 
     coordinator = new InputEventCoordinator(mockDependencies);
@@ -105,9 +108,22 @@ describe('InputEventCoordinator', () => {
       expect(coordinator).toBeInstanceOf(InputEventCoordinator);
     });
 
-    it('should setup input listeners via inputHandler', async () => {
-      const inputHandlerModule = await import('../inputHandler');
-      expect(inputHandlerModule.setupInputListeners).toHaveBeenCalled();
+    it('should setup event listeners during construction', () => {
+      // Verify that constructor completed successfully, which means setupEventListeners was called
+      expect(coordinator).toBeInstanceOf(InputEventCoordinator);
+      
+      // Verify keyboard event listener was added (we can spy on addEventListener)
+      const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+      
+      // Create a new coordinator to test the setup process
+      const newCoordinator = new InputEventCoordinator(mockDependencies);
+      
+      // Should have added keydown event listener
+      expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
+      
+      // Cleanup
+      newCoordinator.destroy();
+      addEventListenerSpy.mockRestore();
     });
 
     it('should setup keyboard event listener', () => {
@@ -291,6 +307,86 @@ describe('InputEventCoordinator', () => {
       
       expect(consoleSpy).toHaveBeenCalledWith('❌ Import error:', 'Test error');
       expect(alertSpy).toHaveBeenCalledWith('Import Error: Test error');
+    });
+  });
+
+  describe('Component Dragging', () => {
+    it('should emit COMPONENT_DRAG_UPDATED event during drag', () => {
+      const emitSpy = vi.spyOn(eventBus, 'emit');
+      
+      // Create a mock component
+      const component = { 
+        id: 'test-component',
+        type: 'task-resistor', 
+        x: 100, 
+        y: 100, 
+        width: 60, 
+        height: 20, 
+        pins: { input: [], output: [] } 
+      };
+      
+      // Set up component selection and dragging state
+      mockDependencies.getComponentAt = vi.fn().mockReturnValue(component);
+      mockDependencies.selectedComponent = component;
+      
+      // Simulate mouse down to start dragging
+      const mouseDownEvent = new MouseEvent('mousedown', { clientX: 150, clientY: 120, button: 0 });
+      coordinator.handleMouseDown(mouseDownEvent);
+      
+      // Verify dragging state is set
+      expect(coordinator.getInteractionState().isDragging).toBe(true);
+      
+      // Simulate mouse move while dragging
+      const mouseMoveEvent = new MouseEvent('mousemove', { clientX: 160, clientY: 130 });
+      coordinator.handleMouseMove(mouseMoveEvent);
+      
+      // Verify COMPONENT_DRAG_UPDATED event was emitted
+      expect(emitSpy).toHaveBeenCalledWith(Events.COMPONENT_DRAG_UPDATED, {
+        componentId: 'test-component',
+        x: expect.any(Number),
+        y: expect.any(Number),
+        timestamp: expect.any(Number)
+      });
+    });
+
+    it('should emit COMPONENT_DRAG_COMPLETED event on mouse up', () => {
+      const emitSpy = vi.spyOn(eventBus, 'emit');
+      
+      // Create a mock component
+      const component = { 
+        id: 'test-component-2',
+        type: 'task-resistor', 
+        x: 100, 
+        y: 100, 
+        width: 60, 
+        height: 20, 
+        pins: { input: [], output: [] } 
+      };
+      
+      // Set up component selection and ensure getComponentAt returns the component
+      mockDependencies.getComponentAt = vi.fn().mockReturnValue(component);
+      mockDependencies.selectedComponent = component;
+      
+      // Simulate mouse down to start dragging
+      const mouseDownEvent = new MouseEvent('mousedown', { clientX: 150, clientY: 120, button: 0 });
+      coordinator.handleMouseDown(mouseDownEvent);
+      
+      // Clear the emit spy to focus on the mouse up event
+      emitSpy.mockClear();
+      
+      // Simulate mouse up to end dragging
+      coordinator.handleMouseUp();
+      
+      // Verify COMPONENT_DRAG_COMPLETED event was emitted
+      expect(emitSpy).toHaveBeenCalledWith(Events.COMPONENT_DRAG_COMPLETED, {
+        componentId: 'test-component-2',
+        x: expect.any(Number),
+        y: expect.any(Number),
+        timestamp: expect.any(Number)
+      });
+      
+      // Verify dragging state is cleared
+      expect(coordinator.getInteractionState().isDragging).toBe(false);
     });
   });
 

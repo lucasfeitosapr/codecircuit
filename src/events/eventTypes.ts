@@ -62,6 +62,10 @@ export const Events = {
   // Phase 6 Renderer Integration Events
   RENDER_FRAME_COMPLETE: 'render.frame.complete',
   RENDER_ERROR: 'render.error',
+  
+  // Phase 7 Extended Component Events
+  EXTENDED_COMPONENTS_INITIALIZED: 'extended.components.initialized',
+  DECISION_EVALUATED: 'decision.evaluated',
 } as const;
 
 export type EventName = typeof Events[keyof typeof Events];

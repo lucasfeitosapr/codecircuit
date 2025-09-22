@@ -73,6 +73,7 @@ export class InputEventCoordinator {
   private isPanning: boolean = false;
   private dragOffset: { x: number; y: number } = { x: 0, y: 0 };
   private panStart: { x: number; y: number } = { x: 0, y: 0 };
+  private draggedComponent: ComponentBase | null = null; // Store dragged component locally
   
   // Event listeners for cleanup
   private eventListeners: Array<{ element: EventTarget; event: string; handler: EventListener }> = [];
@@ -298,8 +299,10 @@ export class InputEventCoordinator {
 
     if (e.button === 2) {
       // Right click - panning
-      this.isPanning = true;
-      this.panStart = { x: e.clientX - this.dependencies.viewportManager.getCamera().x, y: e.clientY - this.dependencies.viewportManager.getCamera().y };
+  this.isPanning = true;
+  // ViewportManager exposes the current camera via the `camera` property
+  const cameraForPan = (this.dependencies.viewportManager as any).camera;
+  this.panStart = { x: e.clientX - cameraForPan.x, y: e.clientY - cameraForPan.y };
       this.dependencies.canvas.style.cursor = 'grabbing';
       return;
     }
@@ -349,6 +352,7 @@ export class InputEventCoordinator {
         this.dependencies.setSelectedComponent(clickedComponent);
         this.dependencies.showDatasheet(clickedComponent);
         this.isDragging = true;
+        this.draggedComponent = clickedComponent; // Store locally for dragging
         this.dragOffset = {
           x: mouseX - clickedComponent.x,
           y: mouseY - clickedComponent.y,
@@ -386,12 +390,12 @@ export class InputEventCoordinator {
     });
     const mouseX = worldCoord.x;
     const mouseY = worldCoord.y;
-    
     // Update mouse position for connection intents
     this.mousePos = { x: mouseX, y: mouseY };
     
     if (this.isPanning) {
-      const camera = this.dependencies.viewportManager.getCamera();
+  // Access current camera from viewportManager.camera
+  const camera = (this.dependencies.viewportManager as any).camera;
       const newCameraX = e.clientX - this.panStart.x;
       const newCameraY = e.clientY - this.panStart.y;
       this.dependencies.viewportManager.setCamera({ 
@@ -402,15 +406,23 @@ export class InputEventCoordinator {
       return;
     }
 
-    const selectedComponent = this.dependencies.selectedComponent;
-    if (this.isDragging && selectedComponent) {
-      selectedComponent.x = mouseX - this.dragOffset.x;
-      selectedComponent.y = mouseY - this.dragOffset.y;
+    // Use locally stored dragged component instead of dependencies.selectedComponent
+    if (this.isDragging && this.draggedComponent) {
+      this.draggedComponent.x = mouseX - this.dragOffset.x;
+      this.draggedComponent.y = mouseY - this.dragOffset.y;
+      
+      // Emit drag update event
+      eventBus.emit(Events.COMPONENT_DRAG_UPDATED, {
+        componentId: this.draggedComponent.id,
+        x: this.draggedComponent.x,
+        y: this.draggedComponent.y,
+        timestamp: Date.now()
+      });
       
       // Update selection box position
       this.dependencies.uiLayer.clearSelectionBoxes();
-      this.dependencies.uiLayer.addSelectionBox(selectedComponent, 'single');
-      this.dependencies.uiLayer.addAlignmentGuides(selectedComponent, this.dependencies.getCurrentViewComponents());
+      this.dependencies.uiLayer.addSelectionBox(this.draggedComponent, 'single');
+      this.dependencies.uiLayer.addAlignmentGuides(this.draggedComponent, this.dependencies.getCurrentViewComponents());
     }
     
     // Update connection intent if connecting
@@ -437,7 +449,19 @@ export class InputEventCoordinator {
       this.isPanning = false;
       this.dependencies.canvas.style.cursor = 'grab';
     }
+    
+    // Emit drag completed event if we were dragging
+    if (this.isDragging && this.draggedComponent) {
+      eventBus.emit(Events.COMPONENT_DRAG_COMPLETED, {
+        componentId: this.draggedComponent.id,
+        x: this.draggedComponent.x,
+        y: this.draggedComponent.y,
+        timestamp: Date.now()
+      });
+    }
+    
     this.isDragging = false;
+    this.draggedComponent = null; // Clear local drag state
   }
   
   /**

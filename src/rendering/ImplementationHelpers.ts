@@ -1,4 +1,5 @@
 import { hexToRgb } from '../utils';
+import { componentSystem } from '../components/ComponentSystem';
 
 export type RenderOptions = {
   camera: any;
@@ -13,6 +14,18 @@ export function renderComponent(
   component: any,
   options: RenderOptions
 ) {
+  // Check if there's a plugin renderer for this component type
+  const plugin = componentSystem.get(component.type);
+  if (plugin && plugin.render) {
+    try {
+      plugin.render(c, frame, component);
+      return;
+    } catch (error) {
+      console.warn(`Plugin renderer failed for ${component.type}:`, error);
+      // Fall back to default renderer
+    }
+  }
+
   const camera = options.camera ?? { x: 0, y: 0, zoom: 1 };
   const selectedComponentId = options.selectedComponentId ?? null;
   const connections = options.connections ?? [];
