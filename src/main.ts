@@ -9,6 +9,7 @@ import { ComponentLifecycleManager, createComponentLifecycleManager } from './co
 import { InputEventCoordinator, createInputEventCoordinator } from './core/InputEventCoordinator';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from './utils';
 import * as rendererHelpers from './ui/rendererHelpers';
+import * as cameraTransitions from './ui/cameraTransitions';
 import {
   drawGrid as rendererDrawGrid,
   drawSchematicBackground as rendererDrawSchematicBackground,
@@ -1279,61 +1280,39 @@ export class MotherboardApp {
 
   // Camera utility methods for smooth transitions
   private interpolateCamera(start: Camera, end: Camera, progress: number): Camera {
-    return {
-      x: start.x + (end.x - start.x) * progress,
-      y: start.y + (end.y - start.y) * progress,
-      zoom: start.zoom + (end.zoom - start.zoom) * progress,
-    };
+    return cameraTransitions.interpolateCamera(start, end, progress);
   }
 
   private getCameraDistance(cam1: Camera, cam2: Camera): number {
-    const dx = cam1.x - cam2.x;
-    const dy = cam1.y - cam2.y;
-    const dz = Math.abs(cam1.zoom - cam2.zoom) * 100; // Scale zoom difference
-    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    return cameraTransitions.getCameraDistance(cam1, cam2);
   }
 
   // Get center position for a component (useful for focusing camera)
   private getComponentCenter(component: ComponentBase): { x: number; y: number } {
-    return {
-      x: component.x + component.width / 2,
-      y: component.y + component.height / 2,
-    };
+    return cameraTransitions.getComponentCenter(component);
   }
 
   // Calculate optimal camera position to focus on a component
   private getFocusCameraPosition(component: ComponentBase, zoom: number = 1): Camera {
-    const center = this.getComponentCenter(component);
-    return {
-      x: this.canvas.width / 2 - center.x * zoom,
-      y: this.canvas.height / 2 - center.y * zoom,
-      zoom: zoom,
-    };
+    return cameraTransitions.getFocusCameraPosition(component, zoom);
   }
 
   // Enhanced transition configuration with dynamic duration based on distance
   private calculateTransitionDuration(start: Camera, end: Camera): number {
-    const distance = this.getCameraDistance(start, end);
-    const baseDuration = this.transitionConfig.duration;
-    const maxDuration = baseDuration * 1.5;
-    const minDuration = baseDuration * 0.5;
-
-    // Scale duration based on distance, but keep within reasonable bounds
-    const scaleFactor = Math.min(distance / 500, 2);
-    return Math.max(minDuration, Math.min(maxDuration, baseDuration * scaleFactor));
+    return cameraTransitions.calculateTransitionDuration(start, end, this.transitionConfig.duration);
   }
 
   // Easing functions for smooth animations
   private easeInOutCubic(t: number): number {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    return cameraTransitions.easeInOutCubic(t);
   }
 
   private easeOutCubic(t: number): number {
-    return 1 - Math.pow(1 - t, 3);
+    return cameraTransitions.easeOutCubic(t);
   }
 
   private easeInOutQuart(t: number): number {
-    return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+    return cameraTransitions.easeInOutQuart(t);
   }
 
   // Configuration for transition animations
@@ -1357,11 +1336,11 @@ export class MotherboardApp {
   animateToSchematicView(moduleComponent: ModuleComponent, callback: () => void) {
     const startTime = performance.now();
     const startCamera = { ...this.camera };
-    
+
     // Calculate target position using utility methods
     const focusCamera = this.getFocusCameraPosition(moduleComponent, this.transitionConfig.focusZoom);
     const finalCamera = { x: 0, y: 0, zoom: 1 }; // Schematic view starts at origin
-    
+
     // Intermediate zoom-out camera for cinematic effect
     const midCamera = {
       x: startCamera.x + (focusCamera.x - startCamera.x) * 0.3,
@@ -1380,16 +1359,16 @@ export class MotherboardApp {
         // Phase 1: Zoom out while panning toward target (cinematic effect)
         const phaseProgress = progress * 2;
         const phaseEased = this.easeOutCubic(phaseProgress);
-        
+
         this.viewportManager.setCamera(this.interpolateCamera(startCamera, midCamera, phaseEased));
       } else {
         // Phase 2: Zoom into target with final positioning
         const phaseProgress = (progress - 0.5) * 2;
-        
+
         // Transition from mid position to focus, then to final schematic position
         const focusPhase = Math.min(phaseProgress * 1.5, 1);
         const finalPhase = Math.max((phaseProgress - 0.6) / 0.4, 0);
-        
+
         if (finalPhase === 0) {
           this.viewportManager.setCamera(this.interpolateCamera(midCamera, focusCamera, focusPhase));
         } else {
