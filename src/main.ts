@@ -777,7 +777,39 @@ export class MotherboardApp {
   setupExportImportEventHandlers() {
     // Handle requests for current project state
     eventBus.on(Events.PROJECT_STATE_REQUEST, (payload: { callback: (components: any[], connections: any[]) => void, timestamp: number }) => {
-      payload.callback(this.components, this.connections);
+      // Provide a snapshot of components that includes any internal components
+      // from an open schematic view. Without this, components created while
+      // inside a schematic (e.g. Decision Points) live in currentView.components
+      // and are not present on the root this.components array — so they would
+      // be missing from exported project files.
+      const componentsSnapshot = this.components.map(c => {
+        const copy: any = { ...(c as any) };
+        if ((c as any).type === 'module-ic') {
+          copy.internalComponents = (c as any).internalComponents ? (c as any).internalComponents.map((ic: any) => ({ ...ic })) : [];
+          copy.internalConnections = (c as any).internalConnections ? (c as any).internalConnections.map((ic: any) => ({ ...ic })) : [];
+        }
+        return copy;
+      });
+
+      // If the user currently has a schematic open, ensure that the module
+      // being edited contains the live internal components/connections from
+      // the current view so they're included in the exported snapshot.
+      if (this.currentView.type === 'schematic' && this.currentView.component) {
+        const moduleId = this.currentView.component.id;
+        const idx = componentsSnapshot.findIndex(c => c.id === moduleId);
+        if (idx !== -1) {
+          componentsSnapshot[idx].internalComponents = [...this.currentView.components];
+          componentsSnapshot[idx].internalConnections = [...this.currentView.connections];
+        } else {
+          // If the module isn't present at root for some reason, add it
+          const moduleCopy: any = { ...this.currentView.component };
+          moduleCopy.internalComponents = [...this.currentView.components];
+          moduleCopy.internalConnections = [...this.currentView.connections];
+          componentsSnapshot.push(moduleCopy);
+        }
+      }
+
+      payload.callback(componentsSnapshot, this.connections);
     });
 
     // Handle project import completion
