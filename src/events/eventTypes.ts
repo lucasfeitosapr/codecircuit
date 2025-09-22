@@ -58,6 +58,10 @@ export const Events = {
   VIEWPORT_ZOOM_REQUESTED: 'viewport.zoom.requested',
   VIEWPORT_PAN_REQUESTED: 'viewport.pan.requested',
   VIEWPORT_CANVAS_SETUP_COMPLETED: 'viewport.canvas.setup.completed',
+  
+  // Phase 6 Renderer Integration Events
+  RENDER_FRAME_COMPLETE: 'render.frame.complete',
+  RENDER_ERROR: 'render.error',
 } as const;
 
 export type EventName = typeof Events[keyof typeof Events];

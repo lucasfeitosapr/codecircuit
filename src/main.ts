@@ -5,6 +5,8 @@ import { stateManager } from './state/StateManager';
 import { ExportImportManager } from './core/ExportImportManager';
 import { createViewportManager, getViewportManager, type ViewportManager } from './core/ViewportManager';
 import { ConnectionManager, createConnectionManager } from './core/ConnectionManager';
+import { ComponentLifecycleManager, createComponentLifecycleManager } from './core/ComponentLifecycleManager';
+import { InputEventCoordinator, createInputEventCoordinator } from './core/InputEventCoordinator';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from './utils';
 import {
   drawGrid as rendererDrawGrid,
@@ -47,16 +49,17 @@ export class MotherboardApp {
   components: ComponentBase[];
   connections: Connection[];
   selectedComponent: ComponentBase | null;
-  isDragging: boolean;
-  dragOffset: { x: number; y: number };
-  isPanning: boolean;
-  panStart: { x: number; y: number };
   lastTime: number;
   fps: number;
+  // Input state now managed by InputEventCoordinator
+  // isDragging: boolean;
+  // dragOffset: { x: number; y: number };
+  // isPanning: boolean;
+  // panStart: { x: number; y: number };
+  // mousePos: { x: number; y: number };
   // Connection state now managed by ConnectionManager
   // isConnecting: boolean;
   // connectionStart: PinHit | null;
-  mousePos: { x: number; y: number };
   viewStack: ViewStack;
   currentView: ViewState;
   isTransitioning: boolean;
@@ -66,6 +69,8 @@ export class MotherboardApp {
   uiLayer: UILayer;
   exportImportManager: ExportImportManager;
   connectionManager: ConnectionManager;
+  componentLifecycleManager: ComponentLifecycleManager;
+  inputEventCoordinator: InputEventCoordinator;
 
   // Convenience getters for viewport properties
   get canvas(): HTMLCanvasElement {
@@ -109,14 +114,15 @@ export class MotherboardApp {
     this.components = [];
     this.connections = [];
     this.selectedComponent = null;
-    this.isDragging = false;
-    this.dragOffset = { x: 0, y: 0 };
-    this.isPanning = false;
-    this.panStart = { x: 0, y: 0 };
     this.lastTime = 0;
     this.fps = 0;
-    // Connection state now managed by ConnectionManager
-    this.mousePos = { x: 0, y: 0 };
+    // Input state initialization now handled by InputEventCoordinator
+    // this.isDragging = false;
+    // this.dragOffset = { x: 0, y: 0 };
+    // this.isPanning = false;
+    // this.panStart = { x: 0, y: 0 };
+    // this.mousePos = { x: 0, y: 0 };
+    // Connection state initialization now handled by ConnectionManager
 
     // View management for schematic navigation
     this.viewStack = new ViewStack(); // Stack of views for navigation (refactored to ViewStack)
@@ -180,6 +186,45 @@ export class MotherboardApp {
     // Phase 5: Initialize managers that are needed during init()
     this.exportImportManager = new ExportImportManager();
     this.connectionManager = createConnectionManager(eventBus, this.categories);
+    
+    // Phase 6C: Initialize ComponentLifecycleManager
+    this.componentLifecycleManager = createComponentLifecycleManager(
+      eventBus,
+      this.runtimeLayer,
+      this.componentTypes,
+      this.categories
+    );
+
+    // Phase 6D: Initialize InputEventCoordinator
+    this.inputEventCoordinator = createInputEventCoordinator({
+      canvas: this.viewportManager.canvas,
+      viewportManager: this.viewportManager,
+      getComponentAt: this.getComponentAt.bind(this),
+      getPinAt: this.getPinAt.bind(this),
+      getCurrentViewComponents: this.getCurrentViewComponents.bind(this),
+      getCurrentViewConnections: this.getCurrentViewConnections.bind(this),
+      addComponent: this.addComponent.bind(this),
+      toggleComponentStatus: this.toggleComponentStatus.bind(this),
+      showDatasheet: this.showDatasheet.bind(this),
+      hideDatasheet: this.hideDatasheet.bind(this),
+      showTemporaryMessage: this.showTemporaryMessage.bind(this),
+      currentView: this.currentView,
+      enterSchematicView: this.enterSchematicView.bind(this),
+      exitSchematicView: this.exitSchematicView.bind(this),
+      viewStack: this.viewStack,
+      isTransitioning: this.isTransitioning,
+      selectedComponent: this.selectedComponent,
+      setSelectedComponent: (component: ComponentBase | null) => {
+        this.selectedComponent = component;
+      },
+      connectionManager: this.connectionManager,
+      updateConnectionModeUI: this.updateConnectionModeUI.bind(this),
+      componentLifecycleManager: this.componentLifecycleManager,
+      uiLayer: this.uiLayer,
+      runtimeLayer: this.runtimeLayer,
+      components: this.components,
+      connections: this.connections
+    });
 
     this.init();
     this.initializeMainView();
@@ -334,148 +379,18 @@ export class MotherboardApp {
   }
 
   onMouseDown(e: MouseEvent) {
-    const rect = this.canvas.getBoundingClientRect();
-    const worldCoord = this.viewportManager.screenToWorld({ 
-      x: e.clientX - rect.left, 
-      y: e.clientY - rect.top 
-    });
-    const mouseX = worldCoord.x;
-    const mouseY = worldCoord.y;
-
-    if (e.button === 2) {
-      // Right click - panning
-      this.isPanning = true;
-      this.panStart = { x: e.clientX - this.camera.x, y: e.clientY - this.camera.y };
-      this.canvas.style.cursor = 'grabbing';
-      return;
-    }
-
-    // Check if clicking on a pin first
-    const pinHit = this.getPinAt(mouseX, mouseY);
-    if (pinHit) {
-      const connectionState = this.connectionManager.getConnectionState();
-      if (connectionState.isConnecting && connectionState.connectionStart) {
-        // End connection
-        this.connectionManager.endConnection(pinHit);
-        this.canvas.style.cursor = 'grab';
-        this.updateConnectionModeUI();
-        this.uiLayer.clearConnectionIntents();
-      } else {
-        // Start connection
-        this.connectionManager.startConnection(pinHit);
-        this.canvas.style.cursor = 'crosshair';
-        this.updateConnectionModeUI();
-        
-        // Add connection intent
-        this.uiLayer.clearConnectionIntents();
-        this.uiLayer.addConnectionIntent({
-          startPin: pinHit,
-          isValid: true,
-          category: pinHit.category ?? 'frontend'
-        });
-      }
-      return;
-    }
-
-    // Check if clicking on a component
-    const clickedComponent = this.getComponentAt(mouseX, mouseY);
-
-    if (clickedComponent) {
-      if (e.detail === 2) {
-        // Double click
-        if (clickedComponent.type === 'module-ic') {
-          // Enter schematic view
-          this.enterSchematicView(clickedComponent);
-        } else {
-          // Toggle status for other components
-          this.toggleComponentStatus(clickedComponent);
-        }
-      } else {
-        // Single click - select
-        this.selectedComponent = clickedComponent;
-        this.showDatasheet(clickedComponent);
-        this.isDragging = true;
-        this.dragOffset = {
-          x: mouseX - clickedComponent.x,
-          y: mouseY - clickedComponent.y,
-        };
-        
-        // Add selection box and alignment guides
-        this.uiLayer.clearSelectionBoxes();
-        this.uiLayer.clearGuideLines();
-        this.uiLayer.addSelectionBox(clickedComponent, 'single');
-        this.uiLayer.addAlignmentGuides(clickedComponent, this.getCurrentViewComponents());
-      }
-    } else {
-      this.selectedComponent = null;
-      this.hideDatasheet();
-      this.uiLayer.clearSelectionBoxes();
-      this.uiLayer.clearGuideLines();
-      
-      // Cancel connection if clicking on empty space
-      if (this.connectionManager.getConnectionState().isConnecting) {
-        this.connectionManager.cancelConnection();
-        this.canvas.style.cursor = 'grab';
-        this.updateConnectionModeUI();
-      }
-    }
+    // Delegate all mouse down handling to InputEventCoordinator
+    this.inputEventCoordinator.handleMouseDown(e);
   }
 
   onMouseMove(e: MouseEvent) {
-    const rect = this.canvas.getBoundingClientRect();
-    const worldCoord = this.viewportManager.screenToWorld({ 
-      x: e.clientX - rect.left, 
-      y: e.clientY - rect.top 
-    });
-    const mouseX = worldCoord.x;
-    const mouseY = worldCoord.y;
-    
-    // Update mouse position for connection intents
-    this.mousePos = { x: mouseX, y: mouseY };
-    
-    if (this.isPanning) {
-      const newCameraX = e.clientX - this.panStart.x;
-      const newCameraY = e.clientY - this.panStart.y;
-      this.viewportManager.setCamera({ 
-        x: newCameraX, 
-        y: newCameraY, 
-        zoom: this.camera.zoom 
-      });
-      return;
-    }
-
-    if (this.isDragging && this.selectedComponent) {
-      this.selectedComponent.x = mouseX - this.dragOffset.x;
-      this.selectedComponent.y = mouseY - this.dragOffset.y;
-      
-      // Update selection box position
-      this.uiLayer.clearSelectionBoxes();
-      this.uiLayer.addSelectionBox(this.selectedComponent, 'single');
-      this.uiLayer.addAlignmentGuides(this.selectedComponent, this.getCurrentViewComponents());
-    }
-    
-    // Update connection intent if connecting
-    const connectionState = this.connectionManager.getConnectionState();
-    if (connectionState.isConnecting && connectionState.connectionStart) {
-      const pinHit = this.getPinAt(mouseX, mouseY);
-      const isValid = pinHit && this.connectionManager.validateConnection(connectionState.connectionStart, pinHit).isValid;
-      
-      this.uiLayer.clearConnectionIntents();
-      this.uiLayer.addConnectionIntent({
-        startPin: connectionState.connectionStart,
-        endPin: pinHit,
-        isValid: isValid || false,
-        category: connectionState.connectionStart.category ?? 'frontend'
-      });
-    }
+    // Delegate all mouse move handling to InputEventCoordinator
+    this.inputEventCoordinator.handleMouseMove(e);
   }
 
   onMouseUp() {
-    if (this.isPanning) {
-      this.isPanning = false;
-      this.canvas.style.cursor = 'grab';
-    }
-    this.isDragging = false;
+    // Delegate all mouse up handling to InputEventCoordinator
+    this.inputEventCoordinator.handleMouseUp();
   }
 
   onWheel(e: WheelEvent) {
@@ -484,72 +399,20 @@ export class MotherboardApp {
   }
 
   addComponent(type: string, x: number, y: number) {
-    const template = this.componentTypes[type];
-    if (!template) return;
-
-    // In schematic view, allow Task Resistors and Module ICs (for nesting), but not Power Cores
-    if (this.currentView.type === 'schematic' && type === 'power-core') {
-      console.log('Power Cores only allowed on main board');
-      return;
-    }
-
-    const components = this.getCurrentViewComponents();
-    // Ensure required numeric fields exist (template may be Partial<ComponentBase>)
-    const width = template.width ?? 60;
-    const height = template.height ?? 20;
-    const pins = template.pins ?? { input: [], output: [] };
-    const component: ComponentBase = {
-      id: this.generateId(),
-      type,
-      x,
-      y,
-      width,
-      height,
-      pins,
-      name: template.name,
-      icon: template.icon,
-      color: template.color,
-      status: 'defined', // default to defined instead of 'todo'
-      title: `${template.name ?? type} ${components.length + 1}`,
-      description: '',
-      category: 'frontend', // Default category
-      createdAt: new Date(),
-    };
-
-    // Add internal components and connections for Module ICs
-    if (type === 'module-ic') {
-      component.internalComponents = [];
-      component.internalConnections = [];
-    }
-
-    components.push(component);
-    this.selectedComponent = component;
-    this.showDatasheet(component);
+    // Delegate to ComponentLifecycleManager
+    const component = this.componentLifecycleManager.createComponent(type, x, y, this.currentView);
     
-    // Add runtime effects for new component
-    const centerX = component.x + component.width / 2;
-    const centerY = component.y + component.height / 2;
-    this.runtimeLayer.glowEffect(centerX, centerY, component.color, 1000);
-    this.runtimeLayer.pulseComponent(component.id, component.color, 800);
-    
-    try {
-      eventBus.emit(Events.ComponentCreated, { id: component.id, type: component.type, model: component, source: 'legacy' });
-    } catch (err) {
-      // swallow to avoid changing behavior
-      // eslint-disable-next-line no-console
-      console.error('Failed to emit ComponentCreated from main.addComponent', err);
+    if (component) {
+      this.selectedComponent = component;
+      this.showDatasheet(component);
     }
+    
+    return component;
   }
 
   getComponentAt(x: number, y: number) {
-    const components = this.getCurrentViewComponents();
-    for (let i = components.length - 1; i >= 0; i--) {
-      const comp = components[i];
-      if (x >= comp.x && x <= comp.x + comp.width && y >= comp.y && y <= comp.y + comp.height) {
-        return comp;
-      }
-    }
-    return null;
+    // Delegate to ComponentLifecycleManager
+    return this.componentLifecycleManager.getComponentAt(x, y, this.currentView);
   }
 
   getPinAt(x: number, y: number): PinHit | null {
@@ -596,36 +459,12 @@ export class MotherboardApp {
   }
 
   toggleComponentStatus(component: ComponentBase) {
-    const statusCycle = ['defined', 'todo', 'in-progress', 'done'];
-    const currentIndex = statusCycle.indexOf(component.status ?? 'defined');
-    const nextIndex = (currentIndex + 1) % statusCycle.length;
-    const oldStatus = component.status;
-    component.status = statusCycle[nextIndex];
-
-    // Add runtime effects for status changes
-    const centerX = component.x + component.width / 2;
-    const centerY = component.y + component.height / 2;
+    // Delegate to ComponentLifecycleManager
+    this.componentLifecycleManager.toggleComponentStatus(component);
     
-    if (component.status === 'done' && oldStatus !== 'done') {
-      // Success effect when completing
-      this.runtimeLayer.sparkEffect(centerX, centerY, '#00ff88');
-      this.runtimeLayer.pulseComponent(component.id, '#00ff88', 600);
-    } else if (component.status === 'in-progress' && oldStatus !== 'in-progress') {
-      // Progress effect when starting
-      this.runtimeLayer.pulseComponent(component.id, '#ffaa00', 400);
-    } else if (component.status === 'todo' && oldStatus !== 'todo') {
-      // Task effect when marking as todo
-      this.runtimeLayer.glowEffect(centerX, centerY, '#4488ff', 500);
-    }
-
+    // Update datasheet if this is the selected component
     if (this.selectedComponent === component) {
       this.showDatasheet(component);
-    }
-    try {
-      eventBus.emit(Events.ComponentUpdated, { id: component.id, changes: { status: component.status }, source: 'legacy' });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to emit ComponentUpdated from toggleComponentStatus', err);
     }
   }
 
@@ -1067,7 +906,7 @@ export class MotherboardApp {
             viewType: this.currentView.type,
             isConnecting: this.connectionManager.getConnectionState().isConnecting,
             connectionStart: this.connectionManager.getConnectionState().connectionStart,
-            mousePos: this.mousePos
+            mousePos: this.inputEventCoordinator.getMousePosition()
           } 
         });
         return;
@@ -1197,8 +1036,9 @@ export class MotherboardApp {
     const connectionStart = connectionState.connectionStart;
     const fromX = connectionStart.x * this.camera.zoom + this.camera.x;
     const fromY = connectionStart.y * this.camera.zoom + this.camera.y;
-    const toX = this.mousePos.x * this.camera.zoom + this.camera.x;
-    const toY = this.mousePos.y * this.camera.zoom + this.camera.y;
+    const mousePos = this.inputEventCoordinator.getMousePosition();
+    const toX = mousePos.x * this.camera.zoom + this.camera.x;
+    const toY = mousePos.y * this.camera.zoom + this.camera.y;
 
     const cat = connectionStart.category ?? 'frontend';
     const categoryColor = this.categories[cat]?.color || '#00ff88';
