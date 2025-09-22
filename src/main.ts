@@ -19,6 +19,7 @@ import { setupInputListeners } from './inputHandler';
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
 import { layeredRenderer } from './rendering/LayeredRenderer';
 import { renderComponent } from './rendering/ImplementationHelpers';
+import { renderComponentWrapper } from './ui/componentRenderer';
 import { isNewRendererEnabled } from './config/featureFlags';
 import { componentSystem } from './components/ComponentSystem';
 import { DecisionPointPlugin } from './components/plugins/DecisionPointPlugin';
@@ -27,6 +28,7 @@ import ImplementationLayer from './rendering/layers/ImplementationLayer';
 import ConnectionsLayer from './rendering/layers/ConnectionsLayer';
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
+import { ProjectSerializer } from './utils/ProjectSerializer';
 
 // Import V2 plugins for event-driven architecture  
 import { DecisionPointPluginV2 } from './components/plugins/DecisionPointPluginV2';
@@ -571,81 +573,15 @@ export class MotherboardApp {
     const projectData = {
       name: 'Motherboard Project',
       created: new Date().toISOString(),
-      components: this.serializeComponents(this.components),
-      connections: this.serializeConnections(this.connections),
+      components: ProjectSerializer.serializeComponents(this.components),
+      connections: ProjectSerializer.serializeConnections(this.connections),
       version: '1.0.0',
     };
 
     return projectData;
   }
 
-  // Serialize components including internal structures
-  private serializeComponents(components: ComponentBase[]): any[] {
-    return components.map(component => {
-      const serialized: any = {
-        id: component.id,
-        type: component.type,
-        x: component.x,
-        y: component.y,
-        width: component.width,
-        height: component.height,
-        name: component.name,
-        title: component.title,
-        icon: component.icon,
-        color: component.color,
-        pins: component.pins,
-        status: component.status,
-        category: component.category,
-        description: component.description,
-        createdAt: component.createdAt,
-      };
-
-      // Handle Module IC internal structures
-      if (component.type === 'module-ic') {
-        const moduleComponent = component as ModuleComponent;
-        if (moduleComponent.internalComponents) {
-          serialized.internalComponents = this.serializeComponents(
-            moduleComponent.internalComponents
-          );
-        }
-        if (moduleComponent.internalConnections) {
-          serialized.internalConnections = this.serializeConnections(
-            moduleComponent.internalConnections
-          );
-        }
-        if (moduleComponent.pinMap) {
-          serialized.pinMap = moduleComponent.pinMap;
-        }
-      }
-
-      return serialized;
-    });
-  }
-
-  // Serialize connections with component references
-  private serializeConnections(connections: Connection[]): any[] {
-    return connections.map(connection => ({
-      id: connection.id,
-      from: {
-        componentId: connection.from.component.id,
-        pinType: connection.from.pinType,
-        pinIndex: connection.from.pinIndex,
-        x: connection.from.x,
-        y: connection.from.y,
-        category: connection.from.category,
-      },
-      to: {
-        componentId: connection.to.component.id,
-        pinType: connection.to.pinType,
-        pinIndex: connection.to.pinIndex,
-        x: connection.to.x,
-        y: connection.to.y,
-        category: connection.to.category,
-      },
-      category: connection.category,
-      createdAt: connection.createdAt,
-    }));
-  }
+  // Serialization methods extracted to ProjectSerializer module
 
   // Import project data
   importProjectData(projectData: any) {
@@ -656,15 +592,10 @@ export class MotherboardApp {
       this.selectedComponent = null;
       this.hideDatasheet();
 
-      // Deserialize components
-      if (projectData.components) {
-        this.components = this.deserializeComponents(projectData.components);
-      }
-
-      // Deserialize connections
-      if (projectData.connections) {
-        this.connections = this.deserializeConnections(projectData.connections, this.components);
-      }
+      // Use ProjectSerializer for deserialization
+      const { components, connections } = ProjectSerializer.importProjectData(projectData);
+      this.components = components;
+      this.connections = connections;
 
       // Reset view to main
       this.initializeMainView();
@@ -676,109 +607,7 @@ export class MotherboardApp {
     }
   }
 
-  // Deserialize components and rebuild internal structures
-  private deserializeComponents(componentsData: any[]): ComponentBase[] {
-    return componentsData.map(data => {
-      const component: ComponentBase = {
-        id: data.id,
-        type: data.type,
-        x: data.x,
-        y: data.y,
-        width: data.width,
-        height: data.height,
-        name: data.name,
-        title: data.title,
-        icon: data.icon,
-        color: data.color,
-        pins: data.pins,
-        status: data.status || 'defined',
-        category: data.category || 'frontend',
-        description: data.description || '',
-        createdAt: data.createdAt || new Date(),
-      };
-
-      // Handle Module IC internal structures
-      if (data.type === 'module-ic') {
-        const moduleComponent = component as ModuleComponent;
-
-        if (data.internalComponents) {
-          moduleComponent.internalComponents = this.deserializeComponents(data.internalComponents);
-        }
-
-        if (data.internalConnections) {
-          moduleComponent.internalConnections = this.deserializeConnections(
-            data.internalConnections,
-            moduleComponent.internalComponents || []
-          );
-        }
-
-        if (data.pinMap) {
-          moduleComponent.pinMap = data.pinMap;
-        }
-      }
-
-      return component;
-    });
-  }
-
-  // Deserialize connections and rebuild component references
-  private deserializeConnections(
-    connectionsData: any[],
-    components: ComponentBase[]
-  ): Connection[] {
-    return connectionsData
-      .map(data => {
-        const fromComponent = this.findComponentById(data.from.componentId, components);
-        const toComponent = this.findComponentById(data.to.componentId, components);
-
-        if (!fromComponent || !toComponent) {
-          console.warn('Warning: Could not find component for connection', data.id);
-          return null;
-        }
-
-        return {
-          id: data.id,
-          from: {
-            component: fromComponent,
-            pinType: data.from.pinType,
-            pinIndex: data.from.pinIndex,
-            x: data.from.x,
-            y: data.from.y,
-            category: data.from.category,
-          },
-          to: {
-            component: toComponent,
-            pinType: data.to.pinType,
-            pinIndex: data.to.pinIndex,
-            x: data.to.x,
-            y: data.to.y,
-            category: data.to.category,
-          },
-          category: data.category,
-          createdAt: data.createdAt,
-        };
-      })
-      .filter(conn => conn !== null) as Connection[];
-  }
-
-  // Helper to find component by ID recursively
-  private findComponentById(id: string, components: ComponentBase[]): ComponentBase | null {
-    for (const component of components) {
-      if (component.id === id) {
-        return component;
-      }
-
-      // Search in internal components for Module ICs
-      if (component.type === 'module-ic') {
-        const moduleComponent = component as ModuleComponent;
-        if (moduleComponent.internalComponents) {
-          const found = this.findComponentById(id, moduleComponent.internalComponents);
-          if (found) return found;
-        }
-      }
-    }
-    return null;
-  }
+  // All serialization/deserialization methods extracted to ProjectSerializer module
 
   // Add file input handler for importing
   setupImportHandler() {
@@ -992,28 +821,8 @@ export class MotherboardApp {
   }
 
   drawComponent(component: ComponentBase) {
-    // Use new centralized implementation helper for unified visuals
-    renderComponent(this.ctx, { timestamp: performance.now(), camera: this.camera }, component, {
-      camera: this.camera,
-      categories: this.categories,
-      selectedComponentId: this.selectedComponent?.id ?? null,
-      connections: this.getCurrentViewConnections().filter(conn => conn && conn.from && conn.to).map((connection: Connection) => {
-        const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
-        const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
-        
-        // Defensive handling for pin definition mismatches during V2 integration
-        const fromX = connection.from.x ?? (connection.from.component.x + (fromPinDef?.x ?? 0));
-        const fromY = connection.from.y ?? (connection.from.component.y + (fromPinDef?.y ?? 0));
-        const toX = connection.to.x ?? (connection.to.component.x + (toPinDef?.x ?? 0));
-        const toY = connection.to.y ?? (connection.to.component.y + (toPinDef?.y ?? 0));
-        
-        return {
-          ...connection,
-          from: { ...connection.from, x: fromX, y: fromY, component: connection.from.component },
-          to: { ...connection.to, x: toX, y: toY, component: connection.to.component },
-        } as Connection;
-      }),
-    });
+    // Delegate to the extracted component renderer helper
+    renderComponentWrapper(this.ctx, this.camera, this, component);
   }
 
 

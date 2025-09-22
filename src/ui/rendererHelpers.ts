@@ -1,11 +1,23 @@
 import { drawOrthogonalTrace as rendererDrawOrthogonalTrace } from '../renderer';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from '../utils';
+import type { Camera, Connection, ComponentBase, PinRef } from '../types';
 
-// Loose types to avoid introducing breaking changes during incremental migration.
-export function drawConnections(app: any, connections: any[]) {
+// Minimal app context used by these helpers. Keep it intentionally small so
+// we don't accidentally couple to the entire application surface while
+// still allowing the compiler to check the important fields.
+interface AppContext {
+  ctx: CanvasRenderingContext2D;
+  camera: Camera;
+  categories: Record<string, { name: string; color: string }>;
+  connectionManager?: {
+    getConnectionState: () => { connectionStart?: PinRef | null | undefined };
+  };
+  inputEventCoordinator?: { getMousePosition: () => { x: number; y: number } };
+}
+
+export function drawConnections(app: AppContext, connections: Connection[] | undefined) {
   if (!connections) return;
-
-  connections.forEach((connection: any) => {
+  connections.forEach((connection) => {
     if (!connection || !connection.from || !connection.to) {
       // Keep same warning behaviour
       // eslint-disable-next-line no-console
@@ -16,13 +28,13 @@ export function drawConnections(app: any, connections: any[]) {
     const fromPin = connection.from;
     const toPin = connection.to;
 
-    const fromComponent = fromPin.component;
-    const toComponent = toPin.component;
+    const fromComponent = fromPin.component as ComponentBase;
+    const toComponent = toPin.component as ComponentBase;
 
     if (!fromComponent?.pins?.output || !toComponent?.pins?.input) return;
 
-    const fromPinDef = fromComponent.pins.output[fromPin.pinIndex];
-    const toPinDef = toComponent.pins.input[toPin.pinIndex];
+    const fromPinDef = fromComponent.pins.output![fromPin.pinIndex];
+    const toPinDef = toComponent.pins.input![toPin.pinIndex];
 
     const fromX = (fromComponent.x + fromPinDef.x) * app.camera.zoom + app.camera.x;
     const fromY = (fromComponent.y + fromPinDef.y) * app.camera.zoom + app.camera.y;
@@ -55,7 +67,7 @@ export function drawConnections(app: any, connections: any[]) {
   });
 }
 
-export function drawIntentionTrace(app: any, fromX: number, fromY: number, toX: number, toY: number) {
+export function drawIntentionTrace(app: AppContext, fromX: number, fromY: number, toX: number, toY: number) {
   const ctx = app.ctx;
   const intentionColor = '#00ffff';
   ctx.strokeStyle = intentionColor + '66';
@@ -66,13 +78,14 @@ export function drawIntentionTrace(app: any, fromX: number, fromY: number, toX: 
   ctx.shadowBlur = 0;
 }
 
-export function drawTempConnection(app: any) {
-  const connectionState = app.connectionManager.getConnectionState();
-  if (!connectionState.connectionStart) return;
+export function drawTempConnection(app: AppContext) {
+  const connectionState = app.connectionManager?.getConnectionState();
+  if (!connectionState || !connectionState.connectionStart) return;
 
   const connectionStart = connectionState.connectionStart;
   const fromX = connectionStart.x * app.camera.zoom + app.camera.x;
   const fromY = connectionStart.y * app.camera.zoom + app.camera.y;
+  if (!app.inputEventCoordinator) return;
   const mousePos = app.inputEventCoordinator.getMousePosition();
   const toX = mousePos.x * app.camera.zoom + app.camera.x;
   const toY = mousePos.y * app.camera.zoom + app.camera.y;
@@ -89,7 +102,7 @@ export function drawTempConnection(app: any) {
 }
 
 export function drawTraceBackground(
-  app: any,
+  app: AppContext,
   fromX: number,
   fromY: number,
   toX: number,
@@ -105,7 +118,7 @@ export function drawTraceBackground(
 }
 
 export function drawActiveTrace(
-  app: any,
+  app: AppContext,
   fromX: number,
   fromY: number,
   toX: number,
@@ -132,8 +145,8 @@ export function drawActiveTrace(
 }
 
 export function drawDataFlow(
-  app: any,
-  connection: any,
+  app: AppContext,
+  connection: Connection,
   fromX: number,
   fromY: number,
   toX: number,
@@ -158,7 +171,7 @@ export function drawDataFlow(
 
   for (let i = 0; i < particleCount; i++) {
     const offset = (time * speed + i * 0.35) % 1;
-    const pos = _getPointOnPath(pathPoints, offset);
+  const pos = _getPointOnPath(pathPoints, offset);
     const alpha = 0.9 * (1 - Math.pow(offset, 1.5));
     ctx.fillStyle = `rgba(${_hexToRgb(color)}, ${alpha})`;
     ctx.shadowColor = color;
