@@ -30,6 +30,7 @@ import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
 import { ProjectSerializer } from './utils/ProjectSerializer';
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
+import { UIController, createUIController, type UIControllerContext } from './ui/UIController';
 
 // Import V2 plugins for event-driven architecture  
 import { DecisionPointPluginV2 } from './components/plugins/DecisionPointPluginV2';
@@ -82,6 +83,7 @@ export class MotherboardApp {
   componentLifecycleManager: ComponentLifecycleManager;
   inputEventCoordinator: InputEventCoordinator;
   componentRegistry: ComponentRegistry;
+  uiController: UIController;
 
   // Convenience getters for viewport properties
   get canvas(): HTMLCanvasElement {
@@ -211,6 +213,22 @@ export class MotherboardApp {
       connections: this.connections
     });
 
+    // Phase 2A Extended: Initialize UIController for UI management
+    this.uiController = createUIController({
+      getCurrentView: () => this.currentView,
+      getViewStack: () => this.viewStack,
+      getComponents: () => this.components,
+      getConnections: () => this.connections,
+      getSelectedComponent: () => this.selectedComponent,
+      setComponents: (components: any[]) => { this.components = components; },
+      setConnections: (connections: any[]) => { this.connections = connections; },
+      setSelectedComponent: (component: any) => { this.selectedComponent = component; },
+      exitSchematicView: this.exitSchematicView.bind(this),
+      hideDatasheet: this.hideDatasheet.bind(this),
+      navigateToBreadcrumbLevel: this.navigateToBreadcrumbLevel.bind(this),
+      handleKeyboardShortcut: this.handleKeyboardShortcut.bind(this)
+    });
+
     this.init();
     this.initializeMainView();
 
@@ -310,7 +328,7 @@ export class MotherboardApp {
       components: [...this.components], // Create defensive copy to prevent reference issues
       connections: [...this.connections], // Create defensive copy
     };
-    this.updateBreadcrumbs();
+    this.uiController.updateBreadcrumbs();
   }
 
   /**
@@ -343,9 +361,9 @@ export class MotherboardApp {
     
     // Wire input listeners via the inputHandler module
     setupInputListeners(this);
-    this.setupKeyboardShortcuts();
-    this.setupImportHandler();
-    this.setupUI();
+    this.uiController.setupKeyboardShortcuts();
+    this.uiController.setupImportHandler();
+    this.uiController.setupUI();
     this.animate();
   }
 
@@ -360,56 +378,8 @@ export class MotherboardApp {
     // Keeping method stub to avoid breaking changes
   }
 
-  setupUI() {
-    // Close help overlay when clicking outside
-    const helpOverlay = document.getElementById('help-overlay');
-    if (helpOverlay) {
-      helpOverlay.addEventListener('click', (e: MouseEvent) => {
-        const target = e.target as HTMLElement | null;
-        if (target?.id === 'help-overlay') {
-          target.classList.remove('active');
-        }
-      });
-    }
-
-    // UI controls
-    const backBtn = document.getElementById('back-btn');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        this.exitSchematicView();
-      });
-    }
-
-    const helpBtn = document.getElementById('help-btn');
-    if (helpBtn) {
-      helpBtn.addEventListener('click', () => {
-        const overlay = document.getElementById('help-overlay');
-        if (overlay) overlay.classList.add('active');
-      });
-    }
-
-    const resetBtn = document.getElementById('reset-btn');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        if (confirm('Reset the entire board? This cannot be undone.')) {
-          this.components = [];
-          this.connections = [];
-          this.selectedComponent = null;
-          this.hideDatasheet();
-        }
-      });
-    }
-
-    const exportBtn = document.getElementById('export-btn');
-    if (exportBtn) {
-      exportBtn.addEventListener('click', () => {
-        // Phase 5: Use new ExportImportManager instead of legacy method
-        eventBus.emit(Events.PROJECT_EXPORT_REQUESTED, {
-          timestamp: Date.now()
-        });
-      });
-    }
-  }
+  // setupUI() method extracted to UIController - now delegating
+  // Phase 2A Extended: Method delegation to UIController
 
   setupPluginSystem() {
     // Phase 5B: Event-driven plugin coordination
@@ -610,18 +580,8 @@ export class MotherboardApp {
 
   // All serialization/deserialization methods extracted to ProjectSerializer module
 
-  // Add file input handler for importing
-  setupImportHandler() {
-    const importBtn = document.getElementById('import-btn');
-    if (importBtn) {
-      importBtn.addEventListener('click', () => {
-        // Phase 5: Use new ExportImportManager instead of legacy method
-        eventBus.emit(Events.PROJECT_IMPORT_REQUESTED, {
-          timestamp: Date.now()
-        });
-      });
-    }
-  }
+  // setupImportHandler() method extracted to UIController - now delegating
+  // Phase 2A Extended: Method delegation to UIController
 
   // Phase 5: Setup event handlers for the new ExportImportManager
   setupExportImportEventHandlers() {
@@ -963,7 +923,7 @@ export class MotherboardApp {
       // Update camera to schematic view
       this.viewportManager.setCamera({ ...this.currentView.camera });
       this.isTransitioning = false;
-      this.updateBreadcrumbs();
+      this.uiController.updateBreadcrumbs();
     });
   }
 
@@ -1011,7 +971,7 @@ export class MotherboardApp {
       this.viewportManager.setCamera({ ...previousView.camera });
       this.selectedComponent = previousView.selectedComponent;
       this.isTransitioning = false;
-      this.updateBreadcrumbs();
+      this.uiController.updateBreadcrumbs();
     });
   }
 
@@ -1153,93 +1113,11 @@ export class MotherboardApp {
     requestAnimationFrame(animate);
   }
 
-  updateBreadcrumbs() {
-    // Update the breadcrumb navigation in the UI with full path
-    const breadcrumbNav = document.getElementById('breadcrumb-nav') as HTMLElement;
-    const backBtn = document.getElementById('back-btn') as HTMLElement;
+  // updateBreadcrumbs() method extracted to UIController - now delegating
+  // Phase 2A Extended: Method delegation to UIController
 
-    if (!breadcrumbNav || !backBtn) return;
-
-    // Build breadcrumb path from view stack
-    const breadcrumbPath = this.buildBreadcrumbPath();
-    
-    // Clear existing breadcrumbs
-    breadcrumbNav.innerHTML = '';
-    
-    // Create breadcrumb items
-    breadcrumbPath.forEach((item, index) => {
-      // Add separator before each item (except first)
-      if (index > 0) {
-        const separator = document.createElement('span');
-        separator.className = 'breadcrumb-separator';
-        separator.textContent = '>';
-        breadcrumbNav.appendChild(separator);
-      }
-      
-      // Create breadcrumb item
-      const breadcrumbItem = document.createElement('span');
-      breadcrumbItem.className = `breadcrumb-item ${item.isCurrent ? 'current' : ''}`;
-      breadcrumbItem.setAttribute('data-view-index', index.toString());
-      
-      // Add depth indicator
-      const depthIndicator = document.createElement('span');
-      depthIndicator.className = 'depth-indicator';
-      depthIndicator.textContent = item.icon;
-      breadcrumbItem.appendChild(depthIndicator);
-      
-      // Add text content
-      const textNode = document.createTextNode(item.name);
-      breadcrumbItem.appendChild(textNode);
-      
-      // Add click handler for navigation (except current item)
-      if (!item.isCurrent) {
-        breadcrumbItem.addEventListener('click', () => {
-          this.navigateToBreadcrumbLevel(index);
-        });
-      }
-      
-      breadcrumbNav.appendChild(breadcrumbItem);
-    });
-    
-    // Update back button visibility
-    const isMainView = this.currentView.type === 'main';
-    backBtn.style.display = isMainView ? 'none' : 'inline-block';
-    
-    // Update parts tray context filtering
-    this.updatePartsTrayContext();
-  }
-
-  updatePartsTrayContext() {
-    // Update parts tray to show appropriate components for current context
-    const powerCoreItem = document.getElementById('power-core-item') as HTMLElement;
-    const moduleIcItem = document.getElementById('module-ic-item') as HTMLElement;
-    const taskResistorItem = document.getElementById('task-resistor-item') as HTMLElement;
-
-    if (!powerCoreItem || !moduleIcItem || !taskResistorItem) return;
-
-    const isMainView = this.currentView.type === 'main';
-    const currentDepth = this.viewStack.size() + (this.currentView.type === 'schematic' ? 1 : 0);
-
-    if (isMainView) {
-      // Main board: All components available
-      powerCoreItem.classList.remove('disabled');
-      moduleIcItem.classList.remove('disabled');
-      taskResistorItem.classList.remove('disabled');
-      
-      powerCoreItem.querySelector('.context-hint')!.textContent = 'Energy sources';
-      moduleIcItem.querySelector('.context-hint')!.textContent = 'Features & Systems';
-      taskResistorItem.querySelector('.context-hint')!.textContent = 'Not typical on main board';
-    } else {
-      // Schematic view: No Power Cores allowed
-      powerCoreItem.classList.add('disabled');
-      moduleIcItem.classList.remove('disabled');
-      taskResistorItem.classList.remove('disabled');
-      
-      powerCoreItem.querySelector('.context-hint')!.textContent = 'Main board only';
-      moduleIcItem.querySelector('.context-hint')!.textContent = `Sub-systems (Level ${currentDepth + 1})`;
-      taskResistorItem.querySelector('.context-hint')!.textContent = 'Individual tasks';
-    }
-  }
+  // updatePartsTrayContext() method extracted to UIController - now delegating
+  // Phase 2A Extended: Method delegation to UIController
 
   buildBreadcrumbPath() {
     const path = [];
@@ -1335,7 +1213,7 @@ export class MotherboardApp {
         };
         this.viewportManager.setCamera({ ...mainCamera });
         this.isTransitioning = false;
-        this.updateBreadcrumbs();
+        this.uiController.updateBreadcrumbs();
       } else {
         requestAnimationFrame(animate);
       }
@@ -1344,12 +1222,8 @@ export class MotherboardApp {
     requestAnimationFrame(animate);
   }
 
-  // Keyboard Shortcuts System
-  setupKeyboardShortcuts() {
-    document.addEventListener('keydown', (event) => {
-      this.handleKeyboardShortcut(event);
-    });
-  }
+  // setupKeyboardShortcuts() method extracted to UIController - now delegating
+  // Phase 2A Extended: Method delegation to UIController
 
   handleKeyboardShortcut(event: KeyboardEvent) {
     // Ignore keyboard shortcuts when typing in input fields
