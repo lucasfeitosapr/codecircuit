@@ -31,6 +31,7 @@ import UILayer from './rendering/layers/UILayer';
 import { ProjectSerializer } from './utils/ProjectSerializer';
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
 import { UIController, createUIController, type UIControllerContext } from './ui/UIController';
+import { ViewNavigationManager, type ViewNavigationContext } from './ui/ViewNavigationManager';
 
 // Import V2 plugins for event-driven architecture  
 import { DecisionPointPluginV2 } from './components/plugins/DecisionPointPluginV2';
@@ -84,6 +85,7 @@ export class MotherboardApp {
   inputEventCoordinator: InputEventCoordinator;
   componentRegistry: ComponentRegistry;
   uiController: UIController;
+  viewNavigationManager: ViewNavigationManager;
 
   // Convenience getters for viewport properties
   get canvas(): HTMLCanvasElement {
@@ -211,6 +213,32 @@ export class MotherboardApp {
       runtimeLayer: this.runtimeLayer,
       components: this.components,
       connections: this.connections
+    });
+
+    // Phase 2A Extended: Initialize ViewNavigationManager for camera animations
+    this.viewNavigationManager = new ViewNavigationManager({
+      viewportManager: this.viewportManager,
+      components: this.components,
+      getCurrentView: () => this.currentView.type,
+      getViewStack: () => {
+        const stack = [];
+        let current = this.viewStack.peek();
+        if (current) stack.push(current.type);
+        return stack;
+      },
+      setCurrentView: (view: string) => { this.currentView.type = view as ViewState['type']; },
+      pushView: (view: string) => { 
+        this.viewStack.push({ 
+          type: view as ViewState['type'], 
+          component: null, 
+          camera: { ...this.viewportManager.camera }, 
+          components: [], 
+          connections: [] 
+        }); 
+      },
+      popView: () => { this.viewStack.pop(); },
+      requestAnimationFrame: (callback: FrameRequestCallback) => requestAnimationFrame(callback),
+      getComponent: (id: string) => this.components.find(c => c.id === id)
     });
 
     // Phase 2A Extended: Initialize UIController for UI management
@@ -909,8 +937,8 @@ export class MotherboardApp {
     this.hideDatasheet();
     this.selectedComponent = null;
 
-    // Animate transition
-    this.animateToSchematicView(moduleComponent, () => {
+    // Animate transition using ViewNavigationManager
+    this.viewNavigationManager.animateToSchematicView(moduleComponent.id, () => {
       this.currentView = {
         type: 'schematic',
         component: moduleComponent,
@@ -948,7 +976,7 @@ export class MotherboardApp {
     this.hideDatasheet();
     this.selectedComponent = null;
 
-    this.animateToMainView(previousView.camera, () => {
+    this.viewNavigationManager.animateToMainView(previousView.camera, () => {
       // Restore the previous view with proper array isolation
       this.currentView = {
         type: previousView.type,
@@ -975,143 +1003,9 @@ export class MotherboardApp {
     });
   }
 
-  // Camera utility methods for smooth transitions
-  private interpolateCamera(start: Camera, end: Camera, progress: number): Camera {
-    return cameraTransitions.interpolateCamera(start, end, progress);
-  }
 
-  private getCameraDistance(cam1: Camera, cam2: Camera): number {
-    return cameraTransitions.getCameraDistance(cam1, cam2);
-  }
 
-  // Get center position for a component (useful for focusing camera)
-  private getComponentCenter(component: ComponentBase): { x: number; y: number } {
-    return cameraTransitions.getComponentCenter(component);
-  }
 
-  // Calculate optimal camera position to focus on a component
-  private getFocusCameraPosition(component: ComponentBase, zoom: number = 1): Camera {
-    return cameraTransitions.getFocusCameraPosition(component, zoom);
-  }
-
-  // Enhanced transition configuration with dynamic duration based on distance
-  private calculateTransitionDuration(start: Camera, end: Camera): number {
-    return cameraTransitions.calculateTransitionDuration(start, end, this.transitionConfig.duration);
-  }
-
-  // Easing functions for smooth animations
-  private easeInOutCubic(t: number): number {
-    return cameraTransitions.easeInOutCubic(t);
-  }
-
-  private easeOutCubic(t: number): number {
-    return cameraTransitions.easeOutCubic(t);
-  }
-
-  private easeInOutQuart(t: number): number {
-    return cameraTransitions.easeInOutQuart(t);
-  }
-
-  // Configuration for transition animations
-  private transitionConfig = {
-    duration: 800, // milliseconds
-    zoomOutFactor: 0.3,
-    focusZoom: 1.2,
-    easingFunction: this.easeInOutCubic.bind(this),
-  };
-
-  // Public method to configure transition parameters
-  public setTransitionConfig(config: Partial<typeof this.transitionConfig>) {
-    this.transitionConfig = { ...this.transitionConfig, ...config };
-  }
-
-  // Method to get current transition config (useful for debugging/tuning)
-  public getTransitionConfig() {
-    return { ...this.transitionConfig };
-  }
-
-  animateToSchematicView(moduleComponent: ModuleComponent, callback: () => void) {
-    const startTime = performance.now();
-    const startCamera = { ...this.camera };
-
-    // Calculate target position using utility methods
-    const focusCamera = this.getFocusCameraPosition(moduleComponent, this.transitionConfig.focusZoom);
-    const finalCamera = { x: 0, y: 0, zoom: 1 }; // Schematic view starts at origin
-
-    // Intermediate zoom-out camera for cinematic effect
-    const midCamera = {
-      x: startCamera.x + (focusCamera.x - startCamera.x) * 0.3,
-      y: startCamera.y + (focusCamera.y - startCamera.y) * 0.3,
-      zoom: this.transitionConfig.zoomOutFactor,
-    };
-
-    // Calculate dynamic duration based on camera movement distance
-    const duration = this.calculateTransitionDuration(startCamera, finalCamera);
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      if (progress < 0.5) {
-        // Phase 1: Zoom out while panning toward target (cinematic effect)
-        const phaseProgress = progress * 2;
-        const phaseEased = this.easeOutCubic(phaseProgress);
-
-        this.viewportManager.setCamera(this.interpolateCamera(startCamera, midCamera, phaseEased));
-      } else {
-        // Phase 2: Zoom into target with final positioning
-        const phaseProgress = (progress - 0.5) * 2;
-
-        // Transition from mid position to focus, then to final schematic position
-        const focusPhase = Math.min(phaseProgress * 1.5, 1);
-        const finalPhase = Math.max((phaseProgress - 0.6) / 0.4, 0);
-
-        if (finalPhase === 0) {
-          this.viewportManager.setCamera(this.interpolateCamera(midCamera, focusCamera, focusPhase));
-        } else {
-          this.viewportManager.setCamera(this.interpolateCamera(focusCamera, finalCamera, this.easeInOutCubic(finalPhase)));
-        }
-      }
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        // Ensure final position is exact
-        this.viewportManager.setCamera({ ...finalCamera });
-        callback();
-      }
-    };
-
-    requestAnimationFrame(animate);
-  }
-
-  animateToMainView(targetCamera: Camera, callback: () => void) {
-    const startTime = performance.now();
-    const startCamera = { ...this.camera };
-    
-    // Calculate dynamic duration based on camera movement distance
-    const duration = this.calculateTransitionDuration(startCamera, targetCamera);
-    
-    // Smooth transition back to the previous view's camera position
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easedProgress = this.transitionConfig.easingFunction(progress);
-
-      // Smooth interpolation to target camera state using utility method
-      this.viewportManager.setCamera(this.interpolateCamera(startCamera, targetCamera, easedProgress));
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        // Ensure final position is exact
-        this.viewportManager.setCamera({ ...targetCamera });
-        callback();
-      }
-    };
-
-    requestAnimationFrame(animate);
-  }
 
   // updateBreadcrumbs() method extracted to UIController - now delegating
   // Phase 2A Extended: Method delegation to UIController
@@ -1186,40 +1080,31 @@ export class MotherboardApp {
     // Exit all the way to main board
     this.isTransitioning = true;
     
-    const startTime = performance.now();
-    const startCamera = { ...this.camera };
     const mainCamera = { x: 0, y: 0, zoom: 1 };
     
-    // Calculate dynamic duration based on camera movement distance
-    const duration = this.calculateTransitionDuration(startCamera, mainCamera);
-    
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easedProgress = this.transitionConfig.easingFunction(progress);
-      
-      // Interpolate camera position
-      this.viewportManager.setCamera(this.interpolateCamera(startCamera, mainCamera, easedProgress));
-      
-      if (progress >= 1) {
-        // Transition complete
-        this.viewStack.clear();
-        this.currentView = {
-          type: 'main',
-          component: null,
-          camera: { ...mainCamera },
-          components: this.components,
-          connections: this.connections,
-        };
-        this.viewportManager.setCamera({ ...mainCamera });
-        this.isTransitioning = false;
-        this.uiController.updateBreadcrumbs();
-      } else {
-        requestAnimationFrame(animate);
-      }
-    };
-    
-    requestAnimationFrame(animate);
+    this.viewNavigationManager.animateToMainView(mainCamera, () => {
+      // Transition complete
+      this.viewStack.clear();
+      this.currentView = {
+        type: 'main',
+        component: null,
+        camera: { ...mainCamera },
+        components: this.components,
+        connections: this.connections,
+      };
+      this.viewportManager.setCamera({ ...mainCamera });
+      this.isTransitioning = false;
+      this.uiController.updateBreadcrumbs();
+    });
+  }
+
+  // Delegate transition configuration to ViewNavigationManager
+  public setTransitionConfig(config: any) {
+    this.viewNavigationManager.setTransitionConfig(config);
+  }
+
+  public getTransitionConfig() {
+    return this.viewNavigationManager.getTransitionConfig();
   }
 
   // setupKeyboardShortcuts() method extracted to UIController - now delegating
