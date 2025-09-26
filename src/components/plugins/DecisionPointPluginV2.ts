@@ -4,7 +4,7 @@
 
 import { BaseComponentPlugin } from './BaseComponentPlugin';
 import { ComponentBase, PinDef } from '../../types';
-import { RenderFrame } from '../ComponentSystem';
+import { RenderFrame } from '../../rendering/LayeredRenderer';
 import { PluginMetadata } from '../../events/eventTypes';
 import { eventBus } from '../../events/EventBus';
 

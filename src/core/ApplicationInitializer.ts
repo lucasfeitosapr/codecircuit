@@ -7,14 +7,13 @@ import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import { stateManager } from '../state/StateManager';
 import { layeredRenderer } from '../rendering/LayeredRenderer';
-import { componentSystem } from '../components/ComponentSystem';
-import { DecisionPointPlugin } from '../components/plugins/DecisionPointPlugin';
 
 // Import V2 plugins
 import { DecisionPointPluginV2 } from '../components/plugins/DecisionPointPluginV2';
 import { PowerCorePluginV2 } from '../components/plugins/PowerCorePluginV2';
 import { ModuleICPluginV2 } from '../components/plugins/ModuleICPluginV2';
 import { TaskResistorPluginV2 } from '../components/plugins/TaskResistorPluginV2';
+import { GatewayPluginV2 } from '../components/plugins/GatewayPluginV2';
 
 // Import layers  
 import BackgroundLayer from '../rendering/layers/BackgroundLayer';
@@ -45,25 +44,6 @@ export class ApplicationInitializer {
     this.context = context;
   }
 
-  initializeExtendedComponents() {
-    try {
-      // Register Decision Point ◆ plugin (idempotent)
-      if (!componentSystem.get('decision-point')) {
-        componentSystem.register(DecisionPointPlugin);
-      }
-      
-      console.log('✅ Phase 7A: Extended Components initialized successfully');
-      console.log(`   - Decision Point ◆ registered`);
-      
-      // Emit event for UI updates
-      eventBus.emit(Events.EXTENDED_COMPONENTS_INITIALIZED, {
-        plugins: componentSystem.list().map(p => ({ id: p.id, displayName: p.displayName }))
-      });
-      
-    } catch (error) {
-      console.error('❌ Failed to initialize extended components:', error);
-    }
-  }
 
   setupPluginSystem() {
     // Phase 5B: Event-driven plugin coordination
@@ -92,6 +72,7 @@ export class ApplicationInitializer {
     this.context.componentRegistry.register(new PowerCorePluginV2());
     this.context.componentRegistry.register(new ModuleICPluginV2());
     this.context.componentRegistry.register(new TaskResistorPluginV2());
+    this.context.componentRegistry.register(new GatewayPluginV2()); // Phase 2B: Gateway plugin!
 
     console.log('🚀 Event-driven plugin system initialized');
     console.log('📊 ComponentTypes populated:', Object.keys(this.context.componentTypes));
@@ -230,9 +211,6 @@ export class ApplicationInitializer {
       this.setupPluginSystem();
       console.log('✅ Plugin system initialized');
 
-      // Phase 4: Initialize extended components
-      this.initializeExtendedComponents();
-      console.log('✅ Extended components initialized');
 
       // Phase 5: Seed demo data if requested
       this.seedDemoDataIfRequested();

@@ -1,4 +1,4 @@
-import { componentSystem } from '../../components/ComponentSystem';
+import { getComponentRegistry } from '../../components/ComponentRegistry';
 import type { RenderFrame } from '../LayeredRenderer';
 
 // Cache bust: 2024-01-20 - Removed all console logs
@@ -20,15 +20,16 @@ export const ImplementationLayer = {
       fp.connections = fp.connections ?? connections;
 
       for (const model of models) {
-        const plugin = componentSystem.get(model.type);
-        
-        if (plugin && typeof plugin.render === 'function') {
-          try {
-            plugin.render(ctx, frame, model);
-          } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error(`Plugin ${plugin.id} render failed`, e);
+        try {
+          const componentRegistry = getComponentRegistry();
+          const plugin = componentRegistry.get(model.type);
+
+          if (plugin) {
+            plugin.renderComponent(ctx, frame, model);
           }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error(`V2 plugin render failed for ${model.type}:`, e);
         }
       }
     } catch (e) {
