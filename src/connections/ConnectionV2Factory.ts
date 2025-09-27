@@ -6,7 +6,7 @@ import {
   ConnectionV2Factory as IConnectionV2Factory,
   ConnectionTemplate,
   ConnectionTemplates,
-  ConnectionV2Utils
+  ConnectionV2Utils,
 } from './ConnectionV2';
 import { Connection } from '../types';
 import { ConnectionStyleCalculator } from './ConnectionProtocolStyles';
@@ -21,11 +21,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
   /**
    * Create a new ConnectionV2 with intelligent defaults
    */
-  createConnection(
-    source: any,
-    target: any,
-    options?: Partial<ConnectionV2>
-  ): ConnectionV2 {
+  createConnection(source: any, target: any, options?: Partial<ConnectionV2>): ConnectionV2 {
     // Create base connection structure
     const baseConnection = this.createBaseConnection(source, target);
 
@@ -33,10 +29,12 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
     const gatewayEndpoints = this.detectGatewayEndpoints(source, target);
 
     // Suggest appropriate protocol and connection type
-    const suggestedProtocol = options?.protocol ||
+    const suggestedProtocol =
+      options?.protocol ||
       this.suggestProtocol(source.component?.type, target.component?.type, !!gatewayEndpoints);
 
-    const suggestedConnectionType = options?.connectionType ||
+    const suggestedConnectionType =
+      options?.connectionType ||
       this.suggestConnectionType(suggestedProtocol, source.component?.type, target.component?.type);
 
     // Create intelligent design configuration
@@ -45,7 +43,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
       dataVolume: this.suggestDataVolume(suggestedConnectionType),
       reliability: this.suggestReliability(source.component?.type, target.component?.type),
       security: this.suggestSecurity(gatewayEndpoints),
-      ...options?.designConfig
+      ...options?.designConfig,
     };
 
     // Create design-time health model
@@ -53,7 +51,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
       simulatedState: this.simulateInitialHealth(suggestedProtocol, designConfig),
       bottleneckRisk: this.calculateInitialBottleneckRisk(suggestedConnectionType, designConfig),
       failureScenarios: this.generateInitialFailureScenarios(suggestedProtocol, designConfig),
-      ...options?.designHealth
+      ...options?.designHealth,
     };
 
     // Create visual properties
@@ -61,7 +59,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
       thickness: ConnectionV2Utils.getThicknessForDataVolume(designConfig.dataVolume),
       style: this.getStyleForProtocol(suggestedProtocol),
       animation: ConnectionV2Utils.getAnimationForConnectionType(suggestedConnectionType),
-      ...options?.visual
+      ...options?.visual,
     };
 
     // Create enhanced connection
@@ -73,7 +71,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
       designHealth,
       gatewayEndpoints,
       visual,
-      ...options
+      ...options,
     };
 
     return connectionV2;
@@ -84,29 +82,21 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
    */
   upgradeConnection(connection: Connection): ConnectionV2 {
     // Use factory to create enhanced version
-    return this.createConnection(
-      connection.from,
-      connection.to,
-      {
-        id: connection.id,
-        category: connection.category,
-        createdAt: connection.createdAt
-      }
-    );
+    return this.createConnection(connection.from, connection.to, {
+      id: connection.id,
+      category: connection.category,
+      createdAt: connection.createdAt,
+    });
   }
 
   /**
    * Create connection from template
    */
-  createFromTemplate(
-    template: ConnectionTemplate,
-    source: any,
-    target: any
-  ): ConnectionV2 {
+  createFromTemplate(template: ConnectionTemplate, source: any, target: any): ConnectionV2 {
     return this.createConnection(source, target, {
       connectionType: template.defaultConnectionType,
       protocol: template.defaultProtocol,
-      designConfig: template.defaultDesignConfig
+      designConfig: template.defaultDesignConfig,
     });
   }
 
@@ -130,7 +120,10 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
 
       // Update bottleneck risk based on Gateway health
       if (gatewayHealthStates.source === 'failed' || gatewayHealthStates.target === 'failed') {
-        connection.designHealth.bottleneckRisk = Math.max(connection.designHealth.bottleneckRisk, 0.8);
+        connection.designHealth.bottleneckRisk = Math.max(
+          connection.designHealth.bottleneckRisk,
+          0.8
+        );
       }
     }
 
@@ -148,9 +141,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
     );
 
     // Validate connections as a group
-    const validationResults = connections.map(conn =>
-      connectionValidator.validateConnection(conn)
-    );
+    const validationResults = connections.map(conn => connectionValidator.validateConnection(conn));
 
     // Log any validation issues
     validationResults.forEach((results, index) => {
@@ -170,18 +161,23 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
       id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       from: source,
       to: target,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
   }
 
   /**
    * Detect Gateway endpoints in the connection
    */
-  private detectGatewayEndpoints(source: any, target: any): {
-    sourceGateway?: string;
-    targetGateway?: string;
-    externalSystemName?: string;
-  } | undefined {
+  private detectGatewayEndpoints(
+    source: any,
+    target: any
+  ):
+    | {
+        sourceGateway?: string;
+        targetGateway?: string;
+        externalSystemName?: string;
+      }
+    | undefined {
     const gatewayEndpoints: any = {};
 
     // Check if source is a Gateway
@@ -259,13 +255,13 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
     }
 
     const latencyMap = {
-      'gRPC': 'LOW',
-      'TCP': 'LOW',
-      'WebSocket': 'LOW',
-      'HTTP': 'MEDIUM',
-      'MessageQueue': 'MEDIUM',
-      'Database': 'MEDIUM',
-      'Custom': 'HIGH'
+      gRPC: 'LOW',
+      TCP: 'LOW',
+      WebSocket: 'LOW',
+      HTTP: 'MEDIUM',
+      MessageQueue: 'MEDIUM',
+      Database: 'MEDIUM',
+      Custom: 'HIGH',
     };
 
     return latencyMap[protocol as keyof typeof latencyMap] || 'MEDIUM';
@@ -276,10 +272,10 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
    */
   private suggestDataVolume(connectionType: any): any {
     const volumeMap = {
-      'sync': 'MODERATE',
-      'async': 'MODERATE',
-      'stream': 'HEAVY',
-      'event': 'LIGHT'
+      sync: 'MODERATE',
+      async: 'MODERATE',
+      stream: 'HEAVY',
+      event: 'LIGHT',
     };
 
     return volumeMap[connectionType as keyof typeof volumeMap] || 'MODERATE';
@@ -361,7 +357,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
       description: 'Connection timeout due to network issues',
       probability: designConfig.expectedLatency === 'HIGH' ? 0.1 : 0.03,
       impact: 'MEDIUM',
-      mitigations: ['Implement retry logic', 'Set appropriate timeouts']
+      mitigations: ['Implement retry logic', 'Set appropriate timeouts'],
     });
 
     // Protocol-specific scenarios
@@ -371,7 +367,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
         description: 'HTTP 5xx server errors',
         probability: 0.05,
         impact: 'MEDIUM',
-        mitigations: ['Monitor server health', 'Implement retry for 5xx errors']
+        mitigations: ['Monitor server health', 'Implement retry for 5xx errors'],
       });
     }
 
@@ -383,14 +379,14 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
    */
   private getStyleForProtocol(protocol: any): 'solid' | 'dashed' | 'dotted' {
     const styleMap = {
-      'HTTP': 'solid',
-      'TCP': 'solid',
-      'WebSocket': 'dashed',
-      'MessageQueue': 'dotted',
-      'GraphQL': 'solid',
-      'gRPC': 'solid',
-      'Database': 'solid',
-      'Custom': 'solid'
+      HTTP: 'solid',
+      TCP: 'solid',
+      WebSocket: 'dashed',
+      MessageQueue: 'dotted',
+      GraphQL: 'solid',
+      gRPC: 'solid',
+      Database: 'solid',
+      Custom: 'solid',
     };
 
     return styleMap[protocol as keyof typeof styleMap] || 'solid';
@@ -399,10 +395,7 @@ export class ConnectionV2Factory implements IConnectionV2Factory {
   /**
    * Map Gateway health states to connection health
    */
-  private mapGatewayHealthToConnectionHealth(
-    sourceHealth?: string,
-    targetHealth?: string
-  ): any {
+  private mapGatewayHealthToConnectionHealth(sourceHealth?: string, targetHealth?: string): any {
     // If either Gateway is failed, connection is at-risk
     if (sourceHealth === 'failed' || targetHealth === 'failed') {
       return 'critical';
@@ -429,15 +422,23 @@ export class ConnectionCreationUtils {
     sourceType: string,
     targetType: string
   ): ConnectionTemplate | null {
-    return ConnectionTemplates.find(template => {
-      if (template.applicableSourceTypes && !template.applicableSourceTypes.includes(sourceType)) {
-        return false;
-      }
-      if (template.applicableTargetTypes && !template.applicableTargetTypes.includes(targetType)) {
-        return false;
-      }
-      return true;
-    }) || null;
+    return (
+      ConnectionTemplates.find(template => {
+        if (
+          template.applicableSourceTypes &&
+          !template.applicableSourceTypes.includes(sourceType)
+        ) {
+          return false;
+        }
+        if (
+          template.applicableTargetTypes &&
+          !template.applicableTargetTypes.includes(targetType)
+        ) {
+          return false;
+        }
+        return true;
+      }) || null
+    );
   }
 
   /**
@@ -447,7 +448,8 @@ export class ConnectionCreationUtils {
     sourceType: string,
     targetType: string
   ): Array<{ template: ConnectionTemplate; confidence: number; reason: string }> {
-    const suggestions: Array<{ template: ConnectionTemplate; confidence: number; reason: string }> = [];
+    const suggestions: Array<{ template: ConnectionTemplate; confidence: number; reason: string }> =
+      [];
 
     ConnectionTemplates.forEach(template => {
       let confidence = 0.5; // Base confidence
@@ -461,9 +463,9 @@ export class ConnectionCreationUtils {
 
       if (template.applicableTargetTypes?.includes(targetType)) {
         confidence += 0.3;
-        reason = reason.includes('Designed') ?
-          `Designed for ${sourceType} → ${targetType}` :
-          `Designed for ${targetType} targets`;
+        reason = reason.includes('Designed')
+          ? `Designed for ${sourceType} → ${targetType}`
+          : `Designed for ${targetType} targets`;
       }
 
       // Specific patterns
@@ -528,13 +530,25 @@ export class ConnectionCreationUtils {
     }
 
     // Validate options if provided
-    if (options?.protocol && !['HTTP', 'TCP', 'WebSocket', 'MessageQueue', 'GraphQL', 'gRPC', 'Database', 'Custom'].includes(options.protocol)) {
+    if (
+      options?.protocol &&
+      ![
+        'HTTP',
+        'TCP',
+        'WebSocket',
+        'MessageQueue',
+        'GraphQL',
+        'gRPC',
+        'Database',
+        'Custom',
+      ].includes(options.protocol)
+    ) {
       issues.push('Invalid protocol specified');
     }
 
     return {
       valid: issues.length === 0,
-      issues
+      issues,
     };
   }
 }

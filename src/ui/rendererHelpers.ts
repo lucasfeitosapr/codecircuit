@@ -17,7 +17,7 @@ interface AppContext {
 
 export function drawConnections(app: AppContext, connections: Connection[] | undefined) {
   if (!connections) return;
-  connections.forEach((connection) => {
+  connections.forEach(connection => {
     if (!connection || !connection.from || !connection.to) {
       // Keep same warning behaviour
       // eslint-disable-next-line no-console
@@ -67,7 +67,13 @@ export function drawConnections(app: AppContext, connections: Connection[] | und
   });
 }
 
-export function drawIntentionTrace(app: AppContext, fromX: number, fromY: number, toX: number, toY: number) {
+export function drawIntentionTrace(
+  app: AppContext,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number
+) {
   const ctx = app.ctx;
   const intentionColor = '#00ffff';
   ctx.strokeStyle = intentionColor + '66';
@@ -171,7 +177,7 @@ export function drawDataFlow(
 
   for (let i = 0; i < particleCount; i++) {
     const offset = (time * speed + i * 0.35) % 1;
-  const pos = _getPointOnPath(pathPoints, offset);
+    const pos = _getPointOnPath(pathPoints, offset);
     const alpha = 0.9 * (1 - Math.pow(offset, 1.5));
     ctx.fillStyle = `rgba(${_hexToRgb(color)}, ${alpha})`;
     ctx.shadowColor = color;

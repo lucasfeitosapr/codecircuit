@@ -1,18 +1,18 @@
 import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import type { ComponentBase, ModuleComponent, PinHit, Camera } from '../types';
-import { setupInputListeners } from '../inputHandler';
+// import { setupInputListeners } from '../inputHandler'; // Moved to archived - no longer used
 import { hideDatasheet as hideDatasheetUI, showDatasheet as showDatasheetUI } from '../datasheet';
 
 /**
  * Phase 6B: Input Event Coordinator
- * 
+ *
  * This class coordinates all input handling for the application, including:
- * - Mouse events (click, drag, scroll)  
+ * - Mouse events (click, drag, scroll)
  * - Keyboard shortcuts
  * - UI button interactions
  * - File import handling
- * 
+ *
  * Extracted from main.ts to create a cleaner separation of concerns.
  * The main application now delegates all input handling to this coordinator.
  */
@@ -21,44 +21,44 @@ export interface InputEventCoordinatorDependencies {
   // Canvas and viewport
   canvas: HTMLCanvasElement;
   viewportManager: any; // ViewportManager type
-  
+
   // Component management
   getComponentAt: (x: number, y: number) => ComponentBase | null;
   getPinAt: (x: number, y: number) => PinHit | null;
   getCurrentViewComponents: () => ComponentBase[];
   getCurrentViewConnections: () => any[];
-  
+
   // Component operations
   addComponent: (type: string, x: number, y: number) => void;
   toggleComponentStatus: (component: ComponentBase) => void;
-  
+
   // UI operations
   showDatasheet: (component: ComponentBase) => void;
   hideDatasheet: () => void;
   showTemporaryMessage: (message: string, duration?: number) => void;
-  
+
   // View management
   currentView: any; // View type from main.ts
   enterSchematicView: (component: ModuleComponent) => void;
   exitSchematicView: () => void;
   viewStack: any; // ViewStack type
   isTransitioning: boolean;
-  
+
   // Selection and interaction state
   selectedComponent: ComponentBase | null;
   setSelectedComponent: (component: ComponentBase | null) => void;
-  
+
   // Connection management
   connectionManager: any; // ConnectionManager type
   updateConnectionModeUI: () => void;
-  
+
   // Component lifecycle management
   componentLifecycleManager: any; // ComponentLifecycleManager type
-  
+
   // Rendering layers
   uiLayer: any; // UILayer type
   runtimeLayer: any; // RuntimeLayer type
-  
+
   // Component types and state
   components: ComponentBase[];
   connections: any[];
@@ -66,7 +66,7 @@ export interface InputEventCoordinatorDependencies {
 
 export class InputEventCoordinator {
   private dependencies: InputEventCoordinatorDependencies;
-  
+
   // Mouse interaction state
   private mousePos: { x: number; y: number } = { x: 0, y: 0 };
   private isDragging: boolean = false;
@@ -74,15 +74,16 @@ export class InputEventCoordinator {
   private dragOffset: { x: number; y: number } = { x: 0, y: 0 };
   private panStart: { x: number; y: number } = { x: 0, y: 0 };
   private draggedComponent: ComponentBase | null = null; // Store dragged component locally
-  
+
   // Event listeners for cleanup
-  private eventListeners: Array<{ element: EventTarget; event: string; handler: EventListener }> = [];
-  
+  private eventListeners: Array<{ element: EventTarget; event: string; handler: EventListener }> =
+    [];
+
   constructor(dependencies: InputEventCoordinatorDependencies) {
     this.dependencies = dependencies;
     this.setupEventListeners();
   }
-  
+
   /**
    * Initialize all input event listeners
    */
@@ -93,7 +94,7 @@ export class InputEventCoordinator {
     this.setupImportHandler();
     this.setupExportImportEventHandlers();
   }
-  
+
   /**
    * Setup canvas mouse and wheel event listeners via inputHandler.ts
    */
@@ -103,7 +104,7 @@ export class InputEventCoordinator {
       console.warn('InputEventCoordinator: Canvas not available, skipping canvas event listeners');
       return;
     }
-    
+
     // Delegate to existing inputHandler.ts which sets up mouse events
     // This maintains backward compatibility with the existing input system
     const appCompat = {
@@ -115,14 +116,19 @@ export class InputEventCoordinator {
       onWheel: this.handleWheel.bind(this),
       addComponent: (type: string, x: number, y: number) => {
         // Delegate to ComponentLifecycleManager
-        return this.dependencies.componentLifecycleManager.createComponent(type, x, y, this.dependencies.currentView);
-      }
+        return this.dependencies.componentLifecycleManager.createComponent(
+          type,
+          x,
+          y,
+          this.dependencies.currentView
+        );
+      },
     };
-    
+
     // TODO: Temporarily disabled to fix hanging issue
     // setupInputListeners(appCompat);
   }
-  
+
   /**
    * Setup keyboard shortcut listeners
    */
@@ -130,15 +136,15 @@ export class InputEventCoordinator {
     const keydownHandler = (event: KeyboardEvent) => {
       this.handleKeyboardShortcut(event);
     };
-    
+
     document.addEventListener('keydown', keydownHandler);
     this.eventListeners.push({
       element: document,
       event: 'keydown',
-      handler: keydownHandler as EventListener
+      handler: keydownHandler as EventListener,
     });
   }
-  
+
   /**
    * Setup UI button event handlers
    */
@@ -156,38 +162,13 @@ export class InputEventCoordinator {
       this.eventListeners.push({
         element: helpOverlay,
         event: 'click',
-        handler: helpClickHandler
+        handler: helpClickHandler,
       });
     }
 
-    // Back button
-    const backBtn = document.getElementById('back-btn');
-    if (backBtn) {
-      const backHandler = () => {
-        this.dependencies.exitSchematicView();
-      };
-      backBtn.addEventListener('click', backHandler);
-      this.eventListeners.push({
-        element: backBtn,
-        event: 'click',
-        handler: backHandler
-      });
-    }
+    // Back button handled by UIController - removed duplicate handler
 
-    // Help button
-    const helpBtn = document.getElementById('help-btn');
-    if (helpBtn) {
-      const helpHandler = () => {
-        const overlay = document.getElementById('help-overlay');
-        if (overlay) overlay.classList.add('active');
-      };
-      helpBtn.addEventListener('click', helpHandler);
-      this.eventListeners.push({
-        element: helpBtn,
-        event: 'click',
-        handler: helpHandler
-      });
-    }
+    // Help button handled by UIController - removed duplicate handler
 
     // Reset button
     const resetBtn = document.getElementById('reset-btn');
@@ -204,7 +185,7 @@ export class InputEventCoordinator {
       this.eventListeners.push({
         element: resetBtn,
         event: 'click',
-        handler: resetHandler
+        handler: resetHandler,
       });
     }
 
@@ -213,18 +194,18 @@ export class InputEventCoordinator {
     if (exportBtn) {
       const exportHandler = () => {
         eventBus.emit(Events.PROJECT_EXPORT_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       };
       exportBtn.addEventListener('click', exportHandler);
       this.eventListeners.push({
         element: exportBtn,
         event: 'click',
-        handler: exportHandler
+        handler: exportHandler,
       });
     }
   }
-  
+
   /**
    * Setup file import handler
    */
@@ -233,76 +214,107 @@ export class InputEventCoordinator {
     if (importBtn) {
       const importHandler = () => {
         eventBus.emit(Events.PROJECT_IMPORT_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       };
       importBtn.addEventListener('click', importHandler);
       this.eventListeners.push({
         element: importBtn,
         event: 'click',
-        handler: importHandler
+        handler: importHandler,
       });
     }
   }
-  
+
   /**
    * Setup event handlers for ExportImportManager integration
    */
   private setupExportImportEventHandlers(): void {
     // Handle requests for current project state
-    eventBus.on(Events.PROJECT_STATE_REQUEST, (payload: { callback: (components: any[], connections: any[]) => void, timestamp: number }) => {
-      payload.callback(this.dependencies.components, this.dependencies.connections);
-    });
+    eventBus.on(
+      Events.PROJECT_STATE_REQUEST,
+      (payload: {
+        callback: (components: any[], connections: any[]) => void;
+        timestamp: number;
+      }) => {
+        payload.callback(this.dependencies.components, this.dependencies.connections);
+      }
+    );
 
     // Handle project import completion
-    eventBus.on(Events.PROJECT_IMPORTED, (payload: { components: any[], connections: any[], projectData: any, componentCount: number, connectionCount: number, timestamp: number }) => {
-      // Replace current project state with imported data
-      this.dependencies.components.length = 0;
-      this.dependencies.components.push(...payload.components);
-      this.dependencies.connections.length = 0;
-      this.dependencies.connections.push(...payload.connections);
-      
-      // Update current view to reflect new components
-      this.dependencies.currentView.components = this.dependencies.components;
-      this.dependencies.currentView.connections = this.dependencies.connections;
-      
-      // Reset camera and selection
-      this.dependencies.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
-      this.dependencies.setSelectedComponent(null);
-      
-      console.log(`✅ Project imported: ${payload.componentCount} components, ${payload.connectionCount} connections`);
-    });
+    eventBus.on(
+      Events.PROJECT_IMPORTED,
+      (payload: {
+        components: any[];
+        connections: any[];
+        projectData: any;
+        componentCount: number;
+        connectionCount: number;
+        timestamp: number;
+      }) => {
+        // Replace current project state with imported data
+        this.dependencies.components.length = 0;
+        this.dependencies.components.push(...payload.components);
+        this.dependencies.connections.length = 0;
+        this.dependencies.connections.push(...payload.connections);
+
+        // Update current view to reflect new components
+        this.dependencies.currentView.components = this.dependencies.components;
+        this.dependencies.currentView.connections = this.dependencies.connections;
+
+        // Reset camera and selection
+        this.dependencies.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
+        this.dependencies.setSelectedComponent(null);
+
+        console.log(
+          `✅ Project imported: ${payload.componentCount} components, ${payload.connectionCount} connections`
+        );
+      }
+    );
 
     // Handle import errors
-    eventBus.on(Events.PROJECT_IMPORT_ERROR, (payload: { error: string, filename?: string, projectData?: any, timestamp: number }) => {
-      console.error('❌ Import error:', payload.error);
-      alert(`Import Error: ${payload.error}`);
-    });
+    eventBus.on(
+      Events.PROJECT_IMPORT_ERROR,
+      (payload: { error: string; filename?: string; projectData?: any; timestamp: number }) => {
+        console.error('❌ Import error:', payload.error);
+        alert(`Import Error: ${payload.error}`);
+      }
+    );
 
     // Handle export completion
-    eventBus.on(Events.PROJECT_EXPORTED, (payload: { projectData: any, componentCount: number, connectionCount: number, timestamp: number }) => {
-      console.log(`✅ Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`);
-    });
+    eventBus.on(
+      Events.PROJECT_EXPORTED,
+      (payload: {
+        projectData: any;
+        componentCount: number;
+        connectionCount: number;
+        timestamp: number;
+      }) => {
+        console.log(
+          `✅ Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`
+        );
+      }
+    );
   }
-  
+
   /**
    * Handle mouse down events
    */
   public handleMouseDown(e: MouseEvent): void {
     const rect = this.dependencies.canvas.getBoundingClientRect();
-    const worldCoord = this.dependencies.viewportManager.screenToWorld({ 
-      x: e.clientX - rect.left, 
-      y: e.clientY - rect.top 
+    const worldCoord = this.dependencies.viewportManager.screenToWorld({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     });
     const mouseX = worldCoord.x;
     const mouseY = worldCoord.y;
 
     if (e.button === 2) {
       // Right click - panning
-  this.isPanning = true;
-  // ViewportManager exposes the current camera via the `camera` property
-  const cameraForPan = (this.dependencies.viewportManager as any).camera;
-  this.panStart = { x: e.clientX - cameraForPan.x, y: e.clientY - cameraForPan.y };
+      this.isPanning = true;
+      // ViewportManager exposes the current camera via the `camera` property
+      const cameraForPan = (this.dependencies.viewportManager as any).camera;
+      this.panStart = { x: e.clientX - cameraForPan.x, y: e.clientY - cameraForPan.y };
       this.dependencies.canvas.style.cursor = 'grabbing';
       return;
     }
@@ -322,13 +334,13 @@ export class InputEventCoordinator {
         this.dependencies.connectionManager.startConnection(pinHit);
         this.dependencies.canvas.style.cursor = 'crosshair';
         this.dependencies.updateConnectionModeUI();
-        
+
         // Add connection intent
         this.dependencies.uiLayer.clearConnectionIntents();
         this.dependencies.uiLayer.addConnectionIntent({
           startPin: pinHit,
           isValid: true,
-          category: pinHit.category ?? 'frontend'
+          category: pinHit.category ?? 'frontend',
         });
       }
       return;
@@ -357,19 +369,22 @@ export class InputEventCoordinator {
           x: mouseX - clickedComponent.x,
           y: mouseY - clickedComponent.y,
         };
-        
+
         // Add selection box and alignment guides
         this.dependencies.uiLayer.clearSelectionBoxes();
         this.dependencies.uiLayer.clearGuideLines();
         this.dependencies.uiLayer.addSelectionBox(clickedComponent, 'single');
-        this.dependencies.uiLayer.addAlignmentGuides(clickedComponent, this.dependencies.getCurrentViewComponents());
+        this.dependencies.uiLayer.addAlignmentGuides(
+          clickedComponent,
+          this.dependencies.getCurrentViewComponents()
+        );
       }
     } else {
       this.dependencies.setSelectedComponent(null);
       this.dependencies.hideDatasheet();
       this.dependencies.uiLayer.clearSelectionBoxes();
       this.dependencies.uiLayer.clearGuideLines();
-      
+
       // Cancel connection if clicking on empty space
       if (this.dependencies.connectionManager.getConnectionState().isConnecting) {
         this.dependencies.connectionManager.cancelConnection();
@@ -378,30 +393,30 @@ export class InputEventCoordinator {
       }
     }
   }
-  
+
   /**
    * Handle mouse move events
    */
   public handleMouseMove(e: MouseEvent): void {
     const rect = this.dependencies.canvas.getBoundingClientRect();
-    const worldCoord = this.dependencies.viewportManager.screenToWorld({ 
-      x: e.clientX - rect.left, 
-      y: e.clientY - rect.top 
+    const worldCoord = this.dependencies.viewportManager.screenToWorld({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     });
     const mouseX = worldCoord.x;
     const mouseY = worldCoord.y;
     // Update mouse position for connection intents
     this.mousePos = { x: mouseX, y: mouseY };
-    
+
     if (this.isPanning) {
-  // Access current camera from viewportManager.camera
-  const camera = (this.dependencies.viewportManager as any).camera;
+      // Access current camera from viewportManager.camera
+      const camera = (this.dependencies.viewportManager as any).camera;
       const newCameraX = e.clientX - this.panStart.x;
       const newCameraY = e.clientY - this.panStart.y;
-      this.dependencies.viewportManager.setCamera({ 
-        x: newCameraX, 
-        y: newCameraY, 
-        zoom: camera.zoom 
+      this.dependencies.viewportManager.setCamera({
+        x: newCameraX,
+        y: newCameraY,
+        zoom: camera.zoom,
       });
       return;
     }
@@ -410,37 +425,45 @@ export class InputEventCoordinator {
     if (this.isDragging && this.draggedComponent) {
       this.draggedComponent.x = mouseX - this.dragOffset.x;
       this.draggedComponent.y = mouseY - this.dragOffset.y;
-      
+
       // Emit drag update event
       eventBus.emit(Events.COMPONENT_DRAG_UPDATED, {
         componentId: this.draggedComponent.id,
         x: this.draggedComponent.x,
         y: this.draggedComponent.y,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       // Update selection box position
       this.dependencies.uiLayer.clearSelectionBoxes();
       this.dependencies.uiLayer.addSelectionBox(this.draggedComponent, 'single');
-      this.dependencies.uiLayer.addAlignmentGuides(this.draggedComponent, this.dependencies.getCurrentViewComponents());
+      this.dependencies.uiLayer.addAlignmentGuides(
+        this.draggedComponent,
+        this.dependencies.getCurrentViewComponents()
+      );
     }
-    
+
     // Update connection intent if connecting
     const connectionState = this.dependencies.connectionManager.getConnectionState();
     if (connectionState.isConnecting && connectionState.connectionStart) {
       const pinHit = this.dependencies.getPinAt(mouseX, mouseY);
-      const isValid = pinHit && this.dependencies.connectionManager.validateConnection(connectionState.connectionStart, pinHit).isValid;
-      
+      const isValid =
+        pinHit &&
+        this.dependencies.connectionManager.validateConnection(
+          connectionState.connectionStart,
+          pinHit
+        ).isValid;
+
       this.dependencies.uiLayer.clearConnectionIntents();
       this.dependencies.uiLayer.addConnectionIntent({
         startPin: connectionState.connectionStart,
         endPin: pinHit,
         isValid: isValid || false,
-        category: connectionState.connectionStart.category ?? 'frontend'
+        category: connectionState.connectionStart.category ?? 'frontend',
       });
     }
   }
-  
+
   /**
    * Handle mouse up events
    */
@@ -449,35 +472,39 @@ export class InputEventCoordinator {
       this.isPanning = false;
       this.dependencies.canvas.style.cursor = 'grab';
     }
-    
+
     // Emit drag completed event if we were dragging
     if (this.isDragging && this.draggedComponent) {
       eventBus.emit(Events.COMPONENT_DRAG_COMPLETED, {
         componentId: this.draggedComponent.id,
         x: this.draggedComponent.x,
         y: this.draggedComponent.y,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
-    
+
     this.isDragging = false;
     this.draggedComponent = null; // Clear local drag state
   }
-  
+
   /**
    * Handle wheel events for zooming
    */
   private handleWheel(e: WheelEvent): void {
     this.dependencies.viewportManager.handleWheelEvent(e);
   }
-  
+
   /**
    * Handle keyboard shortcuts
    */
   private handleKeyboardShortcut(event: KeyboardEvent): void {
     // Ignore keyboard shortcuts when typing in input fields
     const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.contentEditable === 'true'
+    ) {
       return;
     }
 
@@ -501,13 +528,14 @@ export class InputEventCoordinator {
         this.handleHelpKey();
         break;
       case '?':
-        if (event.shiftKey) { // Shift + ? = ?
+        if (event.shiftKey) {
+          // Shift + ? = ?
           this.handleHelpKey();
         }
         break;
     }
   }
-  
+
   /**
    * Handle Escape key - exit contexts and close modals
    */
@@ -542,7 +570,7 @@ export class InputEventCoordinator {
       return;
     }
   }
-  
+
   /**
    * Handle Tab key - cycle between views
    */
@@ -550,7 +578,7 @@ export class InputEventCoordinator {
     if (this.dependencies.isTransitioning) return;
 
     const viewStackSize = this.dependencies.viewStack.size();
-    
+
     if (viewStackSize === 0) {
       return;
     }
@@ -580,7 +608,7 @@ export class InputEventCoordinator {
       }
     }
   }
-  
+
   /**
    * Handle Space key - toggle component status
    */
@@ -588,17 +616,19 @@ export class InputEventCoordinator {
     const selectedComponent = this.dependencies.selectedComponent;
     if (selectedComponent && selectedComponent.type !== 'power-core') {
       this.dependencies.toggleComponentStatus(selectedComponent);
-      
+
       // Update datasheet if open
       if (document.getElementById('datasheet-panel')?.classList.contains('active')) {
         showDatasheetUI(this.dependencies as any, selectedComponent);
       }
     } else if (!selectedComponent) {
       // No component selected - show status hint
-      this.dependencies.showTemporaryMessage('Select a component first, then press SPACE to toggle its status');
+      this.dependencies.showTemporaryMessage(
+        'Select a component first, then press SPACE to toggle its status'
+      );
     }
   }
-  
+
   /**
    * Handle F1 key - toggle help overlay
    */
@@ -612,24 +642,24 @@ export class InputEventCoordinator {
       }
     }
   }
-  
+
   /**
    * Get current mouse position
    */
   public getMousePosition(): { x: number; y: number } {
     return { ...this.mousePos };
   }
-  
+
   /**
    * Get interaction state
    */
   public getInteractionState(): { isDragging: boolean; isPanning: boolean } {
     return {
       isDragging: this.isDragging,
-      isPanning: this.isPanning
+      isPanning: this.isPanning,
     };
   }
-  
+
   /**
    * Cleanup all event listeners
    */
@@ -639,7 +669,7 @@ export class InputEventCoordinator {
       element.removeEventListener(event, handler);
     });
     this.eventListeners.length = 0;
-    
+
     // Remove EventBus listeners would need specific handler references
     // For now, just log cleanup (proper cleanup would require storing handler refs)
     console.log('InputEventCoordinator: Event listeners cleaned up');
@@ -649,6 +679,8 @@ export class InputEventCoordinator {
 /**
  * Factory function to create InputEventCoordinator
  */
-export function createInputEventCoordinator(dependencies: InputEventCoordinatorDependencies): InputEventCoordinator {
+export function createInputEventCoordinator(
+  dependencies: InputEventCoordinatorDependencies
+): InputEventCoordinator {
   return new InputEventCoordinator(dependencies);
 }

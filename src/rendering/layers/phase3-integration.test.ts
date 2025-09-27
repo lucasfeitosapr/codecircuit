@@ -17,7 +17,7 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
     runtimeLayer = new RuntimeLayer();
     uiLayer = new UILayer();
     layeredRenderer = new LayeredRenderer();
-    
+
     // Mock canvas context
     mockCtx = {
       save: vi.fn(),
@@ -48,16 +48,16 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
       camera: { x: 0, y: 0, zoom: 1 },
       payload: {
         models: [
-          { 
-            id: 'comp1', 
-            x: 100, 
-            y: 100, 
-            width: 80, 
+          {
+            id: 'comp1',
+            x: 100,
+            y: 100,
+            width: 80,
             height: 40,
-            color: '#00ff88'
-          }
-        ]
-      }
+            color: '#00ff88',
+          },
+        ],
+      },
     };
 
     mockComponent = {
@@ -74,7 +74,7 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
       description: '',
       category: 'frontend',
       createdAt: new Date(),
-      color: '#00ff88'
+      color: '#00ff88',
     };
 
     mockPinHit = {
@@ -83,7 +83,7 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
       pinIndex: 0,
       x: 180,
       y: 120,
-      category: 'frontend'
+      category: 'frontend',
     };
   });
 
@@ -92,11 +92,11 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
       // Register both layers
       layeredRenderer.registerLayer('runtime', runtimeLayer);
       layeredRenderer.registerLayer('ui', uiLayer);
-      
+
       // Add runtime effects
       runtimeLayer.pulseComponent('comp1', '#00ff88', 1000);
       runtimeLayer.glowEffect(100, 100, '#ff0000', 800);
-      
+
       // Add UI elements
       uiLayer.addSelectionBox(mockComponent, 'single');
       uiLayer.addGuideLine({
@@ -107,9 +107,9 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         endY: 100,
         color: '#00ff88',
         opacity: 0.8,
-        dashed: true
+        dashed: true,
       });
-      
+
       // Render both layers together
       expect(() => layeredRenderer.render(mockCtx, mockFrame)).not.toThrow();
       // Note: LayeredRenderer may not call canvas methods if layers don't render anything
@@ -118,17 +118,17 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
 
     it('should handle component creation workflow', () => {
       // Simulate component creation workflow
-      
+
       // 1. Add component with runtime effects
       const centerX = mockComponent.x + mockComponent.width / 2;
       const centerY = mockComponent.y + mockComponent.height / 2;
       runtimeLayer.glowEffect(centerX, centerY, mockComponent.color!, 1000);
       runtimeLayer.pulseComponent(mockComponent.id, mockComponent.color!, 800);
-      
+
       // 2. Add selection box and alignment guides
       uiLayer.addSelectionBox(mockComponent, 'single');
       uiLayer.addAlignmentGuides(mockComponent, [mockComponent]);
-      
+
       // 3. Render the complete workflow
       expect(() => {
         runtimeLayer.render(mockCtx, mockFrame);
@@ -138,28 +138,22 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
 
     it('should handle connection creation workflow', () => {
       // Simulate connection creation workflow
-      
+
       // 1. Start connection intent
       uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       // 2. Add energy flow effect
       const endPin = { ...mockPinHit, x: 300, y: 200 };
-      runtimeLayer.energyFlow(
-        mockPinHit.x,
-        mockPinHit.y,
-        endPin.x,
-        endPin.y,
-        '#00ff88'
-      );
-      
+      runtimeLayer.energyFlow(mockPinHit.x, mockPinHit.y, endPin.x, endPin.y, '#00ff88');
+
       // 3. Add glow effects at connection points
       runtimeLayer.glowEffect(mockPinHit.x, mockPinHit.y, '#00ff88', 600);
       runtimeLayer.glowEffect(endPin.x, endPin.y, '#00ff88', 600);
-      
+
       // 4. Render the complete workflow
       expect(() => {
         uiLayer.render(mockCtx, mockFrame);
@@ -169,19 +163,19 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
 
     it('should handle status change workflow', () => {
       // Simulate status change workflow
-      
+
       // 1. Add status change effects
       const centerX = mockComponent.x + mockComponent.width / 2;
       const centerY = mockComponent.y + mockComponent.height / 2;
-      
+
       // Success effect when completing
       runtimeLayer.sparkEffect(centerX, centerY, '#00ff88');
       runtimeLayer.pulseComponent(mockComponent.id, '#00ff88', 600);
-      
+
       // 2. Update selection box
       uiLayer.clearSelectionBoxes();
       uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       // 3. Render the complete workflow
       expect(() => {
         runtimeLayer.render(mockCtx, mockFrame);
@@ -191,16 +185,16 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
 
     it('should handle drag and drop workflow', () => {
       // Simulate drag and drop workflow
-      
+
       // 1. Add selection box for dragging component
       uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       // 2. Add alignment guides during drag
       uiLayer.addAlignmentGuides(mockComponent, [mockComponent]);
-      
+
       // 3. Add hover effect
       uiLayer.addSelectionBox(mockComponent, 'hover');
-      
+
       // 4. Render the complete workflow
       expect(() => {
         uiLayer.render(mockCtx, mockFrame);
@@ -212,7 +206,7 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
       runtimeLayer.pulseComponent('comp1', '#00ff88', 1000);
       runtimeLayer.glowEffect(100, 100, '#ff0000', 800);
       runtimeLayer.sparkEffect(150, 150, '#ffff00');
-      
+
       // Add multiple UI elements
       uiLayer.addSelectionBox(mockComponent, 'single');
       uiLayer.addGuideLine({
@@ -222,7 +216,7 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         endX: 200,
         endY: 100,
         color: '#00ff88',
-        opacity: 0.8
+        opacity: 0.8,
       });
       uiLayer.addUIOverlay({
         type: 'tooltip',
@@ -231,9 +225,9 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         width: 200,
         height: 50,
         content: 'Test tooltip',
-        visible: true
+        visible: true,
       });
-      
+
       // Add particles
       runtimeLayer.addParticle({
         x: 100,
@@ -245,9 +239,9 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         size: 3,
         color: '#00ff88',
         alpha: 1.0,
-        type: 'energy'
+        type: 'energy',
       });
-      
+
       // Render everything together
       expect(() => {
         runtimeLayer.render(mockCtx, mockFrame);
@@ -258,7 +252,7 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
     it('should handle camera transformations correctly', () => {
       // Set up camera transformation
       mockFrame.camera = { x: 50, y: 50, zoom: 2 };
-      
+
       // Add effects and UI elements
       runtimeLayer.glowEffect(100, 100, '#00ff88', 800);
       uiLayer.addSelectionBox(mockComponent, 'single');
@@ -269,9 +263,9 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         endX: 200,
         endY: 100,
         color: '#00ff88',
-        opacity: 0.8
+        opacity: 0.8,
       });
-      
+
       // Render with camera transformation
       expect(() => {
         runtimeLayer.render(mockCtx, mockFrame);
@@ -294,10 +288,10 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
           size: 2,
           color: '#00ff88',
           alpha: 1.0,
-          type: 'energy'
+          type: 'energy',
         });
       }
-      
+
       // Add many UI elements
       for (let i = 0; i < 10; i++) {
         uiLayer.addSelectionBox({ ...mockComponent, id: `comp${i}` }, 'single');
@@ -308,10 +302,10 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
           endX: (i + 1) * 20,
           endY: i * 20,
           color: '#00ff88',
-          opacity: 0.8
+          opacity: 0.8,
         });
       }
-      
+
       // Render everything together
       expect(() => {
         runtimeLayer.render(mockCtx, mockFrame);
@@ -325,9 +319,9 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         type: 'pulse',
         duration: 100, // Very short duration
         target: { x: 0, y: 0 },
-        config: { color: '#00ff88' }
+        config: { color: '#00ff88' },
       });
-      
+
       uiLayer.addSelectionBox(mockComponent, 'hover'); // Should be cleaned up
       uiLayer.addGuideLine({
         type: 'horizontal',
@@ -336,12 +330,12 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         endX: 200,
         endY: 100,
         color: '#00ff88',
-        opacity: 0.8
+        opacity: 0.8,
       });
-      
+
       // Simulate time passing
       mockFrame.timestamp = 10000; // 9 seconds later
-      
+
       // Render should handle cleanup
       expect(() => {
         runtimeLayer.render(mockCtx, mockFrame);
@@ -351,20 +345,22 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
 
     it('should handle error conditions gracefully', () => {
       const errorCtx = {
-        save: vi.fn(() => { throw new Error('Canvas error'); }),
+        save: vi.fn(() => {
+          throw new Error('Canvas error');
+        }),
         restore: vi.fn(),
       } as any;
 
       // Add elements
       runtimeLayer.pulseComponent('comp1', '#00ff88', 1000);
       uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       // Should not throw even if canvas operations fail
       // Note: RuntimeLayer and UILayer have their own error handling
       expect(() => {
         runtimeLayer.render(errorCtx, mockFrame);
       }).not.toThrow();
-      
+
       expect(() => {
         uiLayer.render(errorCtx, mockFrame);
       }).not.toThrow();
@@ -381,17 +377,17 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         endX: 200,
         endY: 100,
         color: '#00ff88',
-        opacity: 0.8
+        opacity: 0.8,
       });
-      
+
       uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       uiLayer.addUIOverlay({
         type: 'tooltip',
         x: 100,
@@ -399,9 +395,9 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
         width: 200,
         height: 50,
         content: 'Test tooltip',
-        visible: true
+        visible: true,
       });
-      
+
       // Render and verify order (guides -> intents -> selections -> overlays)
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -409,10 +405,10 @@ describe('Phase 3 Integration: RuntimeLayer + UILayer', () => {
     it('should render runtime effects after UI elements', () => {
       // Add UI elements first
       uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       // Add runtime effects
       runtimeLayer.pulseComponent('comp1', '#00ff88', 1000);
-      
+
       // Render runtime layer after UI layer (correct visual priority)
       expect(() => {
         uiLayer.render(mockCtx, mockFrame);

@@ -1,6 +1,6 @@
 /**
  * Command Executor Tests - Phase 4 State Management Migration
- * 
+ *
  * Comprehensive tests for the Command pattern implementation including
  * undo/redo functionality, command history, and middleware.
  */
@@ -128,10 +128,10 @@ describe('CommandExecutor', () => {
 
       // Start first command
       const promise1 = executor.execute(command1);
-      
+
       // Try to execute second command while first is running
       const promise2 = executor.execute(command2);
-      
+
       const [result1, result2] = await Promise.all([promise1, promise2]);
 
       expect(result1.success).toBe(true);
@@ -209,7 +209,7 @@ describe('CommandExecutor', () => {
     it('should clear future when new command is executed', async () => {
       const command1 = new TestCommand({ value: 'test1' });
       const command2 = new TestCommand({ value: 'test2' });
-      
+
       await executor.execute(command1);
       await executor.undo();
       await executor.execute(command2);
@@ -222,14 +222,14 @@ describe('CommandExecutor', () => {
 
     it('should return error when no commands to undo', async () => {
       const result = await executor.undo();
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe('No commands to undo');
     });
 
     it('should return error when no commands to redo', async () => {
       const result = await executor.redo();
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe('No commands to redo');
     });

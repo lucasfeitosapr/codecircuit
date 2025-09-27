@@ -15,7 +15,7 @@ import { ModuleICPluginV2 } from '../components/plugins/ModuleICPluginV2';
 import { TaskResistorPluginV2 } from '../components/plugins/TaskResistorPluginV2';
 import { GatewayPluginV2 } from '../components/plugins/GatewayPluginV2';
 
-// Import layers  
+// Import layers
 import BackgroundLayer from '../rendering/layers/BackgroundLayer';
 import ImplementationLayer from '../rendering/layers/ImplementationLayer';
 import ConnectionsLayer from '../rendering/layers/ConnectionsLayer';
@@ -44,13 +44,12 @@ export class ApplicationInitializer {
     this.context = context;
   }
 
-
   setupPluginSystem() {
     // Phase 5B: Event-driven plugin coordination
     // Listen for plugin registrations to automatically update componentTypes
     eventBus.on(Events.PLUGIN_REGISTERED, (payload: any) => {
       const { pluginType, metadata } = payload;
-      
+
       // Convert plugin metadata to componentType format
       const componentType = {
         name: metadata.displayName,
@@ -58,12 +57,12 @@ export class ApplicationInitializer {
         color: metadata.color,
         width: metadata.width || 60,
         height: metadata.height || 40,
-        pins: metadata.pins || { input: [], output: [] }
+        pins: metadata.pins || { input: [], output: [] },
       };
-      
+
       // Add to componentTypes (replacing manual coordination)
       this.context.componentTypes[pluginType] = componentType;
-      
+
       console.log(`✅ ComponentType auto-updated: ${metadata.displayName} (${pluginType})`);
     });
 
@@ -147,39 +146,39 @@ export class ApplicationInitializer {
             // add connections: power-core -> module-ic, module-ic -> task-resistor
             try {
               if (p && m && r) {
-                const fromPin = { 
-                  component: p, 
-                  pinType: 'output' as 'output', 
-                  pinIndex: 0, 
-                  x: p.x + (p.pins?.output?.[0]?.x ?? 0), 
-                  y: p.y + (p.pins?.output?.[0]?.y ?? 0), 
-                  category: p.category 
+                const fromPin = {
+                  component: p,
+                  pinType: 'output' as 'output',
+                  pinIndex: 0,
+                  x: p.x + (p.pins?.output?.[0]?.x ?? 0),
+                  y: p.y + (p.pins?.output?.[0]?.y ?? 0),
+                  category: p.category,
                 };
-                const toPin = { 
-                  component: m, 
-                  pinType: 'input' as 'input', 
-                  pinIndex: 0, 
-                  x: m.x + (m.pins?.input?.[0]?.x ?? 0), 
-                  y: m.y + (m.pins?.input?.[0]?.y ?? 0), 
-                  category: m.category 
+                const toPin = {
+                  component: m,
+                  pinType: 'input' as 'input',
+                  pinIndex: 0,
+                  x: m.x + (m.pins?.input?.[0]?.x ?? 0),
+                  y: m.y + (m.pins?.input?.[0]?.y ?? 0),
+                  category: m.category,
                 };
                 this.context.createConnection(fromPin, toPin);
 
-                const fromPin2 = { 
-                  component: m, 
-                  pinType: 'output' as 'output', 
-                  pinIndex: 0, 
-                  x: m.x + (m.pins?.output?.[0]?.x ?? 0), 
-                  y: m.y + (m.pins?.output?.[0]?.y ?? 0), 
-                  category: m.category 
+                const fromPin2 = {
+                  component: m,
+                  pinType: 'output' as 'output',
+                  pinIndex: 0,
+                  x: m.x + (m.pins?.output?.[0]?.x ?? 0),
+                  y: m.y + (m.pins?.output?.[0]?.y ?? 0),
+                  category: m.category,
                 };
-                const toPin2 = { 
-                  component: r, 
-                  pinType: 'input' as 'input', 
-                  pinIndex: 0, 
-                  x: r.x + (r.pins?.input?.[0]?.x ?? 0), 
-                  y: r.y + (r.pins?.input?.[0]?.y ?? 0), 
-                  category: r.category 
+                const toPin2 = {
+                  component: r,
+                  pinType: 'input' as 'input',
+                  pinIndex: 0,
+                  x: r.x + (r.pins?.input?.[0]?.x ?? 0),
+                  y: r.y + (r.pins?.input?.[0]?.y ?? 0),
+                  category: r.category,
                 };
                 this.context.createConnection(fromPin2, toPin2);
               }
@@ -197,7 +196,7 @@ export class ApplicationInitializer {
   // Complete initialization sequence
   initialize() {
     console.log('🚀 Starting application initialization...');
-    
+
     try {
       // Phase 1: Register rendering layers
       this.registerRenderingLayers();
@@ -211,34 +210,34 @@ export class ApplicationInitializer {
       this.setupPluginSystem();
       console.log('✅ Plugin system initialized');
 
-
       // Phase 5: Seed demo data if requested
       this.seedDemoDataIfRequested();
       console.log('✅ Demo data seeding completed');
 
       console.log('🎉 Application initialization complete!');
-      
+
       // Emit initialization complete event
       eventBus.emit('app.initialization.complete', {
         timestamp: Date.now(),
         components: this.context.getComponents().length,
-        connections: this.context.getConnections().length
+        connections: this.context.getConnections().length,
       });
-      
     } catch (error) {
       console.error('❌ Application initialization failed:', error);
-      
+
       // Emit initialization error event
       eventBus.emit('app.initialization.error', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       throw error;
     }
   }
 }
 
-export function createApplicationInitializer(context: InitializationContext): ApplicationInitializer {
+export function createApplicationInitializer(
+  context: InitializationContext
+): ApplicationInitializer {
   return new ApplicationInitializer(context);
 }

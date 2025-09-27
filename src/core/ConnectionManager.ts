@@ -4,14 +4,14 @@ import { Connection, PinHit, ComponentBase, ViewState } from '../types.d';
 
 /**
  * ConnectionManager - Handles all connection-related logic
- * 
+ *
  * Extracted from MotherboardApp to manage:
  * - Connection creation and validation
  * - Pin hit detection and interaction
  * - Connection state management
  * - Connection visual effects coordination
  * - View-specific connection management
- * 
+ *
  * Part of Phase 5 refactoring - Living Blueprint & Legacy Code Elimination
  */
 
@@ -95,16 +95,16 @@ export class ConnectionManager {
           const pin = component.pins.input[i];
           let pinX = component.x + pin.x;
           let pinY = component.y + pin.y;
-          
+
           // Special handling for Decision Point - match rendering coordinate system
           if (component.type === 'decision-point') {
             // Decision Point renders from center, so pin coordinates need adjustment
-            const centerX = component.x + component.width/2;
-            const centerY = component.y + component.height/2;
-            pinX = centerX + (pin.x - component.width/2);
-            pinY = centerY + (pin.y - component.height/2);
+            const centerX = component.x + component.width / 2;
+            const centerY = component.y + component.height / 2;
+            pinX = centerX + (pin.x - component.width / 2);
+            pinY = centerY + (pin.y - component.height / 2);
           }
-          
+
           const distance = Math.sqrt((x - pinX) ** 2 + (y - pinY) ** 2);
 
           if (distance < pinRadius) {
@@ -117,14 +117,14 @@ export class ConnectionManager {
               category: component.category || 'frontend',
               isInputPin: true, // Mark that this came from input array
             };
-            
+
             // Emit pin interaction event
             this.eventBus.emit('pin.interaction', {
               pin: pinHit,
               action: 'hover',
-              timestamp: Date.now()
+              timestamp: Date.now(),
             } as PinInteractionPayload);
-            
+
             return pinHit;
           }
         }
@@ -136,16 +136,16 @@ export class ConnectionManager {
           const pin = component.pins.output[i];
           let pinX = component.x + pin.x;
           let pinY = component.y + pin.y;
-          
+
           // Special handling for Decision Point - match rendering coordinate system
           if (component.type === 'decision-point') {
             // Decision Point renders from center, so pin coordinates need adjustment
-            const centerX = component.x + component.width/2;
-            const centerY = component.y + component.height/2;
-            pinX = centerX + (pin.x - component.width/2);
-            pinY = centerY + (pin.y - component.height/2);
+            const centerX = component.x + component.width / 2;
+            const centerY = component.y + component.height / 2;
+            pinX = centerX + (pin.x - component.width / 2);
+            pinY = centerY + (pin.y - component.height / 2);
           }
-          
+
           const distance = Math.sqrt((x - pinX) ** 2 + (y - pinY) ** 2);
 
           if (distance < pinRadius) {
@@ -158,14 +158,14 @@ export class ConnectionManager {
               category: component.category || 'frontend',
               isInputPin: false, // Mark that this came from output array
             };
-            
+
             // Emit pin interaction event
             this.eventBus.emit('pin.interaction', {
               pin: pinHit,
               action: 'hover',
-              timestamp: Date.now()
+              timestamp: Date.now(),
             } as PinInteractionPayload);
-            
+
             return pinHit;
           }
         }
@@ -185,13 +185,13 @@ export class ConnectionManager {
     this.eventBus.emit('pin.interaction', {
       pin,
       action: 'connect',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     } as PinInteractionPayload);
 
     // Emit connection start event
     this.eventBus.emit('connection.start', {
       pin,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -204,7 +204,7 @@ export class ConnectionManager {
     }
 
     const validation = this.validateConnection(this.connectionStart, pin);
-    
+
     // Emit validation event
     this.eventBus.emit('connection.validation', validation);
 
@@ -221,7 +221,7 @@ export class ConnectionManager {
         from: this.connectionStart,
         to: pin,
         category: connection.category,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       } as ConnectionCreatedPayload);
 
       this.resetConnectionState();
@@ -239,10 +239,10 @@ export class ConnectionManager {
     if (this.isConnecting) {
       this.eventBus.emit('connection.cancelled', {
         startPin: this.connectionStart,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
-    
+
     this.resetConnectionState();
   }
 
@@ -264,7 +264,7 @@ export class ConnectionManager {
         endPin,
         isValid: false,
         reason: 'Cannot connect to the same component',
-        timestamp
+        timestamp,
       };
     }
 
@@ -276,14 +276,14 @@ export class ConnectionManager {
 
     // Allow output-to-input connections (including custom types like success/failure to input)
     const isValidConnection = (startIsOutput && endIsInput) || (startIsInput && endIsOutput);
-    
+
     if (!isValidConnection) {
       return {
         startPin,
         endPin,
         isValid: false,
         reason: 'Can only connect output pins to input pins',
-        timestamp
+        timestamp,
       };
     }
 
@@ -295,7 +295,7 @@ export class ConnectionManager {
         endPin,
         isValid: false,
         reason: 'Connection already exists',
-        timestamp
+        timestamp,
       };
     }
 
@@ -303,7 +303,7 @@ export class ConnectionManager {
       startPin,
       endPin,
       isValid: true,
-      timestamp
+      timestamp,
     };
   }
 
@@ -352,13 +352,15 @@ export class ConnectionManager {
       inputPin = startPin;
     }
 
-    return this.connections.find(
-      (conn: Connection) =>
-        conn.from.component === outputPin.component &&
-        conn.from.pinIndex === outputPin.pinIndex &&
-        conn.to.component === inputPin.component &&
-        conn.to.pinIndex === inputPin.pinIndex
-    ) || null;
+    return (
+      this.connections.find(
+        (conn: Connection) =>
+          conn.from.component === outputPin.component &&
+          conn.from.pinIndex === outputPin.pinIndex &&
+          conn.to.component === inputPin.component &&
+          conn.to.pinIndex === inputPin.pinIndex
+      ) || null
+    );
   }
 
   /**
@@ -376,7 +378,7 @@ export class ConnectionManager {
     this.eventBus.emit('connection.deleted', {
       connectionId,
       connection,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     return true;
@@ -386,9 +388,8 @@ export class ConnectionManager {
    * Get all connections for specific components
    */
   getConnectionsForComponent(componentId: string): Connection[] {
-    return this.connections.filter(conn => 
-      conn.from.component.id === componentId || 
-      conn.to.component.id === componentId
+    return this.connections.filter(
+      conn => conn.from.component.id === componentId || conn.to.component.id === componentId
     );
   }
 
@@ -398,12 +399,12 @@ export class ConnectionManager {
   private handleComponentUpdate(payload: any): void {
     const componentId = payload.id;
     const affectedConnections = this.getConnectionsForComponent(componentId);
-    
+
     if (affectedConnections.length > 0) {
       this.eventBus.emit('connections.component_updated', {
         componentId,
         affectedConnections: affectedConnections.map(c => c.id),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -413,7 +414,7 @@ export class ConnectionManager {
    */
   private handleComponentDeleted(componentId: string): void {
     const connectionsToRemove = this.getConnectionsForComponent(componentId);
-    
+
     connectionsToRemove.forEach(connection => {
       this.removeConnection(connection.id);
     });
@@ -422,7 +423,7 @@ export class ConnectionManager {
       this.eventBus.emit('connections.cleanup', {
         componentId,
         removedConnectionIds: connectionsToRemove.map(c => c.id),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -448,7 +449,7 @@ export class ConnectionManager {
       isPowered,
       categoryColor,
       fromStatus,
-      toStatus
+      toStatus,
     };
   }
 
@@ -457,7 +458,7 @@ export class ConnectionManager {
    */
   shouldRenderAsIntention(connection: Connection): boolean {
     const state = this.getConnectionRenderState(connection);
-    
+
     // Both ends are DEFINED - show intention
     if (state.fromStatus === 'defined' && state.toStatus === 'defined') {
       return true;
@@ -485,7 +486,11 @@ export class ConnectionManager {
   /**
    * Add connection to view-specific arrays
    */
-  addConnectionToView(connection: Connection, view: ViewState, globalConnections?: Connection[]): void {
+  addConnectionToView(
+    connection: Connection,
+    view: ViewState,
+    globalConnections?: Connection[]
+  ): void {
     const viewConnections = this.getConnectionsForView(view);
     viewConnections.push(connection);
 
@@ -493,7 +498,7 @@ export class ConnectionManager {
     if (view.type === 'main' && globalConnections && globalConnections !== viewConnections) {
       globalConnections.push(connection);
     }
-    
+
     // Handle schematic view internal connections
     if (view.type === 'schematic' && view.component) {
       if (!view.component.internalConnections) {
@@ -514,7 +519,7 @@ export class ConnectionManager {
   } {
     return {
       isConnecting: this.isConnecting,
-      connectionStart: this.connectionStart
+      connectionStart: this.connectionStart,
     };
   }
 
@@ -539,7 +544,7 @@ export class ConnectionManager {
     this.connections = [...connections];
     this.eventBus.emit('connections.restored', {
       connectionCount: connections.length,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -550,10 +555,10 @@ export class ConnectionManager {
     const count = this.connections.length;
     this.connections = [];
     this.resetConnectionState();
-    
+
     this.eventBus.emit('connections.cleared', {
       clearedCount: count,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -569,7 +574,7 @@ export class ConnectionManager {
     if (pin.isInputPin !== undefined) {
       return pin.isInputPin;
     }
-    
+
     // Fallback for older code that doesn't set the flag
     return pin.pinType === 'input';
   }
@@ -582,12 +587,12 @@ export class ConnectionManager {
     if (pin.pinType === 'success' || pin.pinType === 'failure') {
       return true;
     }
-    
+
     // Use the reliable flag set by getPinAt() to determine which array the pin came from
     if (pin.isInputPin !== undefined) {
       return !pin.isInputPin; // Output pins have isInputPin: false
     }
-    
+
     // Fallback for older code that doesn't set the flag
     return pin.pinType === 'output';
   }
@@ -595,7 +600,7 @@ export class ConnectionManager {
 
 // Factory function for creating ConnectionManager instance
 export function createConnectionManager(
-  eventBus: EventBus, 
+  eventBus: EventBus,
   categories: Record<string, { name: string; color: string }>
 ): ConnectionManager {
   return new ConnectionManager(eventBus, categories);

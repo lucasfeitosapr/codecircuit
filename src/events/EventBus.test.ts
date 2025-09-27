@@ -5,7 +5,9 @@ describe('EventBus', () => {
   it('should allow subscribe and emit', () => {
     const bus = new EventBus();
     let called = false;
-    bus.on('test.hello', () => { called = true; });
+    bus.on('test.hello', () => {
+      called = true;
+    });
     bus.emit('test.hello', { foo: 'bar' });
     expect(called).toBe(true);
   });
@@ -13,7 +15,9 @@ describe('EventBus', () => {
   it('once should only call once', () => {
     const bus = new EventBus();
     let count = 0;
-    bus.once('test.once', () => { count += 1; });
+    bus.once('test.once', () => {
+      count += 1;
+    });
     bus.emit('test.once');
     bus.emit('test.once');
     expect(count).toBe(1);
@@ -22,7 +26,9 @@ describe('EventBus', () => {
   it('off should remove handler', () => {
     const bus = new EventBus();
     let count = 0;
-    const handler = () => { count++; };
+    const handler = () => {
+      count++;
+    };
     bus.on('test.off', handler);
     bus.emit('test.off');
     bus.off('test.off', handler);
@@ -33,8 +39,12 @@ describe('EventBus', () => {
   it('handler errors should emit system.error without crashing', () => {
     const bus = new EventBus();
     let sawSystemError = false;
-    bus.on('system.error', () => { sawSystemError = true; });
-    bus.on('test.err', () => { throw new Error('boom'); });
+    bus.on('system.error', () => {
+      sawSystemError = true;
+    });
+    bus.on('test.err', () => {
+      throw new Error('boom');
+    });
     bus.emit('test.err');
     expect(sawSystemError).toBe(true);
   });

@@ -123,7 +123,16 @@ export function renderComponent(
 
   // Internal particles
   if (component.status === 'in-progress') {
-    drawEnergyParticles(c, component, screenX, screenY, screenWidth, screenHeight, camera, options.categories);
+    drawEnergyParticles(
+      c,
+      component,
+      screenX,
+      screenY,
+      screenWidth,
+      screenHeight,
+      camera,
+      options.categories
+    );
   }
 }
 
@@ -155,7 +164,10 @@ function drawPins(
       const pinY = screenY + pin.y * camera.zoom;
 
       const hasActiveInput = connections.some(
-        (conn: any) => conn.to.component === component && conn.to.pinIndex === index && (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
+        (conn: any) =>
+          conn.to.component === component &&
+          conn.to.pinIndex === index &&
+          (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
       );
 
       if (hasActiveInput) {
@@ -173,12 +185,14 @@ function drawPins(
       const pinX = screenX + pin.x * camera.zoom;
       const pinY = screenY + pin.y * camera.zoom;
 
-      const hasActiveOutput = connections.some(
-        (conn: any) => conn.from.component === component && conn.from.pinIndex === index
-      ) && isActive;
+      const hasActiveOutput =
+        connections.some(
+          (conn: any) => conn.from.component === component && conn.from.pinIndex === index
+        ) && isActive;
 
       if (hasActiveOutput) {
-        const pulseIntensity = component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
+        const pulseIntensity =
+          component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
         c.shadowBlur = 12 * camera.zoom * pulseIntensity;
         const size = pinSize * (1.1 + 0.05 * Math.sin(Date.now() * 0.005));
         c.fillRect(pinX - size / 2, pinY - size / 2, size, size);

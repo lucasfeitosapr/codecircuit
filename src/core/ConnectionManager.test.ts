@@ -15,7 +15,7 @@ describe('ConnectionManager', () => {
     mockCategories = {
       frontend: { name: 'Frontend', color: '#00ff88' },
       backend: { name: 'Backend', color: '#4488ff' },
-      database: { name: 'Database', color: '#ffaa00' }
+      database: { name: 'Database', color: '#ffaa00' },
     };
 
     connectionManager = new ConnectionManager(eventBus, mockCategories);
@@ -31,15 +31,15 @@ describe('ConnectionManager', () => {
         height: 40,
         pins: {
           input: [],
-          output: [{ x: 80, y: 20, type: 'energy' }]
+          output: [{ x: 80, y: 20, type: 'energy' }],
         },
         name: 'Power Core',
         status: 'done',
         category: 'backend',
-        createdAt: new Date()
+        createdAt: new Date(),
       } as ComponentBase,
       {
-        id: 'comp2', 
+        id: 'comp2',
         type: 'module-ic',
         x: 200,
         y: 150,
@@ -47,20 +47,20 @@ describe('ConnectionManager', () => {
         height: 60,
         pins: {
           input: [{ x: 0, y: 30, type: 'energy' }],
-          output: [{ x: 100, y: 30, type: 'energy' }]
+          output: [{ x: 100, y: 30, type: 'energy' }],
         },
         name: 'Module IC',
         status: 'in-progress',
         category: 'frontend',
-        createdAt: new Date()
-      } as ComponentBase
+        createdAt: new Date(),
+      } as ComponentBase,
     ];
   });
 
   describe('Construction and Setup', () => {
     it('should initialize with empty state', () => {
       expect(connectionManager.getAllConnections()).toHaveLength(0);
-      
+
       const state = connectionManager.getConnectionState();
       expect(state.isConnecting).toBe(false);
       expect(state.connectionStart).toBeNull();
@@ -70,9 +70,15 @@ describe('ConnectionManager', () => {
       const eventSpy = vi.spyOn(eventBus, 'on');
       new ConnectionManager(eventBus, mockCategories);
 
-      expect(eventSpy).toHaveBeenCalledWith(Events.CONNECTION_START_REQUESTED, expect.any(Function));
+      expect(eventSpy).toHaveBeenCalledWith(
+        Events.CONNECTION_START_REQUESTED,
+        expect.any(Function)
+      );
       expect(eventSpy).toHaveBeenCalledWith(Events.CONNECTION_END_REQUESTED, expect.any(Function));
-      expect(eventSpy).toHaveBeenCalledWith(Events.CONNECTION_CANCEL_REQUESTED, expect.any(Function));
+      expect(eventSpy).toHaveBeenCalledWith(
+        Events.CONNECTION_CANCEL_REQUESTED,
+        expect.any(Function)
+      );
       expect(eventSpy).toHaveBeenCalledWith(Events.ComponentUpdated, expect.any(Function));
       expect(eventSpy).toHaveBeenCalledWith(Events.ComponentDeleted, expect.any(Function));
     });
@@ -106,13 +112,16 @@ describe('ConnectionManager', () => {
 
     it('should emit pin interaction events', () => {
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       connectionManager.getPinAt(180, 120, mockComponents);
-      
-      expect(eventSpy).toHaveBeenCalledWith('pin.interaction', expect.objectContaining({
-        action: 'hover',
-        timestamp: expect.any(Number)
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'pin.interaction',
+        expect.objectContaining({
+          action: 'hover',
+          timestamp: expect.any(Number),
+        })
+      );
     });
 
     it('should respect pin hit radius', () => {
@@ -137,7 +146,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
 
       inputPin = {
@@ -146,13 +155,13 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
     });
 
     it('should create valid connection', () => {
       const connection = connectionManager.createConnection(outputPin, inputPin);
-      
+
       expect(connection).not.toBeNull();
       expect(connection?.from.component.id).toBe('comp1');
       expect(connection?.to.component.id).toBe('comp2');
@@ -164,7 +173,7 @@ describe('ConnectionManager', () => {
     it('should handle output-to-input pin ordering', () => {
       // Create connection starting from input pin
       const connection = connectionManager.createConnection(inputPin, outputPin);
-      
+
       expect(connection).not.toBeNull();
       expect(connection?.from.pinType).toBe('output');
       expect(connection?.to.pinType).toBe('input');
@@ -177,7 +186,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 100,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
 
       const connection = connectionManager.createConnection(outputPin, sameCompPin);
@@ -191,7 +200,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 300,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
 
       const connection = connectionManager.createConnection(outputPin, anotherOutputPin);
@@ -210,9 +219,9 @@ describe('ConnectionManager', () => {
 
     it('should add connection to internal list', () => {
       const initialCount = connectionManager.getAllConnections().length;
-      
+
       connectionManager.createConnection(outputPin, inputPin);
-      
+
       expect(connectionManager.getAllConnections()).toHaveLength(initialCount + 1);
     });
   });
@@ -228,7 +237,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
 
       inputPin = {
@@ -237,13 +246,13 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
     });
 
     it('should validate good connection', () => {
       const validation = connectionManager.validateConnection(outputPin, inputPin);
-      
+
       expect(validation.isValid).toBe(true);
       expect(validation.reason).toBeUndefined();
       expect(validation.startPin).toBe(outputPin);
@@ -254,7 +263,7 @@ describe('ConnectionManager', () => {
     it('should reject same component connection', () => {
       const sameCompPin: PinHit = { ...inputPin, component: mockComponents[0] };
       const validation = connectionManager.validateConnection(outputPin, sameCompPin);
-      
+
       expect(validation.isValid).toBe(false);
       expect(validation.reason).toBe('Cannot connect to the same component');
     });
@@ -262,7 +271,7 @@ describe('ConnectionManager', () => {
     it('should reject same pin type connection', () => {
       const anotherOutputPin: PinHit = { ...outputPin, component: mockComponents[1] };
       const validation = connectionManager.validateConnection(outputPin, anotherOutputPin);
-      
+
       expect(validation.isValid).toBe(false);
       expect(validation.reason).toBe('Can only connect output pins to input pins'); // Updated message
     });
@@ -270,9 +279,9 @@ describe('ConnectionManager', () => {
     it('should reject duplicate connection', () => {
       // Create existing connection
       connectionManager.createConnection(outputPin, inputPin);
-      
+
       const validation = connectionManager.validateConnection(outputPin, inputPin);
-      
+
       expect(validation.isValid).toBe(false);
       expect(validation.reason).toBe('Connection already exists');
     });
@@ -288,26 +297,32 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
     });
 
     it('should start connection', () => {
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       connectionManager.startConnection(outputPin);
-      
+
       const state = connectionManager.getConnectionState();
       expect(state.isConnecting).toBe(true);
       expect(state.connectionStart).toBe(outputPin);
-      
-      expect(eventSpy).toHaveBeenCalledWith('pin.interaction', expect.objectContaining({
-        pin: outputPin,
-        action: 'connect'
-      }));
-      expect(eventSpy).toHaveBeenCalledWith('connection.start', expect.objectContaining({
-        pin: outputPin
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'pin.interaction',
+        expect.objectContaining({
+          pin: outputPin,
+          action: 'connect',
+        })
+      );
+      expect(eventSpy).toHaveBeenCalledWith(
+        'connection.start',
+        expect.objectContaining({
+          pin: outputPin,
+        })
+      );
     });
 
     it('should end connection successfully', () => {
@@ -317,25 +332,28 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
 
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       connectionManager.startConnection(outputPin);
       const result = connectionManager.endConnection(inputPin);
-      
+
       expect(result).toBe(true);
-      
+
       const state = connectionManager.getConnectionState();
       expect(state.isConnecting).toBe(false);
       expect(state.connectionStart).toBeNull();
-      
-      expect(eventSpy).toHaveBeenCalledWith(Events.ConnectionCreated, expect.objectContaining({
-        from: outputPin,
-        to: inputPin,
-        category: 'backend'
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        Events.ConnectionCreated,
+        expect.objectContaining({
+          from: outputPin,
+          to: inputPin,
+          category: 'backend',
+        })
+      );
     });
 
     it('should end connection with validation failure', () => {
@@ -345,37 +363,43 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 100,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
 
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       connectionManager.startConnection(outputPin);
       const result = connectionManager.endConnection(sameCompPin);
-      
+
       expect(result).toBe(false);
-      
-      expect(eventSpy).toHaveBeenCalledWith('connection.validation', expect.objectContaining({
-        isValid: false,
-        reason: 'Cannot connect to the same component'
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'connection.validation',
+        expect.objectContaining({
+          isValid: false,
+          reason: 'Cannot connect to the same component',
+        })
+      );
 
       expect(eventSpy).toHaveBeenCalledWith('connection.cancelled', expect.any(Object));
     });
 
     it('should cancel connection', () => {
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       connectionManager.startConnection(outputPin);
       connectionManager.cancelConnection();
-      
+
       const state = connectionManager.getConnectionState();
       expect(state.isConnecting).toBe(false);
       expect(state.connectionStart).toBeNull();
-      
-      expect(eventSpy).toHaveBeenCalledWith('connection.cancelled', expect.objectContaining({
-        startPin: outputPin
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'connection.cancelled',
+        expect.objectContaining({
+          startPin: outputPin,
+        })
+      );
     });
 
     it('should handle end connection when not connecting', () => {
@@ -385,7 +409,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
 
       const result = connectionManager.endConnection(inputPin);
@@ -403,7 +427,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
 
       const inputPin: PinHit = {
@@ -412,7 +436,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
 
       connection = connectionManager.createConnection(outputPin, inputPin)!;
@@ -435,16 +459,19 @@ describe('ConnectionManager', () => {
 
     it('should remove connection by ID', () => {
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       const result = connectionManager.removeConnection(connection.id);
-      
+
       expect(result).toBe(true);
       expect(connectionManager.getAllConnections()).toHaveLength(0);
-      
-      expect(eventSpy).toHaveBeenCalledWith('connection.deleted', expect.objectContaining({
-        connectionId: connection.id,
-        connection: connection
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'connection.deleted',
+        expect.objectContaining({
+          connectionId: connection.id,
+          connection: connection,
+        })
+      );
     });
 
     it('should handle remove non-existent connection', () => {
@@ -454,31 +481,37 @@ describe('ConnectionManager', () => {
 
     it('should clear all connections', () => {
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       connectionManager.clearAllConnections();
-      
+
       expect(connectionManager.getAllConnections()).toHaveLength(0);
-      
+
       const state = connectionManager.getConnectionState();
       expect(state.isConnecting).toBe(false);
       expect(state.connectionStart).toBeNull();
-      
-      expect(eventSpy).toHaveBeenCalledWith('connections.cleared', expect.objectContaining({
-        clearedCount: 1
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'connections.cleared',
+        expect.objectContaining({
+          clearedCount: 1,
+        })
+      );
     });
 
     it('should set connections for import/restore', () => {
       const eventSpy = vi.spyOn(eventBus, 'emit');
       const newConnections = [connection, { ...connection, id: 'conn2' }];
-      
+
       connectionManager.setConnections(newConnections);
-      
+
       expect(connectionManager.getAllConnections()).toHaveLength(2);
-      
-      expect(eventSpy).toHaveBeenCalledWith('connections.restored', expect.objectContaining({
-        connectionCount: 2
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'connections.restored',
+        expect.objectContaining({
+          connectionCount: 2,
+        })
+      );
     });
   });
 
@@ -492,7 +525,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
 
       const inputPin: PinHit = {
@@ -501,7 +534,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
 
       connection = connectionManager.createConnection(outputPin, inputPin)!;
@@ -509,28 +542,34 @@ describe('ConnectionManager', () => {
 
     it('should handle component update', () => {
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       // Simulate component update event
       eventBus.emit(Events.ComponentUpdated, { id: 'comp1', changes: { status: 'done' } });
-      
-      expect(eventSpy).toHaveBeenCalledWith('connections.component_updated', expect.objectContaining({
-        componentId: 'comp1',
-        affectedConnections: [connection.id]
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'connections.component_updated',
+        expect.objectContaining({
+          componentId: 'comp1',
+          affectedConnections: [connection.id],
+        })
+      );
     });
 
     it('should handle component deletion', () => {
       const eventSpy = vi.spyOn(eventBus, 'emit');
-      
+
       // Simulate component deletion event
       eventBus.emit(Events.ComponentDeleted, { id: 'comp1' });
-      
+
       expect(connectionManager.getAllConnections()).toHaveLength(0);
-      
-      expect(eventSpy).toHaveBeenCalledWith('connections.cleanup', expect.objectContaining({
-        componentId: 'comp1',
-        removedConnectionIds: [connection.id]
-      }));
+
+      expect(eventSpy).toHaveBeenCalledWith(
+        'connections.cleanup',
+        expect.objectContaining({
+          componentId: 'comp1',
+          removedConnectionIds: [connection.id],
+        })
+      );
     });
   });
 
@@ -544,7 +583,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
 
       const inputPin: PinHit = {
@@ -553,7 +592,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
 
       connection = connectionManager.createConnection(outputPin, inputPin)!;
@@ -561,7 +600,7 @@ describe('ConnectionManager', () => {
 
     it('should get connection render state', () => {
       const state = connectionManager.getConnectionRenderState(connection);
-      
+
       expect(state.fromStatus).toBe('done'); // comp1 status
       expect(state.toStatus).toBe('in-progress'); // comp2 status
       expect(state.isActive).toBe(true); // fromStatus is 'done'
@@ -573,7 +612,7 @@ describe('ConnectionManager', () => {
       // Set both components to 'defined'
       mockComponents[0].status = 'defined';
       mockComponents[1].status = 'defined';
-      
+
       const shouldShowIntention = connectionManager.shouldRenderAsIntention(connection);
       expect(shouldShowIntention).toBe(true);
     });
@@ -582,7 +621,7 @@ describe('ConnectionManager', () => {
       // Set source to 'defined' (inactive)
       mockComponents[0].status = 'defined';
       mockComponents[1].status = 'todo';
-      
+
       const shouldShowIntention = connectionManager.shouldRenderAsIntention(connection);
       expect(shouldShowIntention).toBe(true);
     });
@@ -602,7 +641,7 @@ describe('ConnectionManager', () => {
       mockView = {
         type: 'main',
         components: mockComponents,
-        connections: []
+        connections: [],
       };
 
       const outputPin: PinHit = {
@@ -611,7 +650,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'backend'
+        category: 'backend',
       };
 
       const inputPin: PinHit = {
@@ -620,7 +659,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'frontend'
+        category: 'frontend',
       };
 
       connection = connectionManager.createConnection(outputPin, inputPin)!;
@@ -639,9 +678,9 @@ describe('ConnectionManager', () => {
 
     it('should add connection to main view', () => {
       const globalConnections: Connection[] = [];
-      
+
       connectionManager.addConnectionToView(connection, mockView, globalConnections);
-      
+
       expect(mockView.connections).toContain(connection);
       expect(globalConnections).toContain(connection);
     });
@@ -651,15 +690,15 @@ describe('ConnectionManager', () => {
         type: 'schematic',
         component: {
           id: 'module1',
-          internalConnections: []
+          internalConnections: [],
         } as any,
         camera: { x: 0, y: 0, zoom: 1 },
         components: mockComponents,
-        connections: []
+        connections: [],
       };
-      
+
       connectionManager.addConnectionToView(connection, schematicView);
-      
+
       expect(schematicView.connections).toContain(connection);
       expect(schematicView.component.internalConnections).toContain(connection);
     });
@@ -669,11 +708,11 @@ describe('ConnectionManager', () => {
     it('should update categories', () => {
       const newCategories = {
         testing: { name: 'Testing', color: '#88ff00' },
-        security: { name: 'Security', color: '#ff0088' }
+        security: { name: 'Security', color: '#ff0088' },
       };
-      
+
       connectionManager.updateCategories(newCategories);
-      
+
       // Create connection to test new categories
       const outputPin: PinHit = {
         component: mockComponents[0],
@@ -681,7 +720,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'testing'
+        category: 'testing',
       };
 
       const inputPin: PinHit = {
@@ -690,12 +729,12 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'security'
+        category: 'security',
       };
 
       const connection = connectionManager.createConnection(outputPin, inputPin);
       const state = connectionManager.getConnectionRenderState(connection!);
-      
+
       expect(state.categoryColor).toBe('#88ff00'); // testing category color
     });
 
@@ -706,7 +745,7 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 180,
         y: 120,
-        category: 'unknown'
+        category: 'unknown',
       };
 
       const inputPin: PinHit = {
@@ -715,12 +754,12 @@ describe('ConnectionManager', () => {
         pinIndex: 0,
         x: 200,
         y: 180,
-        category: 'unknown'
+        category: 'unknown',
       };
 
       const connection = connectionManager.createConnection(outputPin, inputPin);
       const state = connectionManager.getConnectionRenderState(connection!);
-      
+
       expect(state.categoryColor).toBe('#00ff88'); // Default fallback color
     });
   });

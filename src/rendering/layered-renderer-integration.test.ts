@@ -63,7 +63,7 @@ describe('LayeredRenderer Integration', () => {
 
   it('renders all layers in correct order when feature flag is enabled', () => {
     vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
-    
+
     // Register all layers
     layeredRenderer.registerLayer('background', BackgroundLayer);
     layeredRenderer.registerLayer('implementation', ImplementationLayer);
@@ -95,10 +95,14 @@ describe('LayeredRenderer Integration', () => {
 
     // Background layer should clear canvas
     expect(ctx.clearRect).toHaveBeenCalled();
-    
+
     // Implementation layer should call plugin render
-    expect(renderSpy).toHaveBeenCalledWith(ctx, frame, expect.objectContaining({ type: 'test-plugin' }));
-    
+    expect(renderSpy).toHaveBeenCalledWith(
+      ctx,
+      frame,
+      expect.objectContaining({ type: 'test-plugin' })
+    );
+
     // Connections layer should be called (even with empty connections)
     expect(ctx.beginPath).toHaveBeenCalled();
   });
@@ -121,7 +125,7 @@ describe('LayeredRenderer Integration', () => {
 
   it('handles layer registration errors gracefully', () => {
     vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
-    
+
     // Register a layer that will throw an error
     const errorLayer = {
       name: 'error-layer',
@@ -131,7 +135,7 @@ describe('LayeredRenderer Integration', () => {
     };
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    
+
     layeredRenderer.registerLayer('error-layer', errorLayer);
 
     const frame = {
@@ -142,14 +146,17 @@ describe('LayeredRenderer Integration', () => {
     };
 
     expect(() => layeredRenderer.render(ctx, frame)).not.toThrow();
-    expect(consoleSpy).toHaveBeenCalledWith('LayeredRenderer: layer error-layer failed', expect.any(Error));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'LayeredRenderer: layer error-layer failed',
+      expect.any(Error)
+    );
 
     consoleSpy.mockRestore();
   });
 
   it('handles missing frame payload gracefully', () => {
     vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
-    
+
     layeredRenderer.registerLayer('background', BackgroundLayer);
     layeredRenderer.registerLayer('implementation', ImplementationLayer);
     layeredRenderer.registerLayer('connections', ConnectionsLayer);
@@ -166,10 +173,10 @@ describe('LayeredRenderer Integration', () => {
 
   it('renders with different view types correctly', () => {
     vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
-    
+
     const drawGridSpy = vi.spyOn(legacyRenderer, 'drawGrid');
     const drawSchematicSpy = vi.spyOn(legacyRenderer, 'drawSchematicBackground');
-    
+
     layeredRenderer.registerLayer('background', BackgroundLayer);
 
     // Test main view
@@ -197,7 +204,7 @@ describe('LayeredRenderer Integration', () => {
 
   it('handles component rendering with different statuses', () => {
     vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
-    
+
     const renderSpy = vi.fn();
     const plugin = {
       id: 'test-plugin',

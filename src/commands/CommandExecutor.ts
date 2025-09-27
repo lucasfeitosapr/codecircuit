@@ -1,18 +1,18 @@
 /**
  * Command Executor - Phase 4 State Management Migration
- * 
+ *
  * Executes commands and maintains command history for undo/redo functionality.
  * This is the core of the Command pattern implementation.
  */
 
-import type { 
-  Command, 
-  CommandResult, 
-  CommandHistory, 
-  CommandValidator, 
+import type {
+  Command,
+  CommandResult,
+  CommandHistory,
+  CommandValidator,
   CommandMiddleware,
   AnyCommand,
-  ValidationResult 
+  ValidationResult,
 } from './commandTypes';
 import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
@@ -106,10 +106,10 @@ export class CommandExecutor {
     }
 
     const command = this.history.past[this.history.past.length - 1];
-    
+
     try {
       const result = await command.undo();
-      
+
       if (result.success) {
         // Move command from past to future
         this.history.past.pop();
@@ -145,10 +145,10 @@ export class CommandExecutor {
     }
 
     const command = this.history.future[0];
-    
+
     try {
       const result = await command.execute();
-      
+
       if (result.success) {
         // Move command from future to past
         this.history.future.shift();

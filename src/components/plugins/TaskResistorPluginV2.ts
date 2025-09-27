@@ -13,10 +13,10 @@ export interface TaskResistorComponent extends ComponentBase {
 
 /**
  * TaskResistorPluginV2 - First Phase 2 migration success!
- * 
+ *
  * This demonstrates the scalability of our Phase 1 architecture.
  * 95% code salvage achieved - only coordination layer changed.
- * 
+ *
  * Original TaskResistorPlugin: Simple rectangular component with zigzag pattern
  * V2 Version: Same functionality, event-driven coordination
  */
@@ -30,19 +30,23 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
     width: 60,
     height: 20,
     pins: {
-      input: [{
-        x: 0,
-        y: 10,
-        type: 'energy',
-        label: 'input'
-      }],
-      output: [{
-        x: 60,
-        y: 10,
-        type: 'energy',
-        label: 'output'
-      }]
-    }
+      input: [
+        {
+          x: 0,
+          y: 10,
+          type: 'energy',
+          label: 'input',
+        },
+      ],
+      output: [
+        {
+          x: 60,
+          y: 10,
+          type: 'energy',
+          label: 'output',
+        },
+      ],
+    },
   };
 
   /**
@@ -65,20 +69,24 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
       title: config.title || 'Task Resistor',
       color: '#ff4444',
       status: 'defined',
-      
+
       // Pin configuration from original structure
       pins: {
-        input: [{
-          x: 0,
-          y: 10,
-          type: 'energy'
-        }],
-        output: [{
-          x: 60,
-          y: 10,
-          type: 'energy'
-        }]
-      }
+        input: [
+          {
+            x: 0,
+            y: 10,
+            type: 'energy',
+          },
+        ],
+        output: [
+          {
+            x: 60,
+            y: 10,
+            type: 'energy',
+          },
+        ],
+      },
     };
   }
 
@@ -178,8 +186,15 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
       ctx.globalAlpha = 1;
 
       // Draw pins
-      this.drawPins(ctx, component, screenX, screenY, camera, (frame as any).categories ?? {}, (frame as any).payload?.connections ?? []);
-
+      this.drawPins(
+        ctx,
+        component,
+        screenX,
+        screenY,
+        camera,
+        (frame as any).categories ?? {},
+        (frame as any).payload?.connections ?? []
+      );
     } catch (e) {
       console.error('TaskResistorPluginV2.render failed', e);
     }
@@ -216,7 +231,10 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
         const pinY = screenY + pin.y * camera.zoom;
 
         const hasActiveInput = connections.some(
-          (conn: any) => conn.to.component === component && conn.to.pinIndex === index && (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
+          (conn: any) =>
+            conn.to.component === component &&
+            conn.to.pinIndex === index &&
+            (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
         );
 
         if (hasActiveInput) {
@@ -234,12 +252,14 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
         const pinX = screenX + pin.x * camera.zoom;
         const pinY = screenY + pin.y * camera.zoom;
 
-        const hasActiveOutput = connections.some(
-          (conn: any) => conn.from.component === component && conn.from.pinIndex === index
-        ) && isActive;
+        const hasActiveOutput =
+          connections.some(
+            (conn: any) => conn.from.component === component && conn.from.pinIndex === index
+          ) && isActive;
 
         if (hasActiveOutput) {
-          const pulseIntensity = component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
+          const pulseIntensity =
+            component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
           ctx.shadowBlur = 12 * camera.zoom * pulseIntensity;
           const size = pinSize * (1.1 + 0.05 * Math.sin(Date.now() * 0.005));
           ctx.fillRect(pinX - size / 2, pinY - size / 2, size, size);
@@ -262,14 +282,14 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
   }
 
   /**
-   * Deserialization - 100% salvaged from original  
+   * Deserialization - 100% salvaged from original
    * Simple pass-through deserialization
    */
   deserialize(data: any): TaskResistorComponent {
     // Original: (data) => data
     return {
       ...data,
-      type: 'task-resistor' // Ensure type consistency
+      type: 'task-resistor', // Ensure type consistency
     };
   }
 }
@@ -279,7 +299,7 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
  * Allows gradual transition from PluginDescriptor to BaseComponentPlugin
  */
 export const TaskResistorPluginLegacy = {
-  id: 'task-resistor', 
+  id: 'task-resistor',
   displayName: 'Task Resistor',
   render: (ctx: any, frame: any, model: any) => {
     const plugin = new TaskResistorPluginV2();

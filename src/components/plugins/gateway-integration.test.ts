@@ -29,9 +29,9 @@ describe('Gateway Plugin Integration', () => {
           displayName: 'Gateway ⬟',
           icon: '⬟',
           color: '#9B59B6',
-          category: 'integration'
+          category: 'integration',
         }),
-        timestamp: expect.any(Number)
+        timestamp: expect.any(Number),
       });
     });
 
@@ -62,7 +62,7 @@ describe('Gateway Plugin Integration', () => {
         x: 100,
         y: 200,
         externalSystem: 'User Database',
-        connectionUrl: 'postgresql://localhost:5432/users'
+        connectionUrl: 'postgresql://localhost:5432/users',
       };
 
       const component = registry.createComponent('gateway', config);
@@ -75,21 +75,24 @@ describe('Gateway Plugin Integration', () => {
 
     it('should create different types of Gateway components', () => {
       const dbGateway = registry.createComponent('gateway', {
-        x: 100, y: 100,
+        x: 100,
+        y: 100,
         externalSystem: 'Database',
-        connectionUrl: 'postgresql://localhost:5432/db'
+        connectionUrl: 'postgresql://localhost:5432/db',
       });
 
       const apiGateway = registry.createComponent('gateway', {
-        x: 200, y: 100,
+        x: 200,
+        y: 100,
         externalSystem: 'REST API',
-        connectionUrl: 'https://api.example.com'
+        connectionUrl: 'https://api.example.com',
       });
 
       const fileGateway = registry.createComponent('gateway', {
-        x: 300, y: 100,
+        x: 300,
+        y: 100,
         externalSystem: 'File Storage',
-        connectionUrl: 's3://bucket/files'
+        connectionUrl: 's3://bucket/files',
       });
 
       expect((dbGateway as GatewayComponent).externalSystem).toBe('Database');
@@ -111,8 +114,9 @@ describe('Gateway Plugin Integration', () => {
     beforeEach(() => {
       registry.register(gatewayPlugin);
       gateway = registry.createComponent('gateway', {
-        x: 0, y: 0,
-        externalSystem: 'Test System'
+        x: 0,
+        y: 0,
+        externalSystem: 'Test System',
       }) as GatewayComponent;
     });
 
@@ -127,13 +131,13 @@ describe('Gateway Plugin Integration', () => {
       expect(healthEventSpy).toHaveBeenCalledWith({
         componentId: gateway.id,
         healthState: expect.stringMatching(/^(healthy|degraded|failed)$/),
-        timestamp: expect.any(Number)
+        timestamp: expect.any(Number),
       });
     });
 
     it('should update component health state', () => {
       const originalState = gateway.healthState;
-      
+
       gatewayPlugin.evaluateComponent(gateway);
 
       expect(gateway.healthState).toMatch(/^(healthy|degraded|failed)$/);
@@ -147,12 +151,13 @@ describe('Gateway Plugin Integration', () => {
     beforeEach(() => {
       registry.register(gatewayPlugin);
       gateway = registry.createComponent('gateway', {
-        x: 150, y: 250,
+        x: 150,
+        y: 250,
         externalSystem: 'Payment API',
         connectionUrl: 'https://api.stripe.com',
-        timeout: 8000
+        timeout: 8000,
       }) as GatewayComponent;
-      
+
       // Set some runtime state
       gateway.healthState = 'healthy';
       gateway.lastHealthCheck = Date.now();
@@ -171,7 +176,7 @@ describe('Gateway Plugin Integration', () => {
         connectionUrl: 'https://api.stripe.com',
         timeout: 8000,
         healthState: 'healthy',
-        lastHealthCheck: gateway.lastHealthCheck
+        lastHealthCheck: gateway.lastHealthCheck,
       });
     });
   });
@@ -220,11 +225,17 @@ describe('Gateway Plugin Integration', () => {
       expect(gateway.pins.output).toHaveLength(1);
 
       expect(gateway.pins.input?.[0]).toMatchObject({
-        x: 15, y: 30, type: 'input', label: 'request'
+        x: 15,
+        y: 30,
+        type: 'input',
+        label: 'request',
       });
 
       expect(gateway.pins.output?.[0]).toMatchObject({
-        x: 45, y: 30, type: 'output', label: 'response'
+        x: 45,
+        y: 30,
+        type: 'output',
+        label: 'response',
       });
     });
   });

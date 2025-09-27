@@ -5,7 +5,7 @@ import RuntimeLayer from '../rendering/layers/RuntimeLayer';
 
 /**
  * ComponentLifecycleManager - Phase 6C Component Extraction
- * 
+ *
  * Manages the complete lifecycle of components including:
  * - Component creation and initialization
  * - Status management with visual effects
@@ -27,7 +27,7 @@ export class ComponentLifecycleManager {
     this.runtimeLayer = runtimeLayer;
     this.componentTypes = componentTypes;
     this.categories = categories;
-    
+
     this.setupEventHandlers();
   }
 
@@ -82,7 +82,12 @@ export class ComponentLifecycleManager {
   /**
    * Create a new component and add it to the specified view
    */
-  createComponent(type: string, x: number, y: number, currentView: ViewState): ComponentBase | null {
+  createComponent(
+    type: string,
+    x: number,
+    y: number,
+    currentView: ViewState
+  ): ComponentBase | null {
     const template = this.componentTypes[type];
     if (!template) {
       console.warn(`Component type '${type}' not found`);
@@ -96,12 +101,12 @@ export class ComponentLifecycleManager {
     }
 
     const components = this.getCurrentViewComponents(currentView);
-    
+
     // Ensure required numeric fields exist (template may be Partial<ComponentBase>)
     const width = template.width ?? 60;
     const height = template.height ?? 20;
     const pins = template.pins ?? { input: [], output: [] };
-    
+
     const component: ComponentBase = {
       id: this.generateId(),
       type,
@@ -128,13 +133,13 @@ export class ComponentLifecycleManager {
 
     // Add component to view
     components.push(component);
-    
+
     // Add runtime effects for new component
     this.addComponentCreationEffects(component);
-    
+
     // Emit component created event
     this.emitComponentCreated(component);
-    
+
     return component;
   }
 
@@ -160,7 +165,7 @@ export class ComponentLifecycleManager {
    */
   getComponentAt(x: number, y: number, currentView: ViewState): ComponentBase | null {
     const components = this.getCurrentViewComponents(currentView);
-    
+
     // Iterate from top to bottom (last drawn = topmost)
     for (let i = components.length - 1; i >= 0; i--) {
       const comp = components[i];
@@ -168,7 +173,7 @@ export class ComponentLifecycleManager {
         return comp;
       }
     }
-    
+
     return null;
   }
 
@@ -176,16 +181,20 @@ export class ComponentLifecycleManager {
    * Check if a point is within a component's bounds
    */
   private isPointInComponent(x: number, y: number, component: ComponentBase): boolean {
-    return x >= component.x && 
-           x <= component.x + component.width && 
-           y >= component.y && 
-           y <= component.y + component.height;
+    return (
+      x >= component.x &&
+      x <= component.x + component.width &&
+      y >= component.y &&
+      y <= component.y + component.height
+    );
   }
 
   /**
    * Get components for the current view
    */
   getCurrentViewComponents(currentView: ViewState): ComponentBase[] {
+    // For component lifecycle operations, always use the view's component array
+    // The view-aware logic is handled at a higher level in main.ts
     return currentView.components;
   }
 
@@ -217,7 +226,7 @@ export class ComponentLifecycleManager {
   private addComponentCreationEffects(component: ComponentBase): void {
     const centerX = component.x + component.width / 2;
     const centerY = component.y + component.height / 2;
-    
+
     this.runtimeLayer.glowEffect(centerX, centerY, component.color, 1000);
     this.runtimeLayer.pulseComponent(component.id, component.color, 800);
   }
@@ -228,7 +237,7 @@ export class ComponentLifecycleManager {
   private addStatusChangeEffects(component: ComponentBase, oldStatus?: string): void {
     const centerX = component.x + component.width / 2;
     const centerY = component.y + component.height / 2;
-    
+
     if (component.status === 'done' && oldStatus !== 'done') {
       // Success effect when completing
       this.runtimeLayer.sparkEffect(centerX, centerY, '#00ff88');
@@ -251,7 +260,7 @@ export class ComponentLifecycleManager {
         id: component.id,
         type: component.type,
         model: component,
-        source: 'lifecycle-manager'
+        source: 'lifecycle-manager',
       });
     } catch (err) {
       console.error('Failed to emit ComponentCreated from ComponentLifecycleManager', err);
@@ -266,7 +275,7 @@ export class ComponentLifecycleManager {
       this.eventBus.emit(Events.ComponentUpdated, {
         id: component.id,
         changes,
-        source: 'lifecycle-manager'
+        source: 'lifecycle-manager',
       });
     } catch (err) {
       console.error('Failed to emit ComponentUpdated from ComponentLifecycleManager', err);
@@ -299,14 +308,14 @@ export class ComponentLifecycleManager {
    */
   updateComponent(component: ComponentBase, updates: Partial<ComponentBase>): void {
     const changes: Record<string, any> = {};
-    
+
     // Apply valid updates
     Object.keys(updates).forEach(key => {
       if (key in component) {
         const oldValue = (component as any)[key];
         (component as any)[key] = (updates as any)[key];
         changes[key] = (updates as any)[key];
-        
+
         // Add visual effects for specific property changes
         if (key === 'status' && oldValue !== updates[key]) {
           this.addStatusChangeEffects(component, oldValue);

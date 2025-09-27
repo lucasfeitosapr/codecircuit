@@ -64,7 +64,14 @@ export function createConnection(app: any, startPin: PinHit, endPin: PinHit) {
     }
   }
   try {
-    eventBus.emit(Events.ConnectionCreated, { id: conn.id, from: conn.from, to: conn.to, type: conn.category, metadata: {}, source: 'legacy' });
+    eventBus.emit(Events.ConnectionCreated, {
+      id: conn.id,
+      from: conn.from,
+      to: conn.to,
+      type: conn.category,
+      metadata: {},
+      source: 'legacy',
+    });
   } catch (err) {
     console.error('Failed to emit ConnectionCreated', err);
   }

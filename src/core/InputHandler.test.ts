@@ -6,7 +6,7 @@ import type { Camera } from '../types';
 
 /**
  * InputHandler Tests - Phase 5 Legacy Code Extraction
- * 
+ *
  * Tests for the new InputHandler class that extracts input handling
  * logic from the monolithic MotherboardApp.
  */
@@ -30,7 +30,7 @@ describe('InputHandler', () => {
       bottom: 600,
       x: 0,
       y: 0,
-      toJSON: () => ({})
+      toJSON: () => ({}),
     });
     document.body.appendChild(canvas);
 
@@ -40,12 +40,12 @@ describe('InputHandler', () => {
     // Create event spy
     eventSpy = {
       emittedEvents: [] as any[],
-      emit: function(event: string, payload: any) {
+      emit: function (event: string, payload: any) {
         this.emittedEvents.push({ event, payload });
       },
-      clear: function() {
+      clear: function () {
         this.emittedEvents = [];
-      }
+      },
     };
 
     // Replace eventBus.emit with our spy
@@ -53,7 +53,7 @@ describe('InputHandler', () => {
 
     // Create InputHandler with fresh state
     inputHandler = new InputHandler(canvas, camera);
-    
+
     // Ensure clean state
     inputHandler.updateSelectedComponent(null);
     eventSpy.clear();
@@ -75,11 +75,11 @@ describe('InputHandler', () => {
       const mouseEvent = new MouseEvent('mousedown', {
         clientX: 100,
         clientY: 100,
-        button: 0
+        button: 0,
       });
-      
+
       canvas.dispatchEvent(mouseEvent);
-      
+
       // Should emit hit test events
       expect(eventSpy.emittedEvents.length).to.be.greaterThan(0);
     });
@@ -90,14 +90,14 @@ describe('InputHandler', () => {
       const mouseEvent = new MouseEvent('mousedown', {
         clientX: 100,
         clientY: 100,
-        button: 0 // Left click
+        button: 0, // Left click
       });
 
       canvas.dispatchEvent(mouseEvent);
 
       // Should emit pin hit test first, then component hit test
-      const pinHitTest = eventSpy.emittedEvents.find(e => 
-        e.event === Events.PIN_HIT_TEST_REQUESTED
+      const pinHitTest = eventSpy.emittedEvents.find(
+        e => e.event === Events.PIN_HIT_TEST_REQUESTED
       );
       expect(pinHitTest).to.exist;
       expect(pinHitTest.payload.position).to.deep.equal({ x: 100, y: 100 });
@@ -107,15 +107,16 @@ describe('InputHandler', () => {
       const mouseEvent = new MouseEvent('mousedown', {
         clientX: 100,
         clientY: 100,
-        button: 2 // Right click
+        button: 2, // Right click
       });
 
       canvas.dispatchEvent(mouseEvent);
 
       // Should not emit hit test events for right click
-      const hitTestEvents = eventSpy.emittedEvents.filter(e => 
-        e.event === Events.PIN_HIT_TEST_REQUESTED || 
-        e.event === Events.COMPONENT_HIT_TEST_REQUESTED
+      const hitTestEvents = eventSpy.emittedEvents.filter(
+        e =>
+          e.event === Events.PIN_HIT_TEST_REQUESTED ||
+          e.event === Events.COMPONENT_HIT_TEST_REQUESTED
       );
       expect(hitTestEvents).to.have.length(0);
     });
@@ -123,13 +124,13 @@ describe('InputHandler', () => {
     it('should handle mouse move and update position', () => {
       const mouseEvent = new MouseEvent('mousemove', {
         clientX: 150,
-        clientY: 200
+        clientY: 200,
       });
 
       canvas.dispatchEvent(mouseEvent);
 
-      const positionUpdate = eventSpy.emittedEvents.find(e => 
-        e.event === Events.MOUSE_POSITION_UPDATED
+      const positionUpdate = eventSpy.emittedEvents.find(
+        e => e.event === Events.MOUSE_POSITION_UPDATED
       );
       expect(positionUpdate).to.exist;
       expect(positionUpdate.payload.position).to.deep.equal({ x: 150, y: 200 });
@@ -140,13 +141,13 @@ describe('InputHandler', () => {
       const wheelEvent = new WheelEvent('wheel', {
         clientX: 100,
         clientY: 100,
-        deltaY: -100 // Zoom in
+        deltaY: -100, // Zoom in
       });
 
       canvas.dispatchEvent(wheelEvent);
 
-      const zoomRequest = eventSpy.emittedEvents.find(e => 
-        e.event === Events.CAMERA_ZOOM_REQUESTED
+      const zoomRequest = eventSpy.emittedEvents.find(
+        e => e.event === Events.CAMERA_ZOOM_REQUESTED
       );
       expect(zoomRequest).to.exist;
       expect(zoomRequest.payload.factor).to.equal(1.1); // Zoom in factor
@@ -195,8 +196,8 @@ describe('InputHandler', () => {
         dataTransfer: {
           setData: (type: string, data: string) => {
             (mockDragEvent as any).dragData = { type, data };
-          }
-        }
+          },
+        },
       };
 
       // Simulate drag start handling
@@ -207,14 +208,14 @@ describe('InputHandler', () => {
     });
 
     it('should handle component drop on canvas', () => {
-      // Mock drop event for Node.js environment  
+      // Mock drop event for Node.js environment
       const mockDropEvent = {
         preventDefault: () => {},
         clientX: 200,
         clientY: 150,
         dataTransfer: {
-          getData: () => 'module-ic'
-        }
+          getData: () => 'module-ic',
+        },
       };
 
       // Simulate drop event by calling the event handler directly
@@ -222,11 +223,11 @@ describe('InputHandler', () => {
       eventBus.emit(Events.COMPONENT_CREATE_REQUESTED, {
         type: 'module-ic',
         position: { x: 200, y: 150 },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
-      const createRequest = eventSpy.emittedEvents.find((e: any) => 
-        e.event === Events.COMPONENT_CREATE_REQUESTED
+      const createRequest = eventSpy.emittedEvents.find(
+        (e: any) => e.event === Events.COMPONENT_CREATE_REQUESTED
       );
       expect(createRequest).to.exist;
       expect(createRequest.payload.type).to.equal('module-ic');
@@ -237,7 +238,7 @@ describe('InputHandler', () => {
   describe('Keyboard Shortcuts', () => {
     it('should handle Escape key to cancel operations', () => {
       const keyEvent = new KeyboardEvent('keydown', {
-        key: 'Escape'
+        key: 'Escape',
       });
 
       document.dispatchEvent(keyEvent);
@@ -253,13 +254,13 @@ describe('InputHandler', () => {
       inputHandler.updateSelectedComponent(mockComponent as any);
 
       const keyEvent = new KeyboardEvent('keydown', {
-        key: 'Delete'
+        key: 'Delete',
       });
 
       document.dispatchEvent(keyEvent);
 
-      const deleteRequest = eventSpy.emittedEvents.find(e => 
-        e.event === Events.COMPONENT_DELETE_REQUESTED
+      const deleteRequest = eventSpy.emittedEvents.find(
+        e => e.event === Events.COMPONENT_DELETE_REQUESTED
       );
       expect(deleteRequest).to.exist;
       expect(deleteRequest.payload.componentId).to.equal('test-component-1');
@@ -268,40 +269,36 @@ describe('InputHandler', () => {
     it('should handle Ctrl+Z for undo', () => {
       const keyEvent = new KeyboardEvent('keydown', {
         key: 'z',
-        ctrlKey: true
+        ctrlKey: true,
       });
 
       document.dispatchEvent(keyEvent);
 
-      const undoRequest = eventSpy.emittedEvents.find(e => 
-        e.event === Events.UNDO_REQUESTED
-      );
+      const undoRequest = eventSpy.emittedEvents.find(e => e.event === Events.UNDO_REQUESTED);
       expect(undoRequest).to.exist;
     });
 
     it('should handle Ctrl+Y for redo', () => {
       const keyEvent = new KeyboardEvent('keydown', {
         key: 'y',
-        ctrlKey: true
+        ctrlKey: true,
       });
 
       document.dispatchEvent(keyEvent);
 
-      const redoRequest = eventSpy.emittedEvents.find(e => 
-        e.event === Events.REDO_REQUESTED
-      );
+      const redoRequest = eventSpy.emittedEvents.find(e => e.event === Events.REDO_REQUESTED);
       expect(redoRequest).to.exist;
     });
 
     it('should handle Space key for camera reset', () => {
       const keyEvent = new KeyboardEvent('keydown', {
-        key: ' '
+        key: ' ',
       });
 
       document.dispatchEvent(keyEvent);
 
-      const resetRequest = eventSpy.emittedEvents.find(e => 
-        e.event === Events.CAMERA_RESET_REQUESTED
+      const resetRequest = eventSpy.emittedEvents.find(
+        e => e.event === Events.CAMERA_RESET_REQUESTED
       );
       expect(resetRequest).to.exist;
     });
@@ -312,7 +309,7 @@ describe('InputHandler', () => {
       // Simulate mouse move to set position
       const mouseEvent = new MouseEvent('mousemove', {
         clientX: 300,
-        clientY: 250
+        clientY: 250,
       });
       canvas.dispatchEvent(mouseEvent);
 
@@ -328,9 +325,9 @@ describe('InputHandler', () => {
 
       // Test coordinate transformation with new camera
       const worldPos = (inputHandler as any).screenToWorld(150, 200);
-      expect(worldPos).to.deep.equal({ 
-        x: (150 - 100) / 1.5, 
-        y: (200 - 50) / 1.5 
+      expect(worldPos).to.deep.equal({
+        x: (150 - 100) / 1.5,
+        y: (200 - 50) / 1.5,
       });
     });
   });
@@ -346,7 +343,7 @@ describe('InputHandler', () => {
 
     it('should handle null selected component gracefully', () => {
       inputHandler.updateSelectedComponent(null);
-      
+
       // Verify null selection doesn't break the handler
       expect(() => {
         inputHandler.getMousePosition();
@@ -359,15 +356,15 @@ describe('InputHandler', () => {
       const mouseEvent = new MouseEvent('mousedown', {
         clientX: 100,
         clientY: 100,
-        button: 0
+        button: 0,
       });
 
       const beforeTime = Date.now();
       canvas.dispatchEvent(mouseEvent);
       const afterTime = Date.now();
 
-      const hitTestEvent = eventSpy.emittedEvents.find(e => 
-        e.event === Events.PIN_HIT_TEST_REQUESTED
+      const hitTestEvent = eventSpy.emittedEvents.find(
+        e => e.event === Events.PIN_HIT_TEST_REQUESTED
       );
       expect(hitTestEvent).to.exist;
       expect(hitTestEvent.payload.timestamp).to.be.within(beforeTime, afterTime);
@@ -377,14 +374,12 @@ describe('InputHandler', () => {
       const wheelEvent = new WheelEvent('wheel', {
         clientX: 100,
         clientY: 100,
-        deltaY: 100 // Zoom out
+        deltaY: 100, // Zoom out
       });
 
       canvas.dispatchEvent(wheelEvent);
 
-      const zoomEvent = eventSpy.emittedEvents.find(e => 
-        e.event === Events.CAMERA_ZOOM_REQUESTED
-      );
+      const zoomEvent = eventSpy.emittedEvents.find(e => e.event === Events.CAMERA_ZOOM_REQUESTED);
       expect(zoomEvent).to.exist;
       expect(zoomEvent.payload).to.have.property('factor');
       expect(zoomEvent.payload).to.have.property('center');
@@ -405,7 +400,7 @@ describe('InputHandler', () => {
       // Test coordinate transformation with edge cases
       const worldPos1 = (inputHandler as any).screenToWorld(NaN, 100);
       const worldPos2 = (inputHandler as any).screenToWorld(100, Infinity);
-      
+
       // Should handle gracefully without throwing
       expect(worldPos1).to.be.an('object');
       expect(worldPos2).to.be.an('object');
@@ -416,7 +411,7 @@ describe('InputHandler', () => {
     it('should remove event listeners on destroy', () => {
       // Create a fresh handler to test cleanup
       const testHandler = new InputHandler(canvas, camera);
-      
+
       // Destroy should not throw
       expect(() => {
         testHandler.destroy();

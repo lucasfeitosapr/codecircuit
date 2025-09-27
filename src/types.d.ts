@@ -9,7 +9,7 @@ export interface PinRef {
   y: number;
   category?: string;
   isInputPin?: boolean; // Track which array the pin came from (for accurate classification)
-};
+}
 
 export type Camera = {
   x: number;

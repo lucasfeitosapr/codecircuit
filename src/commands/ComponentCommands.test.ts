@@ -1,6 +1,6 @@
 /**
  * Component Commands Tests - Phase 4 State Management Migration
- * 
+ *
  * Tests for component-related command implementations including
  * creation, updates, deletion, movement, and status changes.
  */

@@ -4,10 +4,10 @@ import type { ComponentBase, Connection, ModuleComponent } from '../types';
 
 /**
  * ExportImportManager - Phase 5 Legacy Code Extraction
- * 
+ *
  * Handles all project serialization, export, and import functionality for the Living Blueprint system.
  * Extracted from the monolithic MotherboardApp as part of Phase 5 modularization.
- * 
+ *
  * Responsibilities:
  * - Project data serialization and deserialization
  * - File export/import with browser download/upload
@@ -15,7 +15,7 @@ import type { ComponentBase, Connection, ModuleComponent } from '../types';
  * - Internal component structure handling (Module ICs)
  * - Data validation and error recovery
  * - Backward compatibility with existing project formats
- * 
+ *
  * Event-driven: Emits import/export events through the global EventBus
  * instead of directly manipulating application state.
  */
@@ -32,22 +32,36 @@ export class ExportImportManager {
    */
   private setupEventListeners(): void {
     // Listen for export/import requests from UI or other modules
-    eventBus.on(Events.PROJECT_EXPORT_REQUESTED, (payload: { filename?: string; timestamp: number }) => {
-      this.exportProject(payload.filename);
-    });
+    eventBus.on(
+      Events.PROJECT_EXPORT_REQUESTED,
+      (payload: { filename?: string; timestamp: number }) => {
+        this.exportProject(payload.filename);
+      }
+    );
 
     eventBus.on(Events.PROJECT_IMPORT_REQUESTED, (payload: { timestamp: number }) => {
       this.importFromFile();
     });
 
-    eventBus.on(Events.PROJECT_DATA_EXPORT_REQUESTED, (payload: { components: any[], connections: any[], callback: (data: any) => void, timestamp: number }) => {
-      const projectData = this.exportProjectData(payload.components, payload.connections);
-      payload.callback(projectData);
-    });
+    eventBus.on(
+      Events.PROJECT_DATA_EXPORT_REQUESTED,
+      (payload: {
+        components: any[];
+        connections: any[];
+        callback: (data: any) => void;
+        timestamp: number;
+      }) => {
+        const projectData = this.exportProjectData(payload.components, payload.connections);
+        payload.callback(projectData);
+      }
+    );
 
-    eventBus.on(Events.PROJECT_DATA_IMPORT_REQUESTED, (payload: { projectData: any, timestamp: number }) => {
-      this.importProjectData(payload.projectData);
-    });
+    eventBus.on(
+      Events.PROJECT_DATA_IMPORT_REQUESTED,
+      (payload: { projectData: any; timestamp: number }) => {
+        this.importProjectData(payload.projectData);
+      }
+    );
   }
 
   /**
@@ -61,14 +75,14 @@ export class ExportImportManager {
           const projectData = this.exportProjectData(components, connections);
           this.downloadProjectFile(projectData, filename);
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     } catch (error) {
       console.error('❌ Failed to export project:', error);
       eventBus.emit(Events.SystemError, {
         error,
         context: 'ExportImportManager.exportProject',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -78,25 +92,36 @@ export class ExportImportManager {
    */
   public exportProjectData(components: ComponentBase[], connections: Connection[]): any {
     try {
+      // Validate input parameters
+      if (!Array.isArray(components)) {
+        throw new Error('Components must be an array');
+      }
+      if (!Array.isArray(connections)) {
+        throw new Error('Connections must be an array');
+      }
+
+      const serializedComponents = this.serializeComponents(components);
+      const serializedConnections = this.serializeConnections(connections);
+
       const projectData = {
         name: this.projectName,
         created: new Date().toISOString(),
-        components: this.serializeComponents(components),
-        connections: this.serializeConnections(connections),
+        components: serializedComponents,
+        connections: serializedConnections,
         version: this.projectVersion,
         metadata: {
           exportedAt: new Date().toISOString(),
           exportedFrom: 'Living Blueprint v2.0',
-          totalComponents: components.length,
-          totalConnections: connections.length,
-        }
+          totalComponents: serializedComponents.length,
+          totalConnections: serializedConnections.length,
+        },
       };
 
       eventBus.emit(Events.PROJECT_EXPORTED, {
         projectData,
         componentCount: components.length,
         connectionCount: connections.length,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       return projectData;
@@ -105,7 +130,7 @@ export class ExportImportManager {
       eventBus.emit(Events.SystemError, {
         error,
         context: 'ExportImportManager.exportProjectData',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       throw error;
     }
@@ -115,48 +140,50 @@ export class ExportImportManager {
    * Serialize components including internal structures
    */
   private serializeComponents(components: ComponentBase[]): any[] {
-    return components.map(component => {
-      const serialized: any = {
-        id: component.id,
-        type: component.type,
-        x: component.x,
-        y: component.y,
-        width: component.width,
-        height: component.height,
-        name: component.name,
-        title: component.title,
-        icon: component.icon,
-        color: component.color,
-        pins: component.pins,
-        status: component.status,
-        category: component.category,
-        description: component.description,
-        createdAt: component.createdAt,
-      };
+    return components
+      .filter(component => component && component.id) // Filter out null/undefined components
+      .map(component => {
+        const serialized: any = {
+          id: component.id,
+          type: component.type,
+          x: component.x,
+          y: component.y,
+          width: component.width,
+          height: component.height,
+          name: component.name,
+          title: component.title,
+          icon: component.icon,
+          color: component.color,
+          pins: component.pins,
+          status: component.status,
+          category: component.category,
+          description: component.description,
+          createdAt: component.createdAt,
+        };
 
-      // Handle Module IC internal structures
-      if (component.type === 'module-ic') {
-        const moduleComponent = component as ModuleComponent;
-        
-        if (moduleComponent.internalComponents) {
-          serialized.internalComponents = this.serializeComponents(
-            moduleComponent.internalComponents
-          );
-        }
-        
-        if (moduleComponent.internalConnections) {
-          serialized.internalConnections = this.serializeConnections(
-            moduleComponent.internalConnections
-          );
-        }
-        
-        if (moduleComponent.pinMap) {
-          serialized.pinMap = moduleComponent.pinMap;
-        }
-      }
+        // Handle Module IC internal structures
+        if (component.type === 'module-ic') {
+          const moduleComponent = component as ModuleComponent;
 
-      return serialized;
-    });
+          if (moduleComponent.internalComponents) {
+            serialized.internalComponents = this.serializeComponents(
+              moduleComponent.internalComponents
+            );
+          }
+
+          if (moduleComponent.internalConnections) {
+            serialized.internalConnections = this.serializeConnections(
+              moduleComponent.internalConnections
+            );
+          }
+
+          if (moduleComponent.pinMap) {
+            serialized.pinMap = moduleComponent.pinMap;
+          }
+        }
+
+        return serialized;
+      });
   }
 
   /**
@@ -191,7 +218,9 @@ export class ExportImportManager {
    */
   private downloadProjectFile(projectData: any, filename?: string): void {
     try {
-      const defaultFilename = `${this.projectName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
+      const defaultFilename = `${this.projectName.toLowerCase().replace(/\s+/g, '-')}-${
+        new Date().toISOString().split('T')[0]
+      }.json`;
       const finalFilename = filename || defaultFilename;
 
       const dataStr = JSON.stringify(projectData, null, 2);
@@ -211,15 +240,14 @@ export class ExportImportManager {
       eventBus.emit(Events.PROJECT_DOWNLOAD_COMPLETED, {
         filename: finalFilename,
         size: dataStr.length,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-
     } catch (error) {
       console.error('❌ Failed to download project file:', error);
       eventBus.emit(Events.SystemError, {
         error,
         context: 'ExportImportManager.downloadProjectFile',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -233,24 +261,23 @@ export class ExportImportManager {
       input.type = 'file';
       input.accept = '.json';
       input.style.display = 'none';
-      
-      input.addEventListener('change', (e) => {
+
+      input.addEventListener('change', e => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
           this.readProjectFile(file);
         }
       });
-      
+
       document.body.appendChild(input);
       input.click();
       document.body.removeChild(input);
-      
     } catch (error) {
       console.error('❌ Failed to create file input:', error);
       eventBus.emit(Events.SystemError, {
         error,
         context: 'ExportImportManager.importFromFile',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -260,8 +287,8 @@ export class ExportImportManager {
    */
   private readProjectFile(file: File): void {
     const reader = new FileReader();
-    
-    reader.onload = (event) => {
+
+    reader.onload = event => {
       try {
         const projectData = JSON.parse(event.target?.result as string);
         this.importProjectData(projectData);
@@ -270,7 +297,7 @@ export class ExportImportManager {
         eventBus.emit(Events.PROJECT_IMPORT_ERROR, {
           error: 'Invalid JSON format in project file',
           filename: file.name,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
     };
@@ -280,7 +307,7 @@ export class ExportImportManager {
       eventBus.emit(Events.PROJECT_IMPORT_ERROR, {
         error: 'Failed to read project file',
         filename: file.name,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     };
 
@@ -296,7 +323,7 @@ export class ExportImportManager {
       this.validateProjectData(projectData);
 
       // Deserialize components
-      const allComponents = projectData.components 
+      const allComponents = projectData.components
         ? this.deserializeComponents(projectData.components)
         : [];
 
@@ -305,7 +332,7 @@ export class ExportImportManager {
       const mainLevelComponents = this.filterMainLevelComponents(allComponents);
 
       // Deserialize connections using all components for reference resolution
-      const connections = projectData.connections 
+      const connections = projectData.connections
         ? this.deserializeConnections(projectData.connections, allComponents)
         : [];
 
@@ -324,17 +351,16 @@ export class ExportImportManager {
         projectData,
         componentCount: mainLevelComponents.length,
         connectionCount: connections.length,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       console.log('✅ Project imported successfully');
-
     } catch (error) {
       console.error('❌ Failed to import project:', error);
       eventBus.emit(Events.PROJECT_IMPORT_ERROR, {
         error: error instanceof Error ? error.message : 'Unknown import error',
         projectData,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       throw error;
     }
@@ -459,7 +485,7 @@ export class ExportImportManager {
   private filterMainLevelComponents(allComponents: ComponentBase[]): ComponentBase[] {
     // Collect all IDs of components that should be internal
     const internalComponentIds = new Set<string>();
-    
+
     allComponents.forEach(component => {
       if (component.type === 'module-ic') {
         const moduleComponent = component as ModuleComponent;
@@ -473,9 +499,11 @@ export class ExportImportManager {
 
     // Return only components that are not marked as internal
     const mainComponents = allComponents.filter(comp => !internalComponentIds.has(comp.id));
-    
-    console.log(`🔧 Filtered components: ${allComponents.length} total → ${mainComponents.length} main-level (${internalComponentIds.size} internal)`);
-    
+
+    console.log(
+      `🔧 Filtered components: ${allComponents.length} total → ${mainComponents.length} main-level (${internalComponentIds.size} internal)`
+    );
+
     return mainComponents;
   }
 
@@ -506,7 +534,7 @@ export class ExportImportManager {
   public getProjectInfo(): { name: string; version: string } {
     return {
       name: this.projectName,
-      version: this.projectVersion
+      version: this.projectVersion,
     };
   }
 
@@ -530,7 +558,7 @@ export class ExportImportManager {
         backup: true,
         backupCreatedAt: new Date().toISOString(),
       };
-      
+
       return JSON.stringify(backupData);
     } catch (error) {
       console.error('❌ Failed to create backup:', error);
@@ -547,7 +575,7 @@ export class ExportImportManager {
       if (!projectData.backup) {
         throw new Error('Invalid backup format');
       }
-      
+
       this.importProjectData(projectData);
     } catch (error) {
       console.error('❌ Failed to restore from backup:', error);

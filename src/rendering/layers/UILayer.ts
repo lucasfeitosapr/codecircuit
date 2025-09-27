@@ -47,12 +47,12 @@ export interface ConnectionIntent {
 export default class UILayer {
   static name = 'ui';
   name = UILayer.name;
-  
+
   private selectionBoxes: Map<string, SelectionBox> = new Map();
   private guideLines: Map<string, GuideLine> = new Map();
   private uiOverlays: Map<string, UIOverlay> = new Map();
   private connectionIntents: Map<string, ConnectionIntent> = new Map();
-  
+
   private selectionIdCounter = 0;
   private guideIdCounter = 0;
   private overlayIdCounter = 0;
@@ -61,10 +61,10 @@ export default class UILayer {
   render(ctx: CanvasRenderingContext2D, frame: RenderFrame) {
     try {
       const timestamp = frame.timestamp || performance.now();
-      
+
       // Clean up old UI elements
       this.cleanupOldElements(timestamp);
-      
+
       // Render UI elements in order of visual priority
       this.renderGuideLines(ctx, frame);
       this.renderConnectionIntents(ctx, frame);
@@ -86,9 +86,9 @@ export default class UILayer {
       height: component.height,
       componentId: component.id,
       type,
-      timestamp: performance.now()
+      timestamp: performance.now(),
     };
-    
+
     this.selectionBoxes.set(id, selectionBox);
     return id;
   }
@@ -116,7 +116,7 @@ export default class UILayer {
   addGuideLine(guide: Omit<GuideLine, 'id'>): string {
     const id = `guide_${++this.guideIdCounter}_${Date.now()}`;
     const fullGuide: GuideLine = { ...guide, id };
-    
+
     this.guideLines.set(id, fullGuide);
     return id;
   }
@@ -133,103 +133,115 @@ export default class UILayer {
   addAlignmentGuides(component: ComponentBase, allComponents: ComponentBase[]): string[] {
     const guideIds: string[] = [];
     const tolerance = 5; // pixels
-    
+
     for (const other of allComponents) {
       if (other.id === component.id) continue;
-      
+
       // Horizontal alignment guides
       if (Math.abs(component.y - other.y) < tolerance) {
-        guideIds.push(this.addGuideLine({
-          type: 'horizontal',
-          startX: Math.min(component.x, other.x) - 20,
-          startY: component.y,
-          endX: Math.max(component.x + component.width, other.x + other.width) + 20,
-          endY: component.y,
-          color: '#00ff88',
-          opacity: 0.6,
-          dashed: true,
-          label: 'Align top'
-        }));
+        guideIds.push(
+          this.addGuideLine({
+            type: 'horizontal',
+            startX: Math.min(component.x, other.x) - 20,
+            startY: component.y,
+            endX: Math.max(component.x + component.width, other.x + other.width) + 20,
+            endY: component.y,
+            color: '#00ff88',
+            opacity: 0.6,
+            dashed: true,
+            label: 'Align top',
+          })
+        );
       }
-      
+
       if (Math.abs(component.y + component.height - (other.y + other.height)) < tolerance) {
-        guideIds.push(this.addGuideLine({
-          type: 'horizontal',
-          startX: Math.min(component.x, other.x) - 20,
-          startY: component.y + component.height,
-          endX: Math.max(component.x + component.width, other.x + other.width) + 20,
-          endY: component.y + component.height,
-          color: '#00ff88',
-          opacity: 0.6,
-          dashed: true,
-          label: 'Align bottom'
-        }));
+        guideIds.push(
+          this.addGuideLine({
+            type: 'horizontal',
+            startX: Math.min(component.x, other.x) - 20,
+            startY: component.y + component.height,
+            endX: Math.max(component.x + component.width, other.x + other.width) + 20,
+            endY: component.y + component.height,
+            color: '#00ff88',
+            opacity: 0.6,
+            dashed: true,
+            label: 'Align bottom',
+          })
+        );
       }
-      
+
       // Vertical alignment guides
       if (Math.abs(component.x - other.x) < tolerance) {
-        guideIds.push(this.addGuideLine({
-          type: 'vertical',
-          startX: component.x,
-          startY: Math.min(component.y, other.y) - 20,
-          endX: component.x,
-          endY: Math.max(component.y + component.height, other.y + other.height) + 20,
-          color: '#00ff88',
-          opacity: 0.6,
-          dashed: true,
-          label: 'Align left'
-        }));
+        guideIds.push(
+          this.addGuideLine({
+            type: 'vertical',
+            startX: component.x,
+            startY: Math.min(component.y, other.y) - 20,
+            endX: component.x,
+            endY: Math.max(component.y + component.height, other.y + other.height) + 20,
+            color: '#00ff88',
+            opacity: 0.6,
+            dashed: true,
+            label: 'Align left',
+          })
+        );
       }
-      
+
       if (Math.abs(component.x + component.width - (other.x + other.width)) < tolerance) {
-        guideIds.push(this.addGuideLine({
-          type: 'vertical',
-          startX: component.x + component.width,
-          startY: Math.min(component.y, other.y) - 20,
-          endX: component.x + component.width,
-          endY: Math.max(component.y + component.height, other.y + other.height) + 20,
-          color: '#00ff88',
-          opacity: 0.6,
-          dashed: true,
-          label: 'Align right'
-        }));
+        guideIds.push(
+          this.addGuideLine({
+            type: 'vertical',
+            startX: component.x + component.width,
+            startY: Math.min(component.y, other.y) - 20,
+            endX: component.x + component.width,
+            endY: Math.max(component.y + component.height, other.y + other.height) + 20,
+            color: '#00ff88',
+            opacity: 0.6,
+            dashed: true,
+            label: 'Align right',
+          })
+        );
       }
-      
+
       // Center alignment guides
       const componentCenterX = component.x + component.width / 2;
       const componentCenterY = component.y + component.height / 2;
       const otherCenterX = other.x + other.width / 2;
       const otherCenterY = other.y + other.height / 2;
-      
+
       if (Math.abs(componentCenterX - otherCenterX) < tolerance) {
-        guideIds.push(this.addGuideLine({
-          type: 'vertical',
-          startX: componentCenterX,
-          startY: Math.min(component.y, other.y) - 20,
-          endX: componentCenterX,
-          endY: Math.max(component.y + component.height, other.y + other.height) + 20,
-          color: '#ffaa00',
-          opacity: 0.8,
-          dashed: true,
-          label: 'Center align'
-        }));
+        guideIds.push(
+          this.addGuideLine({
+            type: 'vertical',
+            startX: componentCenterX,
+            startY: Math.min(component.y, other.y) - 20,
+            endX: componentCenterX,
+            endY: Math.max(component.y + component.height, other.y + other.height) + 20,
+            color: '#ffaa00',
+            opacity: 0.8,
+            dashed: true,
+            label: 'Center align',
+          })
+        );
       }
-      
+
       if (Math.abs(componentCenterY - otherCenterY) < tolerance) {
-        guideIds.push(this.addGuideLine({
-          type: 'horizontal',
-          startX: Math.min(component.x, other.x) - 20,
-          startY: componentCenterY,
-          endX: Math.max(component.x + component.width, other.x + other.width) + 20,
-          endY: componentCenterY,
-          color: '#ffaa00',
-          opacity: 0.8,
-          dashed: true,
-          label: 'Center align'
-        }));
+        guideIds.push(
+          this.addGuideLine({
+            type: 'horizontal',
+            startX: Math.min(component.x, other.x) - 20,
+            startY: componentCenterY,
+            endX: Math.max(component.x + component.width, other.x + other.width) + 20,
+            endY: componentCenterY,
+            color: '#ffaa00',
+            opacity: 0.8,
+            dashed: true,
+            label: 'Center align',
+          })
+        );
       }
     }
-    
+
     return guideIds;
   }
 
@@ -239,9 +251,9 @@ export default class UILayer {
     const fullOverlay: UIOverlay = {
       ...overlay,
       id,
-      timestamp: performance.now()
+      timestamp: performance.now(),
     };
-    
+
     this.uiOverlays.set(id, fullOverlay);
     return id;
   }
@@ -267,9 +279,9 @@ export default class UILayer {
     const id = `intent_${++this.intentIdCounter}_${Date.now()}`;
     const fullIntent: ConnectionIntent = {
       ...intent,
-      timestamp: performance.now()
+      timestamp: performance.now(),
     };
-    
+
     this.connectionIntents.set(id, fullIntent);
     return id;
   }
@@ -297,15 +309,19 @@ export default class UILayer {
     }
   }
 
-  private renderSelectionBox(ctx: CanvasRenderingContext2D, selectionBox: SelectionBox, frame: RenderFrame): void {
+  private renderSelectionBox(
+    ctx: CanvasRenderingContext2D,
+    selectionBox: SelectionBox,
+    frame: RenderFrame
+  ): void {
     const camera = frame.camera || { x: 0, y: 0, zoom: 1 };
     const x = selectionBox.x * camera.zoom + camera.x;
     const y = selectionBox.y * camera.zoom + camera.y;
     const width = selectionBox.width * camera.zoom;
     const height = selectionBox.height * camera.zoom;
-    
+
     ctx.save();
-    
+
     // Selection box style based on type
     switch (selectionBox.type) {
       case 'single':
@@ -328,34 +344,40 @@ export default class UILayer {
         ctx.setLineDash([3, 3]);
         break;
     }
-    
+
     // Draw selection box
     ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
-    
+
     // Draw corner handles for single selection
     if (selectionBox.type === 'single') {
       this.renderSelectionHandles(ctx, x, y, width, height);
     }
-    
+
     ctx.restore();
   }
 
-  private renderSelectionHandles(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number): void {
+  private renderSelectionHandles(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
     const handleSize = 8;
     const handles = [
-      { x: x - handleSize/2, y: y - handleSize/2 }, // top-left
-      { x: x + width - handleSize/2, y: y - handleSize/2 }, // top-right
-      { x: x - handleSize/2, y: y + height - handleSize/2 }, // bottom-left
-      { x: x + width - handleSize/2, y: y + height - handleSize/2 }, // bottom-right
-      { x: x + width/2 - handleSize/2, y: y - handleSize/2 }, // top-center
-      { x: x + width/2 - handleSize/2, y: y + height - handleSize/2 }, // bottom-center
-      { x: x - handleSize/2, y: y + height/2 - handleSize/2 }, // left-center
-      { x: x + width - handleSize/2, y: y + height/2 - handleSize/2 }, // right-center
+      { x: x - handleSize / 2, y: y - handleSize / 2 }, // top-left
+      { x: x + width - handleSize / 2, y: y - handleSize / 2 }, // top-right
+      { x: x - handleSize / 2, y: y + height - handleSize / 2 }, // bottom-left
+      { x: x + width - handleSize / 2, y: y + height - handleSize / 2 }, // bottom-right
+      { x: x + width / 2 - handleSize / 2, y: y - handleSize / 2 }, // top-center
+      { x: x + width / 2 - handleSize / 2, y: y + height - handleSize / 2 }, // bottom-center
+      { x: x - handleSize / 2, y: y + height / 2 - handleSize / 2 }, // left-center
+      { x: x + width - handleSize / 2, y: y + height / 2 - handleSize / 2 }, // right-center
     ];
-    
+
     ctx.fillStyle = '#00ff88';
     ctx.shadowBlur = 4;
-    
+
     handles.forEach(handle => {
       ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
     });
@@ -367,34 +389,38 @@ export default class UILayer {
     }
   }
 
-  private renderGuideLine(ctx: CanvasRenderingContext2D, guide: GuideLine, frame: RenderFrame): void {
+  private renderGuideLine(
+    ctx: CanvasRenderingContext2D,
+    guide: GuideLine,
+    frame: RenderFrame
+  ): void {
     const camera = frame.camera || { x: 0, y: 0, zoom: 1 };
     const startX = guide.startX * camera.zoom + camera.x;
     const startY = guide.startY * camera.zoom + camera.y;
     const endX = guide.endX * camera.zoom + camera.x;
     const endY = guide.endY * camera.zoom + camera.y;
-    
+
     ctx.save();
     ctx.strokeStyle = guide.color;
     ctx.globalAlpha = guide.opacity;
     ctx.lineWidth = 1;
-    
+
     if (guide.dashed) {
       ctx.setLineDash([5, 5]);
     }
-    
+
     ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.lineTo(endX, endY);
     ctx.stroke();
-    
+
     // Draw label if provided
     if (guide.label) {
       ctx.fillStyle = guide.color;
       ctx.font = '12px monospace';
       ctx.fillText(guide.label, startX + 5, startY - 5);
     }
-    
+
     ctx.restore();
   }
 
@@ -406,15 +432,19 @@ export default class UILayer {
     }
   }
 
-  private renderUIOverlay(ctx: CanvasRenderingContext2D, overlay: UIOverlay, frame: RenderFrame): void {
+  private renderUIOverlay(
+    ctx: CanvasRenderingContext2D,
+    overlay: UIOverlay,
+    frame: RenderFrame
+  ): void {
     const camera = frame.camera || { x: 0, y: 0, zoom: 1 };
     const x = overlay.x * camera.zoom + camera.x;
     const y = overlay.y * camera.zoom + camera.y;
     const width = overlay.width * camera.zoom;
     const height = overlay.height * camera.zoom;
-    
+
     ctx.save();
-    
+
     switch (overlay.type) {
       case 'tooltip':
         this.renderTooltip(ctx, x, y, width, height, overlay.content);
@@ -429,72 +459,100 @@ export default class UILayer {
         this.renderConnectionHint(ctx, x, y, width, height, overlay.content);
         break;
     }
-    
+
     ctx.restore();
   }
 
-  private renderTooltip(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, content: string): void {
+  private renderTooltip(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    content: string
+  ): void {
     // Tooltip background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.strokeStyle = '#00ff88';
     ctx.lineWidth = 1;
-    
+
     ctx.fillRect(x, y, width, height);
     ctx.strokeRect(x, y, width, height);
-    
+
     // Tooltip text
     ctx.fillStyle = '#00ff88';
     ctx.font = '12px monospace';
     ctx.fillText(content, x + 8, y + 16);
   }
 
-  private renderContextMenu(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, content: string): void {
+  private renderContextMenu(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    content: string
+  ): void {
     // Context menu background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
     ctx.strokeStyle = '#4488ff';
     ctx.lineWidth = 2;
-    
+
     ctx.fillRect(x, y, width, height);
     ctx.strokeRect(x, y, width, height);
-    
+
     // Context menu items
     const items = content.split('\n');
     ctx.fillStyle = '#ffffff';
     ctx.font = '14px monospace';
-    
+
     items.forEach((item, index) => {
-      ctx.fillText(item, x + 8, y + 20 + (index * 20));
+      ctx.fillText(item, x + 8, y + 20 + index * 20);
     });
   }
 
-  private renderDatasheetOverlay(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, content: string): void {
+  private renderDatasheetOverlay(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    content: string
+  ): void {
     // Datasheet background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.strokeStyle = '#ffaa00';
     ctx.lineWidth = 2;
-    
+
     ctx.fillRect(x, y, width, height);
     ctx.strokeRect(x, y, width, height);
-    
+
     // Datasheet content
     ctx.fillStyle = '#ffaa00';
     ctx.font = '14px monospace';
-    
+
     const lines = content.split('\n');
     lines.forEach((line, index) => {
-      ctx.fillText(line, x + 8, y + 20 + (index * 18));
+      ctx.fillText(line, x + 8, y + 20 + index * 18);
     });
   }
 
-  private renderConnectionHint(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, content: string): void {
+  private renderConnectionHint(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    content: string
+  ): void {
     // Connection hint background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.strokeStyle = '#00ffff';
     ctx.lineWidth = 1;
-    
+
     ctx.fillRect(x, y, width, height);
     ctx.strokeRect(x, y, width, height);
-    
+
     // Connection hint text
     ctx.fillStyle = '#00ffff';
     ctx.font = '12px monospace';
@@ -507,65 +565,69 @@ export default class UILayer {
     }
   }
 
-  private renderConnectionIntent(ctx: CanvasRenderingContext2D, intent: ConnectionIntent, frame: RenderFrame): void {
+  private renderConnectionIntent(
+    ctx: CanvasRenderingContext2D,
+    intent: ConnectionIntent,
+    frame: RenderFrame
+  ): void {
     const camera = frame.camera || { x: 0, y: 0, zoom: 1 };
     const startX = intent.startPin.x * camera.zoom + camera.x;
     const startY = intent.startPin.y * camera.zoom + camera.y;
-    
+
     ctx.save();
-    
+
     // Connection intent line
     if (intent.endPin) {
       const endX = intent.endPin.x * camera.zoom + camera.x;
       const endY = intent.endPin.y * camera.zoom + camera.y;
-      
+
       ctx.strokeStyle = intent.isValid ? '#00ff88' : '#ff4444';
       ctx.lineWidth = 3;
       ctx.globalAlpha = 0.8;
       ctx.setLineDash([8, 4]);
-      
+
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
       ctx.stroke();
     }
-    
+
     // Start pin highlight
     ctx.fillStyle = intent.isValid ? '#00ff88' : '#ff4444';
     ctx.shadowColor = intent.isValid ? '#00ff88' : '#ff4444';
     ctx.shadowBlur = 10;
-    
+
     ctx.beginPath();
     ctx.arc(startX, startY, 8, 0, Math.PI * 2);
     ctx.fill();
-    
+
     ctx.restore();
   }
 
   private cleanupOldElements(timestamp: number): void {
     const maxAge = 5000; // 5 seconds
-    
+
     // Clean up old selection boxes (except single type)
     for (const [id, selectionBox] of this.selectionBoxes) {
       if (selectionBox.type !== 'single' && timestamp - selectionBox.timestamp > maxAge) {
         this.selectionBoxes.delete(id);
       }
     }
-    
+
     // Clean up old guide lines
     for (const [id, guide] of this.guideLines) {
       if (timestamp - (guide as any).timestamp > maxAge) {
         this.guideLines.delete(id);
       }
     }
-    
+
     // Clean up old UI overlays
     for (const [id, overlay] of this.uiOverlays) {
       if (timestamp - overlay.timestamp > maxAge) {
         this.uiOverlays.delete(id);
       }
     }
-    
+
     // Clean up old connection intents
     for (const [id, intent] of this.connectionIntents) {
       if (timestamp - intent.timestamp > maxAge) {

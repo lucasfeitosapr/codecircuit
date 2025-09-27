@@ -14,7 +14,7 @@ export class EventBus {
   }
 
   once<T = any>(event: string, handler: EventHandler<T>): void {
-    const wrapper: EventHandler<T> = (payload) => {
+    const wrapper: EventHandler<T> = payload => {
       try {
         this.off(event, wrapper);
         return handler(payload);
@@ -34,7 +34,7 @@ export class EventBus {
       try {
         const res = handler(payload as T);
         if (res instanceof Promise) {
-          res.catch((err) => this.handleHandlerError(err, event));
+          res.catch(err => this.handleHandlerError(err, event));
         }
       } catch (err) {
         this.handleHandlerError(err, event);

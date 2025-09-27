@@ -33,17 +33,18 @@ function makeCanvasStub() {
   (c as any).getContext = () => ctxStub;
 
   // Provide a realistic bounding rect for event coordinate calculations
-  c.getBoundingClientRect = () => ({
-    left: 0,
-    top: 0,
-    width: 800,
-    height: 600,
-    right: 800,
-    bottom: 600,
-    x: 0,
-    y: 0,
-    toJSON: () => {},
-  } as any);
+  c.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      width: 800,
+      height: 600,
+      right: 800,
+      bottom: 600,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    } as any);
 
   document.body.appendChild(c);
   return c;
@@ -92,14 +93,20 @@ describe('Integration: basic UI interactions', () => {
     expect(app.components.length).toBe(2);
 
     // Find components by type to avoid ordering/positioning assumptions
-    const c1: ComponentBase = (app.components.find((c: any) => c.type === 'task-resistor') || app.components[0]) as ComponentBase;
+    const c1: ComponentBase = (app.components.find((c: any) => c.type === 'task-resistor') ||
+      app.components[0]) as ComponentBase;
 
     // Click on first component to show datasheet (simulate mousedown at component center)
     const rect = canvas.getBoundingClientRect();
     const clickX = rect.left + c1.x + 5; // slight offset inside component
     const clickY = rect.top + c1.y + 5;
 
-    const clickEvent = new MouseEvent('mousedown', { clientX: clickX, clientY: clickY, button: 0, detail: 1 });
+    const clickEvent = new MouseEvent('mousedown', {
+      clientX: clickX,
+      clientY: clickY,
+      button: 0,
+      detail: 1,
+    });
     canvas.dispatchEvent(clickEvent);
 
     // Datasheet should be active and show the title
@@ -112,15 +119,22 @@ describe('Integration: basic UI interactions', () => {
     expect(title.textContent).toContain(selected.name || selected.title || '');
 
     // Double-click to toggle status (simulate detail === 2) at the selected component
-    const dblEvent = new MouseEvent('mousedown', { clientX: rect.left + selected.x + 5, clientY: rect.top + selected.y + 5, button: 0, detail: 2 });
+    const dblEvent = new MouseEvent('mousedown', {
+      clientX: rect.left + selected.x + 5,
+      clientY: rect.top + selected.y + 5,
+      button: 0,
+      detail: 2,
+    });
     canvas.dispatchEvent(dblEvent);
 
     // Status should have moved from 'defined' to 'todo'
     expect(selected.status).toBe('todo');
 
     // Create connection from power-core (output) to task-resistor (input) if pins exist
-    const sourceComp = app.components.find((c: any) => c.type === 'power-core') || app.components[0];
-    const targetComp = app.components.find((c: any) => c.type === 'task-resistor') || app.components[1];
+    const sourceComp =
+      app.components.find((c: any) => c.type === 'power-core') || app.components[0];
+    const targetComp =
+      app.components.find((c: any) => c.type === 'task-resistor') || app.components[1];
 
     const outPin = {
       component: sourceComp,

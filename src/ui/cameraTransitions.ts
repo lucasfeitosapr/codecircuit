@@ -29,7 +29,11 @@ export function getFocusCameraPosition(component: ComponentBase, t: number = 1):
   return { x, y, zoom: t } as Camera;
 }
 
-export function calculateTransitionDuration(start: Camera, end: Camera, baseDuration: number = 800): number {
+export function calculateTransitionDuration(
+  start: Camera,
+  end: Camera,
+  baseDuration: number = 800
+): number {
   const dist = getCameraDistance(start, end);
   const maxDuration = baseDuration * 1.5;
   const minDuration = baseDuration * 0.5;

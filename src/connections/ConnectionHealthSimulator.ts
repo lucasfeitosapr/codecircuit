@@ -8,7 +8,7 @@ import {
   FailureScenario,
   PerformanceImpact,
   ConnectionProtocol,
-  ConnectionType
+  ConnectionType,
 } from './ConnectionV2';
 import { ComponentBase } from '../types';
 
@@ -134,7 +134,7 @@ export class ConnectionHealthSimulator {
       bottleneckAnalysis,
       failureScenarios,
       performancePrediction,
-      recommendations
+      recommendations,
     };
   }
 
@@ -159,7 +159,7 @@ export class ConnectionHealthSimulator {
       systemBottlenecks,
       cascadingFailures,
       overallSystemHealth: this.calculateSystemHealth(connectionSimulations),
-      systemRecommendations
+      systemRecommendations,
     };
   }
 
@@ -188,7 +188,7 @@ export class ConnectionHealthSimulator {
         comparison: this.compareToBaseline(
           simulation,
           this.simulateConnectionHealth(baseConnection, components)
-        )
+        ),
       };
     });
   }
@@ -212,19 +212,22 @@ export class ConnectionHealthSimulator {
         impact: 1 - protocolReliability,
         probability: 0.3,
         description: `${connection.protocol} protocol has inherent reliability considerations`,
-        category: 'reliability'
+        category: 'reliability',
       });
     }
 
     // Latency risk for synchronous connections
-    if (connection.connectionType === 'sync' && connection.designConfig.expectedLatency === 'HIGH') {
+    if (
+      connection.connectionType === 'sync' &&
+      connection.designConfig.expectedLatency === 'HIGH'
+    ) {
       riskFactors.push({
         id: 'sync-high-latency',
         name: 'Synchronous High Latency',
         impact: 0.8,
         probability: 0.6,
         description: 'High latency synchronous connections can block calling threads',
-        category: 'performance'
+        category: 'performance',
       });
     }
 
@@ -237,20 +240,22 @@ export class ConnectionHealthSimulator {
         impact: volumeRisk,
         probability: 0.4,
         description: 'Heavy data volumes can cause memory and bandwidth issues',
-        category: 'performance'
+        category: 'performance',
       });
     }
 
     // Security risk
-    if (connection.designConfig.security === 'PUBLIC' &&
-        ['TCP', 'Custom'].includes(connection.protocol)) {
+    if (
+      connection.designConfig.security === 'PUBLIC' &&
+      ['TCP', 'Custom'].includes(connection.protocol)
+    ) {
       riskFactors.push({
         id: 'insecure-public',
         name: 'Insecure Public Connection',
         impact: 0.9,
         probability: 0.7,
         description: 'Public connections without encryption pose security risks',
-        category: 'security'
+        category: 'security',
       });
     }
 
@@ -262,7 +267,7 @@ export class ConnectionHealthSimulator {
         impact: Math.min(networkConditions.packetLoss * 10, 1),
         probability: 0.8,
         description: 'High packet loss can cause connection failures and retransmissions',
-        category: 'performance'
+        category: 'performance',
       });
     }
 
@@ -282,16 +287,17 @@ export class ConnectionHealthSimulator {
     const mitigationStrategies: string[] = [];
 
     // High latency + synchronous = bottleneck risk
-    if (connection.connectionType === 'sync' &&
-        connection.designConfig.expectedLatency === 'HIGH') {
+    if (
+      connection.connectionType === 'sync' &&
+      connection.designConfig.expectedLatency === 'HIGH'
+    ) {
       bottleneckRisk += 0.6;
       primaryCauses.push('Synchronous high-latency operations');
       mitigationStrategies.push('Consider async connection type', 'Implement timeout handling');
     }
 
     // Heavy data volume on sync connections
-    if (connection.designConfig.dataVolume === 'HEAVY' &&
-        connection.connectionType === 'sync') {
+    if (connection.designConfig.dataVolume === 'HEAVY' && connection.connectionType === 'sync') {
       bottleneckRisk += 0.4;
       primaryCauses.push('Heavy data transfer on synchronous connection');
       mitigationStrategies.push('Use streaming connection', 'Implement data pagination');
@@ -320,7 +326,7 @@ export class ConnectionHealthSimulator {
       bottleneckRisk: Math.min(bottleneckRisk, 1),
       primaryCauses,
       impactedComponents,
-      mitigationStrategies
+      mitigationStrategies,
     };
   }
 
@@ -339,7 +345,11 @@ export class ConnectionHealthSimulator {
       description: 'Network timeout due to high latency or congestion',
       probability: connection.designConfig.expectedLatency === 'HIGH' ? 0.15 : 0.05,
       impact: connection.connectionType === 'sync' ? 'HIGH' : 'MEDIUM',
-      mitigations: ['Implement retry with exponential backoff', 'Set appropriate timeouts', 'Use circuit breaker pattern']
+      mitigations: [
+        'Implement retry with exponential backoff',
+        'Set appropriate timeouts',
+        'Use circuit breaker pattern',
+      ],
     });
 
     // Protocol-specific failures
@@ -349,7 +359,11 @@ export class ConnectionHealthSimulator {
         description: 'Server errors (HTTP 5xx) from target service',
         probability: 0.08,
         impact: 'MEDIUM',
-        mitigations: ['Implement retry for retriable errors', 'Monitor server health', 'Use load balancing']
+        mitigations: [
+          'Implement retry for retriable errors',
+          'Monitor server health',
+          'Use load balancing',
+        ],
       });
     }
 
@@ -359,7 +373,11 @@ export class ConnectionHealthSimulator {
         description: 'WebSocket connection drops due to network issues',
         probability: 0.12,
         impact: 'MEDIUM',
-        mitigations: ['Implement automatic reconnection', 'Use heartbeat/ping-pong', 'Handle reconnection gracefully']
+        mitigations: [
+          'Implement automatic reconnection',
+          'Use heartbeat/ping-pong',
+          'Handle reconnection gracefully',
+        ],
       });
     }
 
@@ -370,7 +388,11 @@ export class ConnectionHealthSimulator {
         description: 'Security vulnerability exploitation',
         probability: 0.02,
         impact: 'CRITICAL',
-        mitigations: ['Implement proper authentication', 'Use encrypted connections', 'Regular security audits']
+        mitigations: [
+          'Implement proper authentication',
+          'Use encrypted connections',
+          'Regular security audits',
+        ],
       });
     }
 
@@ -381,7 +403,11 @@ export class ConnectionHealthSimulator {
         description: 'Memory or bandwidth exhaustion under heavy load',
         probability: 0.1,
         impact: 'HIGH',
-        mitigations: ['Implement backpressure handling', 'Use streaming protocols', 'Monitor resource usage']
+        mitigations: [
+          'Implement backpressure handling',
+          'Use streaming protocols',
+          'Monitor resource usage',
+        ],
       });
     }
 
@@ -431,15 +457,17 @@ export class ConnectionHealthSimulator {
     }
 
     // Connection type impact
-    if (connection.connectionType === 'sync' &&
-        connection.designConfig.expectedLatency === 'HIGH') {
+    if (
+      connection.connectionType === 'sync' &&
+      connection.designConfig.expectedLatency === 'HIGH'
+    ) {
       scalabilityLimits += '; Sync high-latency limits concurrency';
     }
 
     return {
       estimatedThroughput,
       resourceUtilization,
-      scalabilityLimits
+      scalabilityLimits,
     };
   }
 
@@ -454,7 +482,7 @@ export class ConnectionHealthSimulator {
     let healthScore = 1.0;
 
     // Risk factors impact
-    const riskImpact = riskFactors.reduce((sum, rf) => sum + (rf.impact * rf.probability), 0);
+    const riskImpact = riskFactors.reduce((sum, rf) => sum + rf.impact * rf.probability, 0);
     healthScore -= riskImpact * 0.3;
 
     // Bottleneck risk impact
@@ -462,8 +490,8 @@ export class ConnectionHealthSimulator {
 
     // Failure scenarios impact
     const failureImpact = failureScenarios.reduce((sum, fs) => {
-      const impactWeight = { 'LOW': 0.1, 'MEDIUM': 0.3, 'HIGH': 0.6, 'CRITICAL': 1.0 }[fs.impact];
-      return sum + (fs.probability * impactWeight);
+      const impactWeight = { LOW: 0.1, MEDIUM: 0.3, HIGH: 0.6, CRITICAL: 1.0 }[fs.impact];
+      return sum + fs.probability * impactWeight;
     }, 0);
     healthScore -= failureImpact * 0.3;
 
@@ -499,7 +527,7 @@ export class ConnectionHealthSimulator {
         category: 'architecture',
         title: 'Resolve Connection Bottleneck',
         description: 'This connection is identified as a potential bottleneck',
-        implementation: bottleneckAnalysis.mitigationStrategies
+        implementation: bottleneckAnalysis.mitigationStrategies,
       });
     }
 
@@ -515,8 +543,8 @@ export class ConnectionHealthSimulator {
         implementation: [
           'Use encrypted protocols (HTTPS, WSS, gRPC with TLS)',
           'Implement proper authentication and authorization',
-          'Regular security assessments'
-        ]
+          'Regular security assessments',
+        ],
       });
     }
 
@@ -532,8 +560,8 @@ export class ConnectionHealthSimulator {
         implementation: [
           'Consider async patterns for high-latency operations',
           'Implement connection pooling and reuse',
-          'Use appropriate protocols for data volume'
-        ]
+          'Use appropriate protocols for data volume',
+        ],
       });
     }
 
@@ -549,8 +577,8 @@ export class ConnectionHealthSimulator {
           'Add health checks and heartbeat monitoring',
           'Implement distributed tracing',
           'Set up alerts for connection failures',
-          'Monitor performance metrics continuously'
-        ]
+          'Monitor performance metrics continuously',
+        ],
       });
     }
 
@@ -564,35 +592,42 @@ export class ConnectionHealthSimulator {
     this.protocolReliabilityMap = new Map([
       ['HTTP', 0.95],
       ['TCP', 0.98],
-      ['WebSocket', 0.90],
+      ['WebSocket', 0.9],
       ['MessageQueue', 0.99],
       ['GraphQL', 0.94],
       ['gRPC', 0.97],
       ['Database', 0.96],
-      ['Custom', 0.70]
+      ['Custom', 0.7],
     ]);
 
     this.connectionTypeComplexityMap = new Map([
       ['sync', 0.2],
       ['async', 0.4],
       ['stream', 0.6],
-      ['event', 0.5]
+      ['event', 0.5],
     ]);
   }
 
   // Additional private methods for system-wide analysis...
-  private identifySystemBottlenecks(simulations: HealthSimulation[], components: ComponentBase[]): SystemBottleneck[] {
+  private identifySystemBottlenecks(
+    simulations: HealthSimulation[],
+    components: ComponentBase[]
+  ): SystemBottleneck[] {
     // Implementation would analyze all connections together
     return [];
   }
 
-  private analyzeCascadingFailures(simulations: HealthSimulation[], connections: ConnectionV2[]): CascadingFailure[] {
+  private analyzeCascadingFailures(
+    simulations: HealthSimulation[],
+    connections: ConnectionV2[]
+  ): CascadingFailure[] {
     // Implementation would model how failures propagate through the system
     return [];
   }
 
   private calculateSystemHealth(simulations: HealthSimulation[]): HealthState {
-    const avgScore = simulations.reduce((sum, sim) => sum + sim.healthScore, 0) / simulations.length;
+    const avgScore =
+      simulations.reduce((sum, sim) => sum + sim.healthScore, 0) / simulations.length;
     if (avgScore >= 0.8) return 'healthy';
     if (avgScore >= 0.6) return 'degraded';
     if (avgScore >= 0.3) return 'at-risk';
@@ -604,7 +639,10 @@ export class ConnectionHealthSimulator {
     return [];
   }
 
-  private applyScenarioModifications(connection: ConnectionV2, scenario: WhatIfScenario): ConnectionV2 {
+  private applyScenarioModifications(
+    connection: ConnectionV2,
+    scenario: WhatIfScenario
+  ): ConnectionV2 {
     // Implementation would apply scenario changes to connection
     return { ...connection, ...scenario.modifications };
   }

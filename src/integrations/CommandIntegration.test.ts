@@ -1,6 +1,6 @@
 /**
  * Command Integration Tests - Phase 4 State Management Migration
- * 
+ *
  * Tests for the integration layer that connects the Command pattern
  * with the existing MotherboardApp.
  */
@@ -266,9 +266,9 @@ describe('CommandIntegration', () => {
     it('should allow state subscription', () => {
       const callback = vi.fn();
       const unsubscribe = integration.subscribe('stateChanged', callback);
-      
+
       expect(typeof unsubscribe).toBe('function');
-      
+
       // Clean up
       unsubscribe();
     });

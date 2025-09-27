@@ -1,17 +1,17 @@
 /**
  * Component Commands - Phase 4 State Management Migration
- * 
+ *
  * Concrete implementations of component-related commands for the Command pattern.
  * These commands handle component creation, updates, deletion, and movement.
  */
 
-import type { 
+import type {
   CreateComponentCommand,
   UpdateComponentCommand,
   DeleteComponentCommand,
   MoveComponentCommand,
   ToggleComponentStatusCommand,
-  CommandResult
+  CommandResult,
 } from './commandTypes';
 import { generateId } from '../utils';
 
@@ -117,7 +117,7 @@ export class UpdateComponentCommandImpl implements UpdateComponentCommand {
     try {
       // Store previous state for undo
       // This will be implemented to work with the StateManager
-      
+
       return {
         success: true,
         events: ['component.updated'],
@@ -176,7 +176,7 @@ export class DeleteComponentCommandImpl implements DeleteComponentCommand {
     try {
       // Store component state for undo
       // This will be implemented to work with the StateManager
-      
+
       return {
         success: true,
         events: ['component.deleted'],
@@ -234,7 +234,7 @@ export class MoveComponentCommandImpl implements MoveComponentCommand {
     try {
       // Store previous position for undo
       // This will be implemented to work with the StateManager
-      
+
       return {
         success: true,
         events: ['component.moved'],
@@ -294,7 +294,7 @@ export class ToggleComponentStatusCommandImpl implements ToggleComponentStatusCo
     try {
       // Store previous status for undo
       // This will be implemented to work with the StateManager
-      
+
       return {
         success: true,
         events: ['component.statusChanged'],
@@ -335,15 +335,21 @@ export class ToggleComponentStatusCommandImpl implements ToggleComponentStatusCo
 }
 
 // Command factory functions
-export function createComponentCommand(args: CreateComponentCommand['args']): CreateComponentCommandImpl {
+export function createComponentCommand(
+  args: CreateComponentCommand['args']
+): CreateComponentCommandImpl {
   return new CreateComponentCommandImpl(args);
 }
 
-export function updateComponentCommand(args: UpdateComponentCommand['args']): UpdateComponentCommandImpl {
+export function updateComponentCommand(
+  args: UpdateComponentCommand['args']
+): UpdateComponentCommandImpl {
   return new UpdateComponentCommandImpl(args);
 }
 
-export function deleteComponentCommand(args: DeleteComponentCommand['args']): DeleteComponentCommandImpl {
+export function deleteComponentCommand(
+  args: DeleteComponentCommand['args']
+): DeleteComponentCommandImpl {
   return new DeleteComponentCommandImpl(args);
 }
 
@@ -351,6 +357,8 @@ export function moveComponentCommand(args: MoveComponentCommand['args']): MoveCo
   return new MoveComponentCommandImpl(args);
 }
 
-export function toggleComponentStatusCommand(args: ToggleComponentStatusCommand['args']): ToggleComponentStatusCommandImpl {
+export function toggleComponentStatusCommand(
+  args: ToggleComponentStatusCommand['args']
+): ToggleComponentStatusCommandImpl {
   return new ToggleComponentStatusCommandImpl(args);
 }

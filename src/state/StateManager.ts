@@ -1,6 +1,6 @@
 /**
  * Enhanced StateManager - Phase 4 State Management Migration
- * 
+ *
  * Integrates with the Command pattern to provide centralized state management
  * with undo/redo functionality and event-driven architecture.
  */
@@ -68,9 +68,9 @@ export class StateManager {
       args,
       correlationId,
     };
-    
+
     eventBus.emit(Events.CommandDispatched, payload);
-    
+
     // Handle command execution based on command name
     await this.handleCommand(name, args);
   }
@@ -90,7 +90,7 @@ export class StateManager {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
-    
+
     const listeners = this.listeners.get(event)!;
     listeners.push(callback);
 
@@ -161,24 +161,24 @@ export class StateManager {
    */
   private setupEventListeners(): void {
     // Listen for component events
-    eventBus.on(Events.ComponentCreated, (payload) => {
+    eventBus.on(Events.ComponentCreated, payload => {
       this.handleComponentCreated(payload);
     });
 
-    eventBus.on(Events.ComponentUpdated, (payload) => {
+    eventBus.on(Events.ComponentUpdated, payload => {
       this.handleComponentUpdated(payload);
     });
 
-    eventBus.on(Events.ComponentDeleted, (payload) => {
+    eventBus.on(Events.ComponentDeleted, payload => {
       this.handleComponentDeleted(payload);
     });
 
     // Listen for connection events
-    eventBus.on(Events.ConnectionCreated, (payload) => {
+    eventBus.on(Events.ConnectionCreated, payload => {
       this.handleConnectionCreated(payload);
     });
 
-    eventBus.on(Events.ConnectionDeleted, (payload) => {
+    eventBus.on(Events.ConnectionDeleted, payload => {
       this.handleConnectionDeleted(payload);
     });
   }
@@ -209,13 +209,15 @@ export class StateManager {
   private handleComponentUpdated(payload: any): void {
     if (this.state.components[payload.id]) {
       Object.assign(this.state.components[payload.id], payload.updates);
-      
+
       // Update in view components array
-      const viewIndex = this.state.view.components.findIndex((c: ComponentBase) => c.id === payload.id);
+      const viewIndex = this.state.view.components.findIndex(
+        (c: ComponentBase) => c.id === payload.id
+      );
       if (viewIndex >= 0) {
         Object.assign(this.state.view.components[viewIndex], payload.updates);
       }
-      
+
       this.notifyListeners('componentUpdated', payload);
     }
   }
@@ -226,12 +228,12 @@ export class StateManager {
   private handleComponentDeleted(payload: any): void {
     if (this.state.components[payload.id]) {
       delete this.state.components[payload.id];
-      
+
       // Remove from view components array
       this.state.view.components = this.state.view.components.filter(
         (c: ComponentBase) => c.id !== payload.id
       );
-      
+
       this.notifyListeners('componentDeleted', payload);
     }
   }
@@ -248,7 +250,7 @@ export class StateManager {
         category: payload.type || 'frontend',
         createdAt: new Date(),
       };
-      
+
       this.state.connections[connection.id] = connection;
       this.state.view.connections.push(connection);
       this.notifyListeners('connectionCreated', payload);
@@ -261,12 +263,12 @@ export class StateManager {
   private handleConnectionDeleted(payload: any): void {
     if (this.state.connections[payload.id]) {
       delete this.state.connections[payload.id];
-      
+
       // Remove from view connections array
       this.state.view.connections = this.state.view.connections.filter(
         (c: Connection) => c.id !== payload.id
       );
-      
+
       this.notifyListeners('connectionDeleted', payload);
     }
   }

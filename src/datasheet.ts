@@ -15,9 +15,9 @@ import type { ComponentBase } from './types';
 function getHealthStateColor(healthState: string): string {
   const colors = {
     healthy: '#27AE60',
-    degraded: '#F39C12', 
+    degraded: '#F39C12',
     failed: '#E74C3C',
-    unknown: '#95A5A6'
+    unknown: '#95A5A6',
   };
   return colors[healthState as keyof typeof colors] || '#95A5A6';
 }
@@ -96,35 +96,63 @@ export function showDatasheet(app: any, component: ComponentBase) {
         <div class="form-group">
           <label>External System Type</label>
           <select id="gateway-system-type" style="color: #9B59B6;">
-            <option value="Database" ${(component as any).externalSystem === 'Database' ? 'selected' : ''}>🗄️ Database</option>
-            <option value="REST API" ${(component as any).externalSystem === 'REST API' ? 'selected' : ''}>🌐 REST API</option>
-            <option value="GraphQL API" ${(component as any).externalSystem === 'GraphQL API' ? 'selected' : ''}>📊 GraphQL API</option>
-            <option value="File Storage" ${(component as any).externalSystem === 'File Storage' ? 'selected' : ''}>📁 File Storage</option>
-            <option value="Message Queue" ${(component as any).externalSystem === 'Message Queue' ? 'selected' : ''}>📨 Message Queue</option>
-            <option value="Cache" ${(component as any).externalSystem === 'Cache' ? 'selected' : ''}>⚡ Cache</option>
-            <option value="External Service" ${(component as any).externalSystem === 'External Service' ? 'selected' : ''}>🔗 External Service</option>
+            <option value="Database" ${
+              (component as any).externalSystem === 'Database' ? 'selected' : ''
+            }>🗄️ Database</option>
+            <option value="REST API" ${
+              (component as any).externalSystem === 'REST API' ? 'selected' : ''
+            }>🌐 REST API</option>
+            <option value="GraphQL API" ${
+              (component as any).externalSystem === 'GraphQL API' ? 'selected' : ''
+            }>📊 GraphQL API</option>
+            <option value="File Storage" ${
+              (component as any).externalSystem === 'File Storage' ? 'selected' : ''
+            }>📁 File Storage</option>
+            <option value="Message Queue" ${
+              (component as any).externalSystem === 'Message Queue' ? 'selected' : ''
+            }>📨 Message Queue</option>
+            <option value="Cache" ${
+              (component as any).externalSystem === 'Cache' ? 'selected' : ''
+            }>⚡ Cache</option>
+            <option value="External Service" ${
+              (component as any).externalSystem === 'External Service' ? 'selected' : ''
+            }>🔗 External Service</option>
           </select>
         </div>
 
         <div class="form-group">
           <label>Connection URL</label>
-          <input type="text" id="gateway-connection-url" value="${escapeHtml((component as any).connectionUrl ?? '')}" 
+          <input type="text" id="gateway-connection-url" value="${escapeHtml(
+            (component as any).connectionUrl ?? ''
+          )}" 
                  placeholder="e.g., postgresql://localhost:5432/db, https://api.example.com" 
                  style="font-family: 'Courier New', monospace; font-size: 11px;" />
         </div>
 
         <div class="form-group">
           <label>Timeout (ms)</label>
-          <input type="number" id="gateway-timeout" value="${(component as any).timeout ?? 5000}" min="1000" max="30000" step="1000" />
+          <input type="number" id="gateway-timeout" value="${
+            (component as any).timeout ?? 5000
+          }" min="1000" max="30000" step="1000" />
         </div>
 
         <div class="form-group">
           <label>Health State</label>
-          <select id="gateway-health-state" style="color: ${getHealthStateColor((component as any).healthState ?? 'unknown')};">
-            <option value="unknown" ${(component as any).healthState === 'unknown' ? 'selected' : ''}>🟤 Unknown</option>
-            <option value="healthy" ${(component as any).healthState === 'healthy' ? 'selected' : ''}>🟢 Healthy</option>
-            <option value="degraded" ${(component as any).healthState === 'degraded' ? 'selected' : ''}>🟡 Degraded</option>
-            <option value="failed" ${(component as any).healthState === 'failed' ? 'selected' : ''}>🔴 Failed</option>
+          <select id="gateway-health-state" style="color: ${getHealthStateColor(
+            (component as any).healthState ?? 'unknown'
+          )};">
+            <option value="unknown" ${
+              (component as any).healthState === 'unknown' ? 'selected' : ''
+            }>🟤 Unknown</option>
+            <option value="healthy" ${
+              (component as any).healthState === 'healthy' ? 'selected' : ''
+            }>🟢 Healthy</option>
+            <option value="degraded" ${
+              (component as any).healthState === 'degraded' ? 'selected' : ''
+            }>🟡 Degraded</option>
+            <option value="failed" ${
+              (component as any).healthState === 'failed' ? 'selected' : ''
+            }>🔴 Failed</option>
           </select>
         </div>
 
@@ -173,15 +201,15 @@ export function showDatasheet(app: any, component: ComponentBase) {
       const titleInput = document.getElementById('comp-title') as HTMLInputElement;
       if (titleInput) titleInput.value = component.title || '';
     });
-    
+
     attachInputHandler('#gateway-connection-url', el => {
       (component as any).connectionUrl = (el as HTMLInputElement).value;
     });
-    
+
     attachInputHandler('#gateway-timeout', el => {
       (component as any).timeout = parseInt((el as HTMLInputElement).value) || 5000;
     });
-    
+
     attachSelectHandler('#gateway-health-state', el => {
       (component as any).healthState = (el as HTMLSelectElement).value;
       // Update select color to match health state
@@ -189,21 +217,23 @@ export function showDatasheet(app: any, component: ComponentBase) {
     });
 
     // Test connection button
-    const testConnectionBtn = document.getElementById('test-gateway-connection') as HTMLButtonElement | null;
+    const testConnectionBtn = document.getElementById(
+      'test-gateway-connection'
+    ) as HTMLButtonElement | null;
     if (testConnectionBtn) {
       testConnectionBtn.addEventListener('click', () => {
         // Simulate connection test (in real implementation, would make actual HTTP request)
         const gatewayComponent = component as any;
         const systemType = gatewayComponent.externalSystem || 'Unknown';
         const connectionUrl = gatewayComponent.connectionUrl || 'No URL configured';
-        
+
         testConnectionBtn.textContent = '🔄 Testing...';
         testConnectionBtn.disabled = true;
-        
+
         setTimeout(() => {
           // Simulate random test result
           const testPassed = Math.random() > 0.3; // 70% success rate
-          
+
           if (testPassed) {
             gatewayComponent.healthState = 'healthy';
             testConnectionBtn.textContent = '✅ Connection OK';
@@ -215,23 +245,22 @@ export function showDatasheet(app: any, component: ComponentBase) {
             testConnectionBtn.style.background = 'rgba(231,76,60,0.2)';
             testConnectionBtn.style.borderColor = '#E74C3C';
           }
-          
+
           // Update health state dropdown
           const healthSelect = document.getElementById('gateway-health-state') as HTMLSelectElement;
           if (healthSelect) {
             healthSelect.value = gatewayComponent.healthState;
             healthSelect.style.color = getHealthStateColor(gatewayComponent.healthState);
           }
-          
+
           testConnectionBtn.disabled = false;
-          
+
           // Reset button after 3 seconds
           setTimeout(() => {
             testConnectionBtn.textContent = '🔍 Test Connection';
             testConnectionBtn.style.background = 'rgba(155,89,182,0.1)';
             testConnectionBtn.style.borderColor = '#9B59B6';
           }, 3000);
-          
         }, 1500); // Simulate network delay
       });
     }

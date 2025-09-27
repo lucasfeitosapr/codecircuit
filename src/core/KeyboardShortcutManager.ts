@@ -35,50 +35,50 @@ export class KeyboardShortcutManager {
 
   private setupShortcuts() {
     // ESC key: Exit current context or close modals
-    this.shortcuts.set('Escape', (event) => {
+    this.shortcuts.set('Escape', event => {
       this.handleEscapeKey();
     });
 
     // TAB key: Cycle between views
-    this.shortcuts.set('Tab', (event) => {
+    this.shortcuts.set('Tab', event => {
       this.handleTabKey(event.shiftKey);
     });
 
     // SPACE key: Toggle status of selected component
-    this.shortcuts.set(' ', (event) => {
+    this.shortcuts.set(' ', event => {
       this.handleSpaceKey();
     });
 
     // F1 key: Toggle help overlay
-    this.shortcuts.set('F1', (event) => {
+    this.shortcuts.set('F1', event => {
       this.handleHelpKey();
     });
 
     // Shift+?: Toggle help overlay (alternative)
-    this.shortcuts.set('?', (event) => {
+    this.shortcuts.set('?', event => {
       if (event.shiftKey) {
         this.handleHelpKey();
       }
     });
 
     // Additional shortcuts can be added here
-    this.shortcuts.set('Delete', (event) => {
+    this.shortcuts.set('Delete', event => {
       this.handleDeleteKey();
     });
 
-    this.shortcuts.set('Backspace', (event) => {
+    this.shortcuts.set('Backspace', event => {
       this.handleDeleteKey();
     });
 
     // Ctrl+Z: Undo (if implemented)
-    this.shortcuts.set('z', (event) => {
+    this.shortcuts.set('z', event => {
       if (event.ctrlKey || event.metaKey) {
         this.handleUndoKey();
       }
     });
 
-    // Ctrl+Y or Ctrl+Shift+Z: Redo (if implemented) 
-    this.shortcuts.set('y', (event) => {
+    // Ctrl+Y or Ctrl+Shift+Z: Redo (if implemented)
+    this.shortcuts.set('y', event => {
       if (event.ctrlKey || event.metaKey) {
         this.handleRedoKey();
       }
@@ -92,7 +92,11 @@ export class KeyboardShortcutManager {
   private handleKeyDown(event: KeyboardEvent) {
     // Ignore keyboard shortcuts when typing in input fields
     const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.contentEditable === 'true'
+    ) {
       return;
     }
 
@@ -113,19 +117,21 @@ export class KeyboardShortcutManager {
     if (handler) {
       // Prevent default behavior for our shortcuts
       const shortcutKeys = ['Escape', 'Tab', ' ', 'F1', 'Delete', 'Backspace'];
-      if (shortcutKeys.includes(event.key) || 
-          (event.key === '?' && event.shiftKey) ||
-          ((event.key === 'z' || event.key === 'y') && (event.ctrlKey || event.metaKey))) {
+      if (
+        shortcutKeys.includes(event.key) ||
+        (event.key === '?' && event.shiftKey) ||
+        ((event.key === 'z' || event.key === 'y') && (event.ctrlKey || event.metaKey))
+      ) {
         event.preventDefault();
       }
-      
+
       handler(event);
     }
   }
 
   private handleEscapeKey() {
     // ESC key: Exit current context or close modals
-    
+
     // Priority 1: Close help overlay if open
     const helpOverlay = document.getElementById('help-overlay') as HTMLElement;
     if (helpOverlay && helpOverlay.classList.contains('active')) {
@@ -158,7 +164,7 @@ export class KeyboardShortcutManager {
     if (this.context.isTransitioning()) return;
 
     const viewStackSize = this.context.getViewStackSize();
-    
+
     if (viewStackSize === 0) {
       // No views to cycle through
       return;
@@ -172,7 +178,7 @@ export class KeyboardShortcutManager {
     } else {
       // Tab: Navigate deeper or cycle through Module ICs
       const currentView = this.context.getCurrentView();
-      
+
       if (currentView.type === 'main') {
         // Find first Module IC and enter it
         const moduleICs = this.context.getMainComponents().filter(c => c.type === 'module-ic');
@@ -195,19 +201,21 @@ export class KeyboardShortcutManager {
   private handleSpaceKey() {
     // SPACE key: Toggle status of selected component
     const selectedComponent = this.context.getSelectedComponent();
-    
+
     if (selectedComponent && selectedComponent.type !== 'power-core') {
       this.context.toggleComponentStatus(selectedComponent);
-      
+
       // Emit event for UI updates (like datasheet refresh)
       eventBus.emit('component.status.toggled', {
         componentId: selectedComponent.id,
         newStatus: selectedComponent.status,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     } else if (!selectedComponent) {
       // No component selected - show status hint
-      this.context.showTemporaryMessage('Select a component first, then press SPACE to toggle its status');
+      this.context.showTemporaryMessage(
+        'Select a component first, then press SPACE to toggle its status'
+      );
     }
   }
 
@@ -226,17 +234,17 @@ export class KeyboardShortcutManager {
   private handleDeleteKey() {
     // Delete selected component
     const selectedComponent = this.context.getSelectedComponent();
-    
+
     if (selectedComponent && selectedComponent.type !== 'power-core') {
       // Emit delete request
       eventBus.emit(Events.COMPONENT_DELETE_REQUESTED, {
         componentId: selectedComponent.id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       this.context.setSelectedComponent(null);
       hideDatasheetUI();
-      
+
       this.context.showTemporaryMessage(`Deleted ${selectedComponent.type}`);
     } else if (!selectedComponent) {
       this.context.showTemporaryMessage('Select a component to delete');
@@ -248,18 +256,18 @@ export class KeyboardShortcutManager {
   private handleUndoKey() {
     // Undo last action
     eventBus.emit(Events.UNDO_REQUESTED, {
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
-    
+
     this.context.showTemporaryMessage('Undo requested');
   }
 
   private handleRedoKey() {
     // Redo last undone action
     eventBus.emit(Events.REDO_REQUESTED, {
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
-    
+
     this.context.showTemporaryMessage('Redo requested');
   }
 
@@ -282,6 +290,8 @@ export class KeyboardShortcutManager {
   }
 }
 
-export function createKeyboardShortcutManager(context: KeyboardShortcutManagerContext): KeyboardShortcutManager {
+export function createKeyboardShortcutManager(
+  context: KeyboardShortcutManagerContext
+): KeyboardShortcutManager {
   return new KeyboardShortcutManager(context);
 }

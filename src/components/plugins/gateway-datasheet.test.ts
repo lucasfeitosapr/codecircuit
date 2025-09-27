@@ -12,10 +12,10 @@ const mockDOM = () => {
       value: '',
       style: {},
       addEventListener: vi.fn(),
-      disabled: false
-    }))
+      disabled: false,
+    })),
   } as any;
-  
+
   global.confirm = vi.fn(() => true);
 };
 
@@ -29,7 +29,7 @@ describe('Gateway Datasheet Configuration', () => {
       y: 200,
       externalSystem: 'User Database',
       connectionUrl: 'postgresql://localhost:5432/users',
-      timeout: 8000
+      timeout: 8000,
     });
   });
 
@@ -46,20 +46,21 @@ describe('Gateway Datasheet Configuration', () => {
     it('should support different external system types', () => {
       const systemTypes = [
         'Database',
-        'REST API', 
+        'REST API',
         'GraphQL API',
         'File Storage',
         'Message Queue',
         'Cache',
-        'External Service'
+        'External Service',
       ];
 
       systemTypes.forEach(systemType => {
         const gateway = createGateway({
-          x: 0, y: 0,
-          externalSystem: systemType
+          x: 0,
+          y: 0,
+          externalSystem: systemType,
         });
-        
+
         expect(gateway.externalSystem).toBe(systemType);
         expect(gateway.title).toBe(systemType);
       });
@@ -67,7 +68,7 @@ describe('Gateway Datasheet Configuration', () => {
 
     it('should support different health states', () => {
       const healthStates = ['unknown', 'healthy', 'degraded', 'failed'];
-      
+
       healthStates.forEach(state => {
         gatewayComponent.healthState = state as any;
         expect(gatewayComponent.healthState).toBe(state);
@@ -81,7 +82,7 @@ describe('Gateway Datasheet Configuration', () => {
         'mongodb://localhost:27017/app',
         's3://bucket-name/path',
         'redis://localhost:6379',
-        'https://graphql.example.com/graphql'
+        'https://graphql.example.com/graphql',
       ];
 
       validUrls.forEach(url => {
@@ -92,7 +93,7 @@ describe('Gateway Datasheet Configuration', () => {
 
     it('should handle timeout configuration', () => {
       const timeouts = [1000, 5000, 10000, 30000];
-      
+
       timeouts.forEach(timeout => {
         gatewayComponent.timeout = timeout;
         expect(gatewayComponent.timeout).toBe(timeout);
@@ -105,7 +106,7 @@ describe('Gateway Datasheet Configuration', () => {
       const beforeCheck = Date.now();
       gatewayComponent.lastHealthCheck = Date.now();
       const afterCheck = Date.now();
-      
+
       expect(gatewayComponent.lastHealthCheck).toBeGreaterThanOrEqual(beforeCheck);
       expect(gatewayComponent.lastHealthCheck).toBeLessThanOrEqual(afterCheck);
     });
@@ -114,15 +115,15 @@ describe('Gateway Datasheet Configuration', () => {
       // Unknown -> Healthy
       gatewayComponent.healthState = 'healthy';
       expect(gatewayComponent.healthState).toBe('healthy');
-      
+
       // Healthy -> Degraded
       gatewayComponent.healthState = 'degraded';
       expect(gatewayComponent.healthState).toBe('degraded');
-      
+
       // Degraded -> Failed
       gatewayComponent.healthState = 'failed';
       expect(gatewayComponent.healthState).toBe('failed');
-      
+
       // Failed -> Healthy (recovery)
       gatewayComponent.healthState = 'healthy';
       expect(gatewayComponent.healthState).toBe('healthy');
@@ -132,10 +133,11 @@ describe('Gateway Datasheet Configuration', () => {
   describe('Gateway Configuration Examples', () => {
     it('should create Database Gateway configuration', () => {
       const dbGateway = createGateway({
-        x: 0, y: 0,
+        x: 0,
+        y: 0,
         externalSystem: 'Database',
         connectionUrl: 'postgresql://localhost:5432/production',
-        timeout: 10000
+        timeout: 10000,
       });
 
       expect(dbGateway.externalSystem).toBe('Database');
@@ -145,10 +147,11 @@ describe('Gateway Datasheet Configuration', () => {
 
     it('should create REST API Gateway configuration', () => {
       const apiGateway = createGateway({
-        x: 0, y: 0,
+        x: 0,
+        y: 0,
         externalSystem: 'REST API',
         connectionUrl: 'https://api.payment.com/v2',
-        timeout: 5000
+        timeout: 5000,
       });
 
       expect(apiGateway.externalSystem).toBe('REST API');
@@ -158,10 +161,11 @@ describe('Gateway Datasheet Configuration', () => {
 
     it('should create File Storage Gateway configuration', () => {
       const storageGateway = createGateway({
-        x: 0, y: 0,
+        x: 0,
+        y: 0,
         externalSystem: 'File Storage',
         connectionUrl: 's3://production-bucket/uploads',
-        timeout: 15000
+        timeout: 15000,
       });
 
       expect(storageGateway.externalSystem).toBe('File Storage');
@@ -174,21 +178,24 @@ describe('Gateway Datasheet Configuration', () => {
     it('should support typical microservice architecture', () => {
       // User Authentication Flow
       const userDB = createGateway({
-        x: 100, y: 100,
+        x: 100,
+        y: 100,
         externalSystem: 'Database',
-        connectionUrl: 'postgresql://localhost:5432/users'
+        connectionUrl: 'postgresql://localhost:5432/users',
       });
 
       const authAPI = createGateway({
-        x: 300, y: 100,
+        x: 300,
+        y: 100,
         externalSystem: 'REST API',
-        connectionUrl: 'https://auth.service.com/v1'
+        connectionUrl: 'https://auth.service.com/v1',
       });
 
       const sessionCache = createGateway({
-        x: 500, y: 100,
+        x: 500,
+        y: 100,
         externalSystem: 'Cache',
-        connectionUrl: 'redis://localhost:6379'
+        connectionUrl: 'redis://localhost:6379',
       });
 
       // All should have correct configuration

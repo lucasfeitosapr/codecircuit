@@ -3,9 +3,16 @@ import { eventBus } from './events/EventBus';
 import { Events } from './events/eventTypes';
 import { stateManager } from './state/StateManager';
 import { ExportImportManager } from './core/ExportImportManager';
-import { createViewportManager, getViewportManager, type ViewportManager } from './core/ViewportManager';
+import {
+  createViewportManager,
+  getViewportManager,
+  type ViewportManager,
+} from './core/ViewportManager';
 import { ConnectionManager, createConnectionManager } from './core/ConnectionManager';
-import { ComponentLifecycleManager, createComponentLifecycleManager } from './core/ComponentLifecycleManager';
+import {
+  ComponentLifecycleManager,
+  createComponentLifecycleManager,
+} from './core/ComponentLifecycleManager';
 import { InputEventCoordinator, createInputEventCoordinator } from './core/InputEventCoordinator';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from './utils';
 import * as rendererHelpers from './ui/rendererHelpers';
@@ -33,10 +40,10 @@ import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRe
 import { UIController, createUIController, type UIControllerContext } from './ui/UIController';
 import { ViewNavigationManager, type ViewNavigationContext } from './ui/ViewNavigationManager';
 
-// Import V2 plugins for event-driven architecture  
+// Import V2 plugins for event-driven architecture
 import { DecisionPointPluginV2 } from './components/plugins/DecisionPointPluginV2';
 import { PowerCorePluginV2 } from './components/plugins/PowerCorePluginV2';
-import { ModuleICPluginV2 } from './components/plugins/ModuleICPluginV2'; 
+import { ModuleICPluginV2 } from './components/plugins/ModuleICPluginV2';
 import { TaskResistorPluginV2 } from './components/plugins/TaskResistorPluginV2';
 import { ComponentRegistry, createComponentRegistry } from './components/ComponentRegistry';
 import type {
@@ -56,7 +63,7 @@ import type {
 export class MotherboardApp {
   // Viewport management (extracted to ViewportManager)
   viewportManager: ViewportManager;
-  
+
   // Application state
   components: ComponentBase[];
   connections: Connection[];
@@ -102,7 +109,9 @@ export class MotherboardApp {
 
   // Legacy compatibility setters for testing (DEPRECATED)
   set canvas(value: HTMLCanvasElement) {
-    console.warn('Setting canvas directly is deprecated. Canvas is now managed by ViewportManager.');
+    console.warn(
+      'Setting canvas directly is deprecated. Canvas is now managed by ViewportManager.'
+    );
     // For backward compatibility during transition
     (this.viewportManager as any).canvas = value;
   }
@@ -119,13 +128,16 @@ export class MotherboardApp {
     try {
       this.viewportManager = createViewportManager('circuit-board', eventBus);
     } catch (error) {
-      if (error instanceof Error && error.message.includes('ViewportManager instance already exists')) {
+      if (
+        error instanceof Error &&
+        error.message.includes('ViewportManager instance already exists')
+      ) {
         this.viewportManager = getViewportManager();
       } else {
         throw error;
       }
     }
-    
+
     this.components = [];
     this.connections = [];
     this.selectedComponent = null;
@@ -172,10 +184,10 @@ export class MotherboardApp {
     // Phase 5: Initialize managers that are needed during init()
     this.exportImportManager = new ExportImportManager();
     this.connectionManager = createConnectionManager(eventBus, this.categories);
-    
+
     // Phase 5A: Initialize ComponentRegistry for event-driven plugin coordination
     this.componentRegistry = createComponentRegistry(eventBus);
-    
+
     // Phase 6C: Initialize ComponentLifecycleManager
     this.componentLifecycleManager = createComponentLifecycleManager(
       eventBus,
@@ -212,7 +224,7 @@ export class MotherboardApp {
       uiLayer: this.uiLayer,
       runtimeLayer: this.runtimeLayer,
       components: this.components,
-      connections: this.connections
+      connections: this.connections,
     });
 
     // Phase 2A Extended: Initialize ViewNavigationManager for camera animations
@@ -222,23 +234,27 @@ export class MotherboardApp {
       getCurrentView: () => this.currentView.type,
       getViewStack: () => {
         const stack = [];
-        let current = this.viewStack.peek();
+        const current = this.viewStack.peek();
         if (current) stack.push(current.type);
         return stack;
       },
-      setCurrentView: (view: string) => { this.currentView.type = view as ViewState['type']; },
-      pushView: (view: string) => { 
-        this.viewStack.push({ 
-          type: view as ViewState['type'], 
-          component: null, 
-          camera: { ...this.viewportManager.camera }, 
-          components: [], 
-          connections: [] 
-        }); 
+      setCurrentView: (view: string) => {
+        this.currentView.type = view as ViewState['type'];
       },
-      popView: () => { this.viewStack.pop(); },
+      pushView: (view: string) => {
+        this.viewStack.push({
+          type: view as ViewState['type'],
+          component: null,
+          camera: { ...this.viewportManager.camera },
+          components: [],
+          connections: [],
+        });
+      },
+      popView: () => {
+        this.viewStack.pop();
+      },
       requestAnimationFrame: (callback: FrameRequestCallback) => requestAnimationFrame(callback),
-      getComponent: (id: string) => this.components.find(c => c.id === id)
+      getComponent: (id: string) => this.components.find(c => c.id === id),
     });
 
     // Phase 2A Extended: Initialize UIController for UI management
@@ -248,13 +264,19 @@ export class MotherboardApp {
       getComponents: () => this.components,
       getConnections: () => this.connections,
       getSelectedComponent: () => this.selectedComponent,
-      setComponents: (components: any[]) => { this.components = components; },
-      setConnections: (connections: any[]) => { this.connections = connections; },
-      setSelectedComponent: (component: any) => { this.selectedComponent = component; },
+      setComponents: (components: any[]) => {
+        this.components = components;
+      },
+      setConnections: (connections: any[]) => {
+        this.connections = connections;
+      },
+      setSelectedComponent: (component: any) => {
+        this.selectedComponent = component;
+      },
       exitSchematicView: this.exitSchematicView.bind(this),
       hideDatasheet: this.hideDatasheet.bind(this),
       navigateToBreadcrumbLevel: this.navigateToBreadcrumbLevel.bind(this),
-      handleKeyboardShortcut: this.handleKeyboardShortcut.bind(this)
+      handleKeyboardShortcut: this.handleKeyboardShortcut.bind(this),
     });
 
     this.init();
@@ -262,8 +284,8 @@ export class MotherboardApp {
 
     // Phase 7A: Register Extended Component Plugins
     this.initializeExtendedComponents();
-    
-    // Phase 2A: Initialize V2 Plugin System (Event-Driven Architecture) 
+
+    // Phase 2A: Initialize V2 Plugin System (Event-Driven Architecture)
     this.setupPluginSystem();
 
     // Register layers (idempotent during app lifecycle)
@@ -294,8 +316,8 @@ export class MotherboardApp {
         components: componentsById,
         connections: connectionsById,
         view: this.currentView,
-  selectedComponentId: (this.selectedComponent as any)?.id ?? null,
-  selectedComponentIds: this.selectedComponent ? [(this.selectedComponent as any).id] : [],
+        selectedComponentId: (this.selectedComponent as any)?.id ?? null,
+        selectedComponentIds: this.selectedComponent ? [(this.selectedComponent as any).id] : [],
         camera: { x: this.camera.x, y: this.camera.y, zoom: this.camera.zoom },
       } as any);
     } catch (err) {
@@ -325,12 +347,40 @@ export class MotherboardApp {
 
             // add connections: power-core -> module-ic, module-ic -> task-resistor
             try {
-              const fromPin = { component: p, pinType: 'output' as 'output', pinIndex: 0, x: p.x + (p.pins?.output?.[0]?.x ?? 0), y: p.y + (p.pins?.output?.[0]?.y ?? 0), category: p.category };
-              const toPin = { component: m, pinType: 'input' as 'input', pinIndex: 0, x: m.x + (m.pins?.input?.[0]?.x ?? 0), y: m.y + (m.pins?.input?.[0]?.y ?? 0), category: m.category };
+              const fromPin = {
+                component: p,
+                pinType: 'output' as 'output',
+                pinIndex: 0,
+                x: p.x + (p.pins?.output?.[0]?.x ?? 0),
+                y: p.y + (p.pins?.output?.[0]?.y ?? 0),
+                category: p.category,
+              };
+              const toPin = {
+                component: m,
+                pinType: 'input' as 'input',
+                pinIndex: 0,
+                x: m.x + (m.pins?.input?.[0]?.x ?? 0),
+                y: m.y + (m.pins?.input?.[0]?.y ?? 0),
+                category: m.category,
+              };
               this.createConnection(fromPin, toPin);
 
-              const fromPin2 = { component: m, pinType: 'output' as 'output', pinIndex: 0, x: m.x + (m.pins?.output?.[0]?.x ?? 0), y: m.y + (m.pins?.output?.[0]?.y ?? 0), category: m.category };
-              const toPin2 = { component: r, pinType: 'input' as 'input', pinIndex: 0, x: r.x + (r.pins?.input?.[0]?.x ?? 0), y: r.y + (r.pins?.input?.[0]?.y ?? 0), category: r.category };
+              const fromPin2 = {
+                component: m,
+                pinType: 'output' as 'output',
+                pinIndex: 0,
+                x: m.x + (m.pins?.output?.[0]?.x ?? 0),
+                y: m.y + (m.pins?.output?.[0]?.y ?? 0),
+                category: m.category,
+              };
+              const toPin2 = {
+                component: r,
+                pinType: 'input' as 'input',
+                pinIndex: 0,
+                x: r.x + (r.pins?.input?.[0]?.x ?? 0),
+                y: r.y + (r.pins?.input?.[0]?.y ?? 0),
+                category: r.category,
+              };
               this.createConnection(fromPin2, toPin2);
             } catch (e) {
               // ignore any seeding errors
@@ -369,15 +419,14 @@ export class MotherboardApp {
       if (!componentSystem.get('decision-point')) {
         componentSystem.register(DecisionPointPlugin);
       }
-      
+
       console.log('✅ Phase 7A: Extended Components initialized successfully');
       console.log(`   - Decision Point ◆ registered`);
-      
+
       // Emit event for UI updates
       eventBus.emit(Events.EXTENDED_COMPONENTS_INITIALIZED, {
-        plugins: componentSystem.list().map(p => ({ id: p.id, displayName: p.displayName }))
+        plugins: componentSystem.list().map(p => ({ id: p.id, displayName: p.displayName })),
       });
-      
     } catch (error) {
       console.error('❌ Failed to initialize extended components:', error);
     }
@@ -386,7 +435,7 @@ export class MotherboardApp {
   init() {
     // Initialize ViewportManager (replaces setupCanvas)
     this.viewportManager.initialize();
-    
+
     // Wire input listeners via the inputHandler module
     setupInputListeners(this);
     this.uiController.setupKeyboardShortcuts();
@@ -414,7 +463,7 @@ export class MotherboardApp {
     // Listen for plugin registrations to automatically update componentTypes
     eventBus.on(Events.PLUGIN_REGISTERED, (payload: any) => {
       const { pluginType, metadata } = payload;
-      
+
       // Convert plugin metadata to componentType format
       const componentType = {
         name: metadata.displayName,
@@ -422,12 +471,12 @@ export class MotherboardApp {
         color: metadata.color,
         width: metadata.width || 60,
         height: metadata.height || 40,
-        pins: metadata.pins || { input: [], output: [] }
+        pins: metadata.pins || { input: [], output: [] },
       };
-      
+
       // Add to componentTypes (replacing manual coordination)
       this.componentTypes[pluginType] = componentType;
-      
+
       console.log(`✅ ComponentType auto-updated: ${metadata.displayName} (${pluginType})`);
     });
 
@@ -465,18 +514,18 @@ export class MotherboardApp {
   addComponent(type: string, x: number, y: number) {
     // Delegate to ComponentLifecycleManager
     const component = this.componentLifecycleManager.createComponent(type, x, y, this.currentView);
-    
+
     if (component) {
       // For main view, also sync with global arrays to maintain backward compatibility
       // Only if currentView.components is not the same reference as this.components
       if (this.currentView.type === 'main' && this.currentView.components !== this.components) {
         this.components.push(component);
       }
-      
+
       this.selectedComponent = component;
       this.showDatasheet(component);
     }
-    
+
     return component;
   }
 
@@ -510,16 +559,16 @@ export class MotherboardApp {
     if (connection) {
       // Add to legacy connections array for backward compatibility
       this.connections.push(connection);
-      
+
       // Emit the legacy ConnectionCreated event for backward compatibility
       try {
-        eventBus.emit(Events.ConnectionCreated, { 
-          id: connection.id, 
-          from: connection.from, 
-          to: connection.to, 
-          type: connection.category, 
-          metadata: {}, 
-          source: 'legacy' 
+        eventBus.emit(Events.ConnectionCreated, {
+          id: connection.id,
+          from: connection.from,
+          to: connection.to,
+          type: connection.category,
+          metadata: {},
+          source: 'legacy',
         });
       } catch (err) {
         console.error('Failed to emit ConnectionCreated from main.createConnection', err);
@@ -531,7 +580,7 @@ export class MotherboardApp {
   toggleComponentStatus(component: ComponentBase) {
     // Delegate to ComponentLifecycleManager
     this.componentLifecycleManager.toggleComponentStatus(component);
-    
+
     // Update datasheet if this is the selected component
     if (this.selectedComponent === component) {
       this.showDatasheet(component);
@@ -614,101 +663,147 @@ export class MotherboardApp {
   // Phase 5: Setup event handlers for the new ExportImportManager
   setupExportImportEventHandlers() {
     // Handle requests for current project state
-    eventBus.on(Events.PROJECT_STATE_REQUEST, (payload: { callback: (components: any[], connections: any[]) => void, timestamp: number }) => {
-      // Provide a snapshot of components that includes any internal components
-      // from an open schematic view. Without this, components created while
-      // inside a schematic (e.g. Decision Points) live in currentView.components
-      // and are not present on the root this.components array — so they would
-      // be missing from exported project files.
-      const componentsSnapshot = this.components.map(c => {
-        const copy: any = { ...(c as any) };
-        if ((c as any).type === 'module-ic') {
-          copy.internalComponents = (c as any).internalComponents ? (c as any).internalComponents.map((ic: any) => ({ ...ic })) : [];
-          copy.internalConnections = (c as any).internalConnections ? (c as any).internalConnections.map((ic: any) => ({ ...ic })) : [];
-        }
-        return copy;
-      });
+    eventBus.on(
+      Events.PROJECT_STATE_REQUEST,
+      (payload: {
+        callback: (components: any[], connections: any[]) => void;
+        timestamp: number;
+      }) => {
+        // Provide a snapshot of components that includes any internal components
+        // from an open schematic view. Without this, components created while
+        // inside a schematic (e.g. Decision Points) live in currentView.components
+        // and are not present on the root this.components array — so they would
+        // be missing from exported project files.
+        const componentsSnapshot = this.components.map(c => {
+          const copy: any = { ...(c as any) };
+          if ((c as any).type === 'module-ic') {
+            copy.internalComponents = (c as any).internalComponents
+              ? (c as any).internalComponents.map((ic: any) => ({ ...ic }))
+              : [];
+            copy.internalConnections = (c as any).internalConnections
+              ? (c as any).internalConnections.map((ic: any) => ({ ...ic }))
+              : [];
+          }
+          return copy;
+        });
 
-      // If the user currently has a schematic open, ensure that the module
-      // being edited contains the live internal components/connections from
-      // the current view so they're included in the exported snapshot.
-      if (this.currentView.type === 'schematic' && this.currentView.component) {
-        const moduleId = this.currentView.component.id;
-        const idx = componentsSnapshot.findIndex(c => c.id === moduleId);
-        if (idx !== -1) {
-          componentsSnapshot[idx].internalComponents = [...this.currentView.components];
-          componentsSnapshot[idx].internalConnections = [...this.currentView.connections];
-        } else {
-          // If the module isn't present at root for some reason, add it
-          const moduleCopy: any = { ...this.currentView.component };
-          moduleCopy.internalComponents = [...this.currentView.components];
-          moduleCopy.internalConnections = [...this.currentView.connections];
-          componentsSnapshot.push(moduleCopy);
+        // If the user currently has a schematic open, ensure that the module
+        // being edited contains the live internal components/connections from
+        // the current view so they're included in the exported snapshot.
+        if (this.currentView.type === 'schematic' && this.currentView.component) {
+          const moduleId = this.currentView.component.id;
+          const idx = componentsSnapshot.findIndex(c => c.id === moduleId);
+          if (idx !== -1) {
+            componentsSnapshot[idx].internalComponents = [...this.currentView.components];
+            componentsSnapshot[idx].internalConnections = [...this.currentView.connections];
+          } else {
+            // If the module isn't present at root for some reason, add it
+            const moduleCopy: any = { ...this.currentView.component };
+            moduleCopy.internalComponents = [...this.currentView.components];
+            moduleCopy.internalConnections = [...this.currentView.connections];
+            componentsSnapshot.push(moduleCopy);
+          }
         }
+
+        payload.callback(componentsSnapshot, this.connections);
       }
-
-      payload.callback(componentsSnapshot, this.connections);
-    });
+    );
 
     // Handle project import completion
-    eventBus.on(Events.PROJECT_IMPORTED, (payload: { components: any[], connections: any[], projectData: any, componentCount: number, connectionCount: number, timestamp: number }) => {
-      // Replace current project state with imported data
-      this.components = payload.components;
-      this.connections = payload.connections;
-      
-      // Separate main-level components from internal components
-      const mainComponents = payload.components.filter(comp => {
-        // Main components are those not contained within any Module IC
-        return !this.isComponentInternal(comp, payload.components);
-      });
-      
-      // Update current view to reflect only main-level components
-      this.currentView.components = mainComponents;
-      this.currentView.connections = this.connections.filter(conn => {
-        // Only include connections between main-level components
-        const fromMain = mainComponents.some(c => c.id === conn.from.component.id);
-        const toMain = mainComponents.some(c => c.id === conn.to.component.id);
-        return fromMain && toMain;
-      });
-      
-      // Ensure Module ICs have their internal components properly isolated
-      payload.components.forEach(component => {
-        if (component.type === 'module-ic' && component.internalComponents) {
-          // Internal components should NOT appear in main view
-          console.log(`📦 Module IC "${component.name}" has ${component.internalComponents.length} internal components`);
-        }
-      });
-      
-      // Reset camera and selection
-      this.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
-      this.selectedComponent = null;
-      
-      console.log(`✅ Project imported: ${payload.componentCount} components, ${payload.connectionCount} connections`);
-      console.log(`📍 Main view has ${mainComponents.length} components, ${this.currentView.connections.length} connections`);
-    });
+    eventBus.on(
+      Events.PROJECT_IMPORTED,
+      (payload: {
+        components: any[];
+        connections: any[];
+        projectData: any;
+        componentCount: number;
+        connectionCount: number;
+        timestamp: number;
+      }) => {
+        // Replace current project state with imported data
+        this.components = payload.components;
+        this.connections = payload.connections;
+
+        // Separate main-level components from internal components
+        const mainComponents = payload.components.filter(comp => {
+          // Main components are those not contained within any Module IC
+          return !this.isComponentInternal(comp, payload.components);
+        });
+
+        // Update current view to reflect only main-level components
+        this.currentView.components = mainComponents;
+        this.currentView.connections = this.connections.filter(conn => {
+          // Only include connections between main-level components
+          const fromMain = mainComponents.some(c => c.id === conn.from.component.id);
+          const toMain = mainComponents.some(c => c.id === conn.to.component.id);
+          return fromMain && toMain;
+        });
+
+        // Ensure Module ICs have their internal components properly isolated
+        payload.components.forEach(component => {
+          if (component.type === 'module-ic' && component.internalComponents) {
+            // Internal components should NOT appear in main view
+            console.log(
+              `📦 Module IC "${component.name}" has ${component.internalComponents.length} internal components`
+            );
+          }
+        });
+
+        // Reset camera and selection
+        this.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
+        this.selectedComponent = null;
+
+        console.log(
+          `✅ Project imported: ${payload.componentCount} components, ${payload.connectionCount} connections`
+        );
+        console.log(
+          `📍 Main view has ${mainComponents.length} components, ${this.currentView.connections.length} connections`
+        );
+      }
+    );
 
     // Handle import errors
-    eventBus.on(Events.PROJECT_IMPORT_ERROR, (payload: { error: string, filename?: string, projectData?: any, timestamp: number }) => {
-      console.error('❌ Import error:', payload.error);
-      alert(`Import Error: ${payload.error}`);
-    });
+    eventBus.on(
+      Events.PROJECT_IMPORT_ERROR,
+      (payload: { error: string; filename?: string; projectData?: any; timestamp: number }) => {
+        console.error('❌ Import error:', payload.error);
+        alert(`Import Error: ${payload.error}`);
+      }
+    );
 
     // Handle export completion
-    eventBus.on(Events.PROJECT_EXPORTED, (payload: { projectData: any, componentCount: number, connectionCount: number, timestamp: number }) => {
-      console.log(`✅ Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`);
-    });
+    eventBus.on(
+      Events.PROJECT_EXPORTED,
+      (payload: {
+        projectData: any;
+        componentCount: number;
+        connectionCount: number;
+        timestamp: number;
+      }) => {
+        console.log(
+          `✅ Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`
+        );
+      }
+    );
 
     // Handle download completion
-    eventBus.on(Events.PROJECT_DOWNLOAD_COMPLETED, (payload: { filename: string, size: number, timestamp: number }) => {
-      console.log(`✅ Download completed: ${payload.filename} (${payload.size} bytes)`);
-    });
+    eventBus.on(
+      Events.PROJECT_DOWNLOAD_COMPLETED,
+      (payload: { filename: string; size: number; timestamp: number }) => {
+        console.log(`✅ Download completed: ${payload.filename} (${payload.size} bytes)`);
+      }
+    );
   }
 
   // Phase 5: Setup event handlers for the new ConnectionManager
   setupConnectionManagerEventHandlers() {
     // Handle connection creation requests from UI
     eventBus.on(Events.CONNECTION_CREATE_REQUESTED, (payload: any) => {
-      const pinHit = this.connectionManager.getPinAt(payload.x, payload.y, this.getCurrentViewComponents());
+      const pinHit = this.connectionManager.getPinAt(
+        payload.x,
+        payload.y,
+        this.getCurrentViewComponents()
+      );
       if (pinHit) {
         if (this.connectionManager.getConnectionState().isConnecting) {
           // End connection
@@ -737,7 +832,7 @@ export class MotherboardApp {
         this.connections.push(payload.connection);
         console.log('✅ Connection added to main array:', payload.connection.id);
       }
-      
+
       // Add connection to current view if not main view
       if (payload.connection && this.currentView.type !== 'main') {
         if (!this.currentView.connections) {
@@ -748,7 +843,7 @@ export class MotherboardApp {
           console.log('✅ Connection added to schematic view:', payload.connection.id);
         }
       }
-      
+
       // Add runtime effects for new connection
       const categoryColor = this.categories[payload.type ?? 'frontend']?.color || '#00ff88';
       this.runtimeLayer.energyFlow(
@@ -758,11 +853,11 @@ export class MotherboardApp {
         payload.to.y,
         categoryColor
       );
-      
+
       // Add glow effects at connection points
       this.runtimeLayer.glowEffect(payload.from.x, payload.from.y, categoryColor, 600);
       this.runtimeLayer.glowEffect(payload.to.x, payload.to.y, categoryColor, 600);
-      
+
       this.updateConnectionModeUI();
     });
 
@@ -775,14 +870,15 @@ export class MotherboardApp {
           this.connectionManager.getConnectionState().connectionStart!,
           payload.pin
         ).isValid;
-        
+
         // Update UI layer with connection intent
         this.uiLayer.clearConnectionIntents();
         this.uiLayer.addConnectionIntent({
           startPin: this.connectionManager.getConnectionState().connectionStart!,
           endPin: payload.pin,
           isValid,
-          category: this.connectionManager.getConnectionState().connectionStart!.category ?? 'frontend'
+          category:
+            this.connectionManager.getConnectionState().connectionStart!.category ?? 'frontend',
         });
       }
     });
@@ -801,7 +897,7 @@ export class MotherboardApp {
       inputEventCoordinator: this.inputEventCoordinator,
       isTransitioning: this.isTransitioning,
       getCurrentViewComponents: () => this.getCurrentViewComponents(),
-      getCurrentViewConnections: () => this.getCurrentViewConnections()
+      getCurrentViewConnections: () => this.getCurrentViewConnections(),
     };
   }
 
@@ -821,8 +917,6 @@ export class MotherboardApp {
   drawComponent(component: ComponentBase) {
     LegacyRenderer.drawComponent(this.getRendererContext(), component);
   }
-
-
 
   render() {
     // Delegate all rendering to the extracted LegacyRenderer module
@@ -853,7 +947,15 @@ export class MotherboardApp {
     color: string,
     isActive: boolean
   ) {
-    LegacyRenderer.drawTraceBackground(this.getRendererContext(), fromX, fromY, toX, toY, color, isActive);
+    LegacyRenderer.drawTraceBackground(
+      this.getRendererContext(),
+      fromX,
+      fromY,
+      toX,
+      toY,
+      color,
+      isActive
+    );
   }
 
   drawActiveTrace(
@@ -864,7 +966,15 @@ export class MotherboardApp {
     color: string,
     isPowered: boolean
   ) {
-    LegacyRenderer.drawActiveTrace(this.getRendererContext(), fromX, fromY, toX, toY, color, isPowered);
+    LegacyRenderer.drawActiveTrace(
+      this.getRendererContext(),
+      fromX,
+      fromY,
+      toX,
+      toY,
+      color,
+      isPowered
+    );
   }
 
   drawDataFlow(
@@ -876,7 +986,16 @@ export class MotherboardApp {
     color: string,
     isPowered: boolean
   ) {
-    LegacyRenderer.drawDataFlow(this.getRendererContext(), connection, fromX, fromY, toX, toY, color, isPowered);
+    LegacyRenderer.drawDataFlow(
+      this.getRendererContext(),
+      connection,
+      fromX,
+      fromY,
+      toX,
+      toY,
+      color,
+      isPowered
+    );
   }
 
   getPointOnPath(points: { x: number; y: number }[], ratio: number) {
@@ -904,7 +1023,10 @@ export class MotherboardApp {
     return allComponents.some(containerComponent => {
       if (containerComponent.type === 'module-ic') {
         const moduleComponent = containerComponent as ModuleComponent;
-        return moduleComponent.internalComponents?.some(internal => internal.id === component.id) || false;
+        return (
+          moduleComponent.internalComponents?.some(internal => internal.id === component.id) ||
+          false
+        );
       }
       return false;
     });
@@ -991,8 +1113,8 @@ export class MotherboardApp {
         // Restore global arrays from the saved state
         this.components.length = 0; // Clear existing
         this.components.push(...this.currentView.components);
-        
-        this.connections.length = 0; // Clear existing  
+
+        this.connections.length = 0; // Clear existing
         this.connections.push(...this.currentView.connections);
       }
 
@@ -1003,10 +1125,6 @@ export class MotherboardApp {
     });
   }
 
-
-
-
-
   // updateBreadcrumbs() method extracted to UIController - now delegating
   // Phase 2A Extended: Method delegation to UIController
 
@@ -1015,15 +1133,15 @@ export class MotherboardApp {
 
   buildBreadcrumbPath() {
     const path = [];
-    
+
     // Always start with main board
     path.push({
       name: 'Project: Motherboard',
       icon: '⚡',
       isCurrent: this.currentView.type === 'main',
-      viewIndex: 0
+      viewIndex: 0,
     });
-    
+
     // Add each level from view stack
     const stack = this.viewStack.serialize();
     stack.forEach((view: any, index: number) => {
@@ -1031,39 +1149,40 @@ export class MotherboardApp {
         const depth = index + 1;
         const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
         const icon = depth < depthIcons.length ? depthIcons[depth] : `🔹${depth}`;
-        
+
         path.push({
           name: view.component.title || `Module ${depth}`,
           icon: icon,
           isCurrent: false,
-          viewIndex: depth
+          viewIndex: depth,
         });
       }
     });
-    
+
     // Mark current schematic view
     if (this.currentView.type === 'schematic') {
       const currentDepth = stack.length + 1;
       const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
-      const icon = currentDepth < depthIcons.length ? depthIcons[currentDepth] : `🔹${currentDepth}`;
-      
+      const icon =
+        currentDepth < depthIcons.length ? depthIcons[currentDepth] : `🔹${currentDepth}`;
+
       path.push({
         name: this.currentView.component?.title || `Module ${currentDepth}`,
         icon: icon,
         isCurrent: true,
-        viewIndex: currentDepth
+        viewIndex: currentDepth,
       });
     }
-    
+
     return path;
   }
 
   navigateToBreadcrumbLevel(targetIndex: number) {
     // Navigate directly to a specific breadcrumb level
     if (this.isTransitioning) return;
-    
+
     const currentDepth = this.viewStack.size() + (this.currentView.type === 'schematic' ? 1 : 0);
-    
+
     if (targetIndex === 0) {
       // Navigate to main board
       this.exitToMainBoard();
@@ -1079,9 +1198,9 @@ export class MotherboardApp {
   exitToMainBoard() {
     // Exit all the way to main board
     this.isTransitioning = true;
-    
+
     const mainCamera = { x: 0, y: 0, zoom: 1 };
-    
+
     this.viewNavigationManager.animateToMainView(mainCamera, () => {
       // Transition complete
       this.viewStack.clear();
@@ -1113,7 +1232,11 @@ export class MotherboardApp {
   handleKeyboardShortcut(event: KeyboardEvent) {
     // Ignore keyboard shortcuts when typing in input fields
     const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.contentEditable === 'true'
+    ) {
       return;
     }
 
@@ -1137,7 +1260,8 @@ export class MotherboardApp {
         this.handleHelpKey();
         break;
       case '?':
-        if (event.shiftKey) { // Shift + ? = ?
+        if (event.shiftKey) {
+          // Shift + ? = ?
           this.handleHelpKey();
         }
         break;
@@ -1146,7 +1270,7 @@ export class MotherboardApp {
 
   handleEscapeKey() {
     // ESC key: Exit current context or close modals
-    
+
     // Priority 1: Close help overlay if open
     const helpOverlay = document.getElementById('help-overlay') as HTMLElement;
     if (helpOverlay && helpOverlay.classList.contains('active')) {
@@ -1183,7 +1307,7 @@ export class MotherboardApp {
     if (this.isTransitioning) return;
 
     const viewStackSize = this.viewStack.size();
-    
+
     if (viewStackSize === 0) {
       // No views to cycle through
       return;
@@ -1219,7 +1343,7 @@ export class MotherboardApp {
     // SPACE key: Toggle status of selected component
     if (this.selectedComponent && this.selectedComponent.type !== 'power-core') {
       this.toggleComponentStatus(this.selectedComponent);
-      
+
       // Update datasheet if open
       if (document.getElementById('datasheet-panel')?.classList.contains('active')) {
         showDatasheetUI(this, this.selectedComponent);
@@ -1245,7 +1369,7 @@ export class MotherboardApp {
   showTemporaryMessage(message: string, duration: number = 2000) {
     // Show a temporary message to the user
     let messageEl = document.getElementById('temp-message') as HTMLElement;
-    
+
     if (!messageEl) {
       messageEl = document.createElement('div');
       messageEl.id = 'temp-message';
@@ -1267,20 +1391,20 @@ export class MotherboardApp {
       `;
       document.body.appendChild(messageEl);
     }
-    
+
     messageEl.textContent = message;
     messageEl.style.display = 'block';
-    
+
     // Clear any existing timeout
     if (messageEl.dataset.timeoutId) {
       clearTimeout(parseInt(messageEl.dataset.timeoutId));
     }
-    
+
     // Set new timeout
     const timeoutId = setTimeout(() => {
       messageEl.style.display = 'none';
     }, duration);
-    
+
     messageEl.dataset.timeoutId = timeoutId.toString();
   }
 

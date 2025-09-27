@@ -1,9 +1,9 @@
 import { PluginDescriptor, componentSystem } from '../ComponentSystem';
 import { renderComponent } from '../../rendering/ImplementationHelpers';
 
-export const TaskResistorPlugin: PluginDescriptor = {
-  id: 'task-resistor',
-  displayName: 'Task Resistor',
+export const ModuleICPlugin: PluginDescriptor = {
+  id: 'module-ic',
+  displayName: 'Module IC',
   render: (ctx: CanvasRenderingContext2D | WebGLRenderingContext, frame: any, model?: any) => {
     try {
       if (ctx && (ctx as CanvasRenderingContext2D).fillRect && model) {
@@ -14,16 +14,16 @@ export const TaskResistorPlugin: PluginDescriptor = {
           connections: (frame as any).payload?.connections ?? [],
         });
       } else {
-        return { shape: 'zigzag', color: '#cc6666', model };
+        return { shape: 'chip', color: '#66cc66', model };
       }
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error('TaskResistorPlugin.render failed', e);
+      console.error('ModuleICPlugin.render failed', e);
     }
   },
-  serialize: (model) => model,
-  deserialize: (data) => data,
+  serialize: model => model,
+  deserialize: data => data,
 };
 
 // PHASE 2: Temporarily disabled to prevent dual registration conflicts with V2 plugins
-// componentSystem.register(TaskResistorPlugin);
+// componentSystem.register(ModuleICPlugin);

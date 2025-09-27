@@ -1,6 +1,6 @@
 /**
  * Command Integration - Phase 4 State Management Migration
- * 
+ *
  * Integration layer that connects the Command pattern with the existing MotherboardApp
  * to provide seamless undo/redo functionality and enhanced state management.
  */
@@ -26,23 +26,23 @@ export class CommandIntegration {
    */
   private setupEventListeners(): void {
     // Listen for component events and update app state
-    eventBus.on(Events.ComponentCreated, (payload) => {
+    eventBus.on(Events.ComponentCreated, payload => {
       this.handleComponentCreated(payload);
     });
 
-    eventBus.on(Events.ComponentUpdated, (payload) => {
+    eventBus.on(Events.ComponentUpdated, payload => {
       this.handleComponentUpdated(payload);
     });
 
-    eventBus.on(Events.ComponentDeleted, (payload) => {
+    eventBus.on(Events.ComponentDeleted, payload => {
       this.handleComponentDeleted(payload);
     });
 
-    eventBus.on(Events.ConnectionCreated, (payload) => {
+    eventBus.on(Events.ConnectionCreated, payload => {
       this.handleConnectionCreated(payload);
     });
 
-    eventBus.on(Events.ConnectionDeleted, (payload) => {
+    eventBus.on(Events.ConnectionDeleted, payload => {
       this.handleConnectionDeleted(payload);
     });
   }
@@ -54,12 +54,12 @@ export class CommandIntegration {
     if (payload.model && this.app.currentView) {
       // Add to current view components
       this.app.currentView.components.push(payload.model);
-      
+
       // Add to top-level components if on main view
       if (this.app.currentView.type === 'main') {
         this.app.components.push(payload.model);
       }
-      
+
       // Update selection if this is the first component
       if (this.app.currentView.components.length === 1) {
         this.app.selectedComponent = payload.model;
@@ -73,19 +73,23 @@ export class CommandIntegration {
   private handleComponentUpdated(payload: any): void {
     if (payload.updates && this.app.currentView) {
       // Find and update component in current view
-      const component = this.app.currentView.components.find((c: ComponentBase) => c.id === payload.id);
+      const component = this.app.currentView.components.find(
+        (c: ComponentBase) => c.id === payload.id
+      );
       if (component) {
         Object.assign(component, payload.updates);
       }
-      
+
       // Update in top-level components if on main view
       if (this.app.currentView.type === 'main') {
-        const topLevelComponent = this.app.components.find((c: ComponentBase) => c.id === payload.id);
+        const topLevelComponent = this.app.components.find(
+          (c: ComponentBase) => c.id === payload.id
+        );
         if (topLevelComponent) {
           Object.assign(topLevelComponent, payload.updates);
         }
       }
-      
+
       // Update selection if this is the selected component
       if (this.app.selectedComponent && this.app.selectedComponent.id === payload.id) {
         Object.assign(this.app.selectedComponent, payload.updates);
@@ -102,14 +106,12 @@ export class CommandIntegration {
       this.app.currentView.components = this.app.currentView.components.filter(
         (c: ComponentBase) => c.id !== payload.id
       );
-      
+
       // Remove from top-level components if on main view
       if (this.app.currentView.type === 'main') {
-        this.app.components = this.app.components.filter(
-          (c: ComponentBase) => c.id !== payload.id
-        );
+        this.app.components = this.app.components.filter((c: ComponentBase) => c.id !== payload.id);
       }
-      
+
       // Clear selection if deleted component was selected
       if (this.app.selectedComponent && this.app.selectedComponent.id === payload.id) {
         this.app.selectedComponent = null;
@@ -129,10 +131,10 @@ export class CommandIntegration {
         category: payload.type || 'frontend',
         createdAt: new Date(),
       };
-      
+
       // Add to current view connections
       this.app.currentView.connections.push(connection);
-      
+
       // Add to top-level connections if on main view
       if (this.app.currentView.type === 'main') {
         this.app.connections.push(connection);
@@ -149,12 +151,10 @@ export class CommandIntegration {
       this.app.currentView.connections = this.app.currentView.connections.filter(
         (c: Connection) => c.id !== payload.id
       );
-      
+
       // Remove from top-level connections if on main view
       if (this.app.currentView.type === 'main') {
-        this.app.connections = this.app.connections.filter(
-          (c: Connection) => c.id !== payload.id
-        );
+        this.app.connections = this.app.connections.filter((c: Connection) => c.id !== payload.id);
       }
     }
   }
@@ -254,7 +254,7 @@ export class CommandIntegration {
     eventBus.off(Events.ComponentDeleted, this.handleComponentDeleted);
     eventBus.off(Events.ConnectionCreated, this.handleConnectionCreated);
     eventBus.off(Events.ConnectionDeleted, this.handleConnectionDeleted);
-    
+
     this.isInitialized = false;
   }
 }

@@ -100,22 +100,43 @@ export class AppStateManager {
   addComponent(component: ComponentBase) {
     this.state.components.push(component);
     this.notifyListeners('components', this.state.components);
-    
+
     eventBus.emit(Events.ComponentCreated, {
       id: component.id,
       type: component.type,
       model: component,
-      source: 'legacy'
+      source: 'legacy',
+    });
+  }
+
+  addComponentToCurrentView(component: ComponentBase) {
+    if (this.state.currentView.type === 'main') {
+      // Main view: add to global components array AND current view array
+      this.state.components.push(component);
+      this.state.currentView.components.push(component);
+      this.notifyListeners('components', this.state.components);
+      this.notifyListeners('currentView', this.state.currentView);
+    } else if (this.state.currentView.type === 'schematic') {
+      // Schematic view: add ONLY to current view's components array (module internal)
+      this.state.currentView.components.push(component);
+      this.notifyListeners('currentView', this.state.currentView);
+    }
+
+    eventBus.emit(Events.ComponentCreated, {
+      id: component.id,
+      type: component.type,
+      model: component,
+      source: 'view-aware',
     });
   }
 
   removeComponent(componentId: string) {
     this.state.components = this.state.components.filter(c => c.id !== componentId);
     this.notifyListeners('components', this.state.components);
-    
+
     eventBus.emit(Events.ComponentDeleted, {
       id: componentId,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -129,6 +150,26 @@ export class AppStateManager {
     this.notifyListeners('connections', this.state.connections);
   }
 
+  addConnectionToCurrentView(connection: Connection) {
+    if (this.state.currentView.type === 'main') {
+      // Main view: add to global connections array AND current view array
+      this.state.connections.push(connection);
+      this.state.currentView.connections.push(connection);
+      this.notifyListeners('connections', this.state.connections);
+      this.notifyListeners('currentView', this.state.currentView);
+    } else if (this.state.currentView.type === 'schematic') {
+      // Schematic view: add ONLY to current view's connections array (module internal)
+      this.state.currentView.connections.push(connection);
+      this.notifyListeners('currentView', this.state.currentView);
+    }
+
+    eventBus.emit(Events.CONNECTION_CREATED, {
+      id: connection.id,
+      connection: connection,
+      source: 'view-aware',
+    });
+  }
+
   removeConnection(connectionId: string) {
     this.state.connections = this.state.connections.filter(c => c.id !== connectionId);
     this.notifyListeners('connections', this.state.connections);
@@ -137,20 +178,20 @@ export class AppStateManager {
   setSelectedComponent(component: ComponentBase | null) {
     this.state.selectedComponent = component;
     this.notifyListeners('selectedComponent', component);
-    
+
     eventBus.emit('component.selection.changed', {
       component,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
   setCurrentView(view: ViewState) {
     this.state.currentView = { ...view };
     this.notifyListeners('currentView', view);
-    
+
     eventBus.emit('view.changed', {
       view,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -164,7 +205,7 @@ export class AppStateManager {
       const delta = currentTime - this.state.lastTime;
       this.state.fps = Math.round(1000 / delta);
       this.notifyListeners('fps', this.state.fps);
-      
+
       // Update FPS display if element exists
       const fpsEl = document.getElementById('fps-counter');
       if (fpsEl) fpsEl.textContent = `FPS: ${this.state.fps}`;
@@ -208,7 +249,7 @@ export class AppStateManager {
       connections: [],
     });
     this.state.isTransitioning = false;
-    
+
     // Notify all listeners
     this.notifyListeners('components', this.state.components);
     this.notifyListeners('connections', this.state.connections);
@@ -232,7 +273,8 @@ export class AppStateManager {
   restoreFromSnapshot(snapshot: Partial<AppState>) {
     if (snapshot.components) this.setComponents(snapshot.components);
     if (snapshot.connections) this.setConnections(snapshot.connections);
-    if (snapshot.selectedComponent !== undefined) this.setSelectedComponent(snapshot.selectedComponent);
+    if (snapshot.selectedComponent !== undefined)
+      this.setSelectedComponent(snapshot.selectedComponent);
     if (snapshot.currentView) this.setCurrentView(snapshot.currentView);
     if (snapshot.isTransitioning !== undefined) this.setTransitioning(snapshot.isTransitioning);
     if (snapshot.lastTime !== undefined) this.state.lastTime = snapshot.lastTime;
@@ -256,4 +298,8 @@ export function getAppStateManager(): AppStateManager {
     throw new Error('AppStateManager not initialized. Call createAppStateManager() first.');
   }
   return appStateManager;
+}
+
+export function resetAppStateManager(): void {
+  appStateManager = null;
 }

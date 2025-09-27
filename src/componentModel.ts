@@ -45,7 +45,12 @@ export function addComponent(app: any, type: string, x: number, y: number) {
   app.selectedComponent = component;
   if (typeof app.showDatasheet === 'function') app.showDatasheet(component);
   try {
-    eventBus.emit(Events.ComponentCreated, { id: component.id, type: component.type, model: component, source: 'legacy' });
+    eventBus.emit(Events.ComponentCreated, {
+      id: component.id,
+      type: component.type,
+      model: component,
+      source: 'legacy',
+    });
   } catch (err) {
     // do not interfere with main flow
     console.error('Failed to emit ComponentCreated', err);

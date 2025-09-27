@@ -126,10 +126,7 @@ export class ProjectSerializer {
   /**
    * Deserialize connections and rebuild component references
    */
-  static deserializeConnections(
-    connectionsData: any[],
-    components: ComponentBase[]
-  ): Connection[] {
+  static deserializeConnections(connectionsData: any[], components: ComponentBase[]): Connection[] {
     return connectionsData
       .map(data => {
         const fromComponent = this.findComponentById(data.from.componentId, components);
@@ -189,7 +186,10 @@ export class ProjectSerializer {
   /**
    * Import and validate project data structure
    */
-  static importProjectData(projectData: any): { components: ComponentBase[], connections: Connection[] } {
+  static importProjectData(projectData: any): {
+    components: ComponentBase[];
+    connections: Connection[];
+  } {
     try {
       let components: ComponentBase[] = [];
       let connections: Connection[] = [];

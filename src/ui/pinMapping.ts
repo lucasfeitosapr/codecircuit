@@ -33,12 +33,16 @@ export function showPinMappingUI(app: any, moduleComponent: any) {
                   <button class="pin-remove-btn">×</button>
                 </div>
                 <label>Label:</label>
-                <input type="text" class="pin-label" value="${pin.label || ''}" placeholder="Pin label">
+                <input type="text" class="pin-label" value="${
+                  pin.label || ''
+                }" placeholder="Pin label">
                 <label>Type:</label>
                 <select class="pin-type">
                   <option value="energy" ${pin.type === 'energy' ? 'selected' : ''}>Energy</option>
                   <option value="data" ${pin.type === 'data' ? 'selected' : ''}>Data</option>
-                  <option value="control" ${pin.type === 'control' ? 'selected' : ''}>Control</option>
+                  <option value="control" ${
+                    pin.type === 'control' ? 'selected' : ''
+                  }>Control</option>
                 </select>
                 <label>Connect to internal:</label>
                 <select class="pin-mapping">
@@ -49,7 +53,9 @@ export function showPinMappingUI(app: any, moduleComponent: any) {
                         comp.pins.input
                           ?.map(
                             (internalPin: any, internalIndex: number) =>
-                              `<option value="${comp.id}:input:${internalIndex}">${comp.title || comp.name} Input ${internalIndex + 1}</option>`
+                              `<option value="${comp.id}:input:${internalIndex}">${
+                                comp.title || comp.name
+                              } Input ${internalIndex + 1}</option>`
                           )
                           .join('') || ''
                     )
@@ -75,12 +81,16 @@ export function showPinMappingUI(app: any, moduleComponent: any) {
                   <button class="pin-remove-btn">×</button>
                 </div>
                 <label>Label:</label>
-                <input type="text" class="pin-label" value="${pin.label || ''}" placeholder="Pin label">
+                <input type="text" class="pin-label" value="${
+                  pin.label || ''
+                }" placeholder="Pin label">
                 <label>Type:</label>
                 <select class="pin-type">
                   <option value="energy" ${pin.type === 'energy' ? 'selected' : ''}>Energy</option>
                   <option value="data" ${pin.type === 'data' ? 'selected' : ''}>Data</option>
-                  <option value="control" ${pin.type === 'control' ? 'selected' : ''}>Control</option>
+                  <option value="control" ${
+                    pin.type === 'control' ? 'selected' : ''
+                  }>Control</option>
                 </select>
                 <label>Connect from internal:</label>
                 <select class="pin-mapping">
@@ -91,7 +101,9 @@ export function showPinMappingUI(app: any, moduleComponent: any) {
                         comp.pins.output
                           ?.map(
                             (internalPin: any, internalIndex: number) =>
-                              `<option value="${comp.id}:output:${internalIndex}">${comp.title || comp.name} Output ${internalIndex + 1}</option>`
+                              `<option value="${comp.id}:output:${internalIndex}">${
+                                comp.title || comp.name
+                              } Output ${internalIndex + 1}</option>`
                           )
                           .join('') || ''
                     )
@@ -251,7 +263,11 @@ export function addPinToUI(pinType: 'input' | 'output', moduleComponent: any) {
               comp.pins[oppositeType]
                 ?.map(
                   (internalPin: any, internalIndex: number) =>
-                    `<option value="${comp.id}:${oppositeType}:${internalIndex}">${comp.title || comp.name} ${oppositeType.charAt(0).toUpperCase() + oppositeType.slice(1)} ${internalIndex + 1}</option>`
+                    `<option value="${comp.id}:${oppositeType}:${internalIndex}">${
+                      comp.title || comp.name
+                    } ${oppositeType.charAt(0).toUpperCase() + oppositeType.slice(1)} ${
+                      internalIndex + 1
+                    }</option>`
                 )
                 .join('') || ''
           )
@@ -272,7 +288,7 @@ export function applyPinConfiguration(app: any, moduleComponent: any) {
 
     const newPinMap = { input: [], output: [] } as any;
 
-    pinConfigs.forEach((el) => {
+    pinConfigs.forEach(el => {
       const el2 = el as HTMLElement;
       const type = el2.getAttribute('data-pin-type') as 'input' | 'output';
       const indexStr = el2.getAttribute('data-pin-index') || '0';

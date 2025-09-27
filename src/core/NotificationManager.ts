@@ -110,27 +110,22 @@ export class NotificationManager {
   }
 
   show(message: string, options: NotificationOptions = {}): string {
-    const {
-      duration = 2000,
-      type = 'info',
-      position = 'center',
-      icon
-    } = options;
+    const { duration = 2000, type = 'info', position = 'center', icon } = options;
 
     const notificationId = `notification-${++this.notificationCounter}`;
-    
+
     // Create notification element
     const notification = document.createElement('div');
     notification.id = notificationId;
     notification.className = `notification ${type} ${position}`;
-    
+
     // Add icon if provided
     const iconElement = icon ? `<span class="notification-icon">${icon}</span>` : '';
     notification.innerHTML = `${iconElement}${message}`;
-    
+
     // Position multiple notifications
     this.positionNotification(notification, position);
-    
+
     document.body.appendChild(notification);
     this.activeNotifications.set(notificationId, notification);
 
@@ -146,12 +141,13 @@ export class NotificationManager {
 
   private positionNotification(notification: HTMLElement, position: string) {
     // For stacked notifications in the same position
-    const existingNotifications = Array.from(this.activeNotifications.values())
-      .filter(n => n.classList.contains(position));
-    
+    const existingNotifications = Array.from(this.activeNotifications.values()).filter(n =>
+      n.classList.contains(position)
+    );
+
     if (existingNotifications.length > 0 && position !== 'center') {
       const offset = existingNotifications.length * 80; // 80px spacing between notifications
-      
+
       switch (position) {
         case 'top-right':
           notification.style.top = `${20 + offset}px`;
@@ -175,7 +171,7 @@ export class NotificationManager {
 
     // Add hiding animation
     notification.classList.add('hiding');
-    
+
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);
@@ -211,7 +207,7 @@ export class NotificationManager {
     return this.show(message, {
       duration,
       type: 'info',
-      position: 'center'
+      position: 'center',
     });
   }
 
@@ -229,7 +225,9 @@ let notificationManager: NotificationManager | null = null;
 
 export function createNotificationManager(): NotificationManager {
   if (notificationManager) {
-    throw new Error('NotificationManager instance already exists. Use getNotificationManager() instead.');
+    throw new Error(
+      'NotificationManager instance already exists. Use getNotificationManager() instead.'
+    );
   }
   notificationManager = new NotificationManager();
   return notificationManager;

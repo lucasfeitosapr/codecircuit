@@ -51,7 +51,7 @@ Object.defineProperty(globalThis, 'FileReader', {
             name: 'Test Project',
             components: [],
             connections: [],
-            version: '1.0.0'
+            version: '1.0.0',
           });
           this.onload?.({ target: { result: this.result } });
         }
@@ -77,8 +77,8 @@ describe('ExportImportManager', () => {
       title: 'Test Power Core',
       icon: '⚡',
       color: '#ffaa00',
-      pins: { 
-        output: [{ x: 0, y: 0, type: 'energy', label: 'Energy Out' }]
+      pins: {
+        output: [{ x: 0, y: 0, type: 'energy', label: 'Energy Out' }],
       },
       status: 'done',
       category: 'backend',
@@ -98,7 +98,7 @@ describe('ExportImportManager', () => {
       color: '#00aaff',
       pins: {
         input: [{ x: 0, y: 0, type: 'energy', label: 'Energy In' }],
-        output: [{ x: 0, y: 0, type: 'energy', label: 'Energy Out' }]
+        output: [{ x: 0, y: 0, type: 'energy', label: 'Energy Out' }],
       },
       status: 'todo',
       category: 'frontend',
@@ -134,7 +134,7 @@ describe('ExportImportManager', () => {
   beforeEach(() => {
     // Reset mocks
     vi.clearAllMocks();
-    
+
     // Mock EventBus methods
     mockEventEmit = vi.fn();
     mockEventOn = vi.fn();
@@ -148,7 +148,7 @@ describe('ExportImportManager', () => {
       style: { display: '' },
       click: mockClick,
     };
-    
+
     const mockInputElement = {
       type: '',
       accept: '',
@@ -179,10 +179,22 @@ describe('ExportImportManager', () => {
     });
 
     it('should setup event listeners during construction', () => {
-      expect(mockEventOn).toHaveBeenCalledWith(Events.PROJECT_EXPORT_REQUESTED, expect.any(Function));
-      expect(mockEventOn).toHaveBeenCalledWith(Events.PROJECT_IMPORT_REQUESTED, expect.any(Function));
-      expect(mockEventOn).toHaveBeenCalledWith(Events.PROJECT_DATA_EXPORT_REQUESTED, expect.any(Function));
-      expect(mockEventOn).toHaveBeenCalledWith(Events.PROJECT_DATA_IMPORT_REQUESTED, expect.any(Function));
+      expect(mockEventOn).toHaveBeenCalledWith(
+        Events.PROJECT_EXPORT_REQUESTED,
+        expect.any(Function)
+      );
+      expect(mockEventOn).toHaveBeenCalledWith(
+        Events.PROJECT_IMPORT_REQUESTED,
+        expect.any(Function)
+      );
+      expect(mockEventOn).toHaveBeenCalledWith(
+        Events.PROJECT_DATA_EXPORT_REQUESTED,
+        expect.any(Function)
+      );
+      expect(mockEventOn).toHaveBeenCalledWith(
+        Events.PROJECT_DATA_IMPORT_REQUESTED,
+        expect.any(Function)
+      );
     });
   });
 
@@ -205,7 +217,7 @@ describe('ExportImportManager', () => {
       expect(projectData).toHaveProperty('connections');
       expect(projectData).toHaveProperty('version');
       expect(projectData).toHaveProperty('metadata');
-      
+
       expect(projectData.components).toHaveLength(2);
       expect(projectData.connections).toHaveLength(1);
       expect(projectData.metadata.totalComponents).toBe(2);
@@ -249,7 +261,7 @@ describe('ExportImportManager', () => {
 
     it('should handle export errors gracefully', () => {
       const invalidComponents = [null as any];
-      
+
       expect(() => {
         manager.exportProjectData(invalidComponents, []);
       }).toThrow();
@@ -361,16 +373,12 @@ describe('ExportImportManager', () => {
 
   describe('Component Deserialization', () => {
     it('should deserialize components with default values', () => {
-      const componentsData = [
-        { id: 'minimal', type: 'power-core' },
-      ];
+      const componentsData = [{ id: 'minimal', type: 'power-core' }];
 
       const projectData = { components: componentsData, connections: [] };
       manager.importProjectData(projectData);
 
-      const importCall = mockEventEmit.mock.calls.find(
-        call => call[0] === Events.PROJECT_IMPORTED
-      );
+      const importCall = mockEventEmit.mock.calls.find(call => call[0] === Events.PROJECT_IMPORTED);
       const components = importCall[1].components;
       const component = components[0];
 
@@ -388,9 +396,7 @@ describe('ExportImportManager', () => {
       const moduleData = {
         id: 'module1',
         type: 'module-ic',
-        internalComponents: [
-          { id: 'internal1', type: 'task-resistor' },
-        ],
+        internalComponents: [{ id: 'internal1', type: 'task-resistor' }],
         internalConnections: [],
         pinMap: { ext: 'int' },
       };
@@ -398,9 +404,7 @@ describe('ExportImportManager', () => {
       const projectData = { components: [moduleData], connections: [] };
       manager.importProjectData(projectData);
 
-      const importCall = mockEventEmit.mock.calls.find(
-        call => call[0] === Events.PROJECT_IMPORTED
-      );
+      const importCall = mockEventEmit.mock.calls.find(call => call[0] === Events.PROJECT_IMPORTED);
       const components = importCall[1].components;
       const moduleComponent = components[0];
 
@@ -429,9 +433,7 @@ describe('ExportImportManager', () => {
 
       manager.importProjectData(projectData);
 
-      const importCall = mockEventEmit.mock.calls.find(
-        call => call[0] === Events.PROJECT_IMPORTED
-      );
+      const importCall = mockEventEmit.mock.calls.find(call => call[0] === Events.PROJECT_IMPORTED);
       const connections = importCall[1].connections;
       const connection = connections[0];
 
@@ -453,9 +455,7 @@ describe('ExportImportManager', () => {
 
       manager.importProjectData(projectData);
 
-      const importCall = mockEventEmit.mock.calls.find(
-        call => call[0] === Events.PROJECT_IMPORTED
-      );
+      const importCall = mockEventEmit.mock.calls.find(call => call[0] === Events.PROJECT_IMPORTED);
       const connections = importCall[1].connections;
 
       expect(connections).toHaveLength(0);
@@ -465,7 +465,7 @@ describe('ExportImportManager', () => {
   describe('Project Metadata', () => {
     it('should get project info', () => {
       const info = manager.getProjectInfo();
-      
+
       expect(info).toHaveProperty('name');
       expect(info).toHaveProperty('version');
     });
@@ -473,7 +473,7 @@ describe('ExportImportManager', () => {
     it('should set project info', () => {
       manager.setProjectInfo('New Project', '2.0.0');
       const info = manager.getProjectInfo();
-      
+
       expect(info.name).toBe('New Project');
       expect(info.version).toBe('2.0.0');
     });
@@ -492,7 +492,7 @@ describe('ExportImportManager', () => {
 
     it('should restore from backup', () => {
       const backupData = manager.createBackup(mockComponents, mockConnections);
-      
+
       manager.restoreFromBackup(backupData);
 
       expect(mockEventEmit).toHaveBeenCalledWith(Events.PROJECT_IMPORTED, {

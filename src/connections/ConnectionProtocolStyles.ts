@@ -36,7 +36,7 @@ export interface ProtocolStyle {
  */
 export const ConnectionProtocolStyles: Record<ConnectionProtocol, ProtocolStyle> = {
   HTTP: {
-    color: '#007ACC',         // Microsoft Blue - web standard
+    color: '#007ACC', // Microsoft Blue - web standard
     style: 'solid',
     icon: '🌐',
     defaultPort: 80,
@@ -44,24 +44,24 @@ export const ConnectionProtocolStyles: Record<ConnectionProtocol, ProtocolStyle>
     stateColors: {
       active: '#0084FF',
       inactive: '#6C7B7F',
-      error: '#FF4444'
-    }
+      error: '#FF4444',
+    },
   },
 
   TCP: {
-    color: '#28A745',         // Bootstrap Success Green
+    color: '#28A745', // Bootstrap Success Green
     style: 'solid',
     icon: '🔌',
     description: 'Direct TCP socket connection',
     stateColors: {
       active: '#32CD32',
       inactive: '#6C7B7F',
-      error: '#FF4444'
-    }
+      error: '#FF4444',
+    },
   },
 
   WebSocket: {
-    color: '#FFC107',         // Bootstrap Warning Yellow
+    color: '#FFC107', // Bootstrap Warning Yellow
     style: 'dashed',
     icon: '⚡',
     defaultPort: 80,
@@ -69,12 +69,12 @@ export const ConnectionProtocolStyles: Record<ConnectionProtocol, ProtocolStyle>
     stateColors: {
       active: '#FFD700',
       inactive: '#6C7B7F',
-      error: '#FF4444'
-    }
+      error: '#FF4444',
+    },
   },
 
   MessageQueue: {
-    color: '#DC3545',         // Bootstrap Danger Red
+    color: '#DC3545', // Bootstrap Danger Red
     style: 'dotted',
     icon: '📬',
     defaultPort: 5672,
@@ -82,12 +82,12 @@ export const ConnectionProtocolStyles: Record<ConnectionProtocol, ProtocolStyle>
     stateColors: {
       active: '#FF6B6B',
       inactive: '#6C7B7F',
-      error: '#CC0000'
-    }
+      error: '#CC0000',
+    },
   },
 
   GraphQL: {
-    color: '#E535AB',         // GraphQL Pink
+    color: '#E535AB', // GraphQL Pink
     style: 'solid',
     icon: '📊',
     defaultPort: 80,
@@ -95,12 +95,12 @@ export const ConnectionProtocolStyles: Record<ConnectionProtocol, ProtocolStyle>
     stateColors: {
       active: '#FF69B4',
       inactive: '#6C7B7F',
-      error: '#FF4444'
-    }
+      error: '#FF4444',
+    },
   },
 
   gRPC: {
-    color: '#4285F4',         // Google Blue
+    color: '#4285F4', // Google Blue
     style: 'solid',
     icon: '⚡',
     defaultPort: 443,
@@ -108,12 +108,12 @@ export const ConnectionProtocolStyles: Record<ConnectionProtocol, ProtocolStyle>
     stateColors: {
       active: '#4A90E2',
       inactive: '#6C7B7F',
-      error: '#FF4444'
-    }
+      error: '#FF4444',
+    },
   },
 
   Database: {
-    color: '#9B59B6',         // Matches Gateway component color
+    color: '#9B59B6', // Matches Gateway component color
     style: 'solid',
     icon: '🗃️',
     defaultPort: 5432,
@@ -121,21 +121,21 @@ export const ConnectionProtocolStyles: Record<ConnectionProtocol, ProtocolStyle>
     stateColors: {
       active: '#BB79DB',
       inactive: '#6C7B7F',
-      error: '#FF4444'
-    }
+      error: '#FF4444',
+    },
   },
 
   Custom: {
-    color: '#6C757D',         // Bootstrap Secondary Gray
+    color: '#6C757D', // Bootstrap Secondary Gray
     style: 'solid',
     icon: '🔧',
     description: 'Custom or undefined protocol',
     stateColors: {
       active: '#868E96',
       inactive: '#ADB5BD',
-      error: '#FF4444'
-    }
-  }
+      error: '#FF4444',
+    },
+  },
 };
 
 /**
@@ -170,8 +170,8 @@ export const ConnectionTypeStyles: Record<ConnectionType, ConnectionTypeStyle> =
     indicators: {
       startMarker: '→',
       endMarker: '←',
-      flowDirection: true
-    }
+      flowDirection: true,
+    },
   },
 
   async: {
@@ -180,8 +180,8 @@ export const ConnectionTypeStyles: Record<ConnectionType, ConnectionTypeStyle> =
     description: 'Asynchronous messaging',
     indicators: {
       startMarker: '⟶',
-      flowDirection: true
-    }
+      flowDirection: true,
+    },
   },
 
   stream: {
@@ -191,8 +191,8 @@ export const ConnectionTypeStyles: Record<ConnectionType, ConnectionTypeStyle> =
     indicators: {
       startMarker: '≈',
       endMarker: '≈',
-      flowDirection: true
-    }
+      flowDirection: true,
+    },
   },
 
   event: {
@@ -201,19 +201,19 @@ export const ConnectionTypeStyles: Record<ConnectionType, ConnectionTypeStyle> =
     description: 'Event-driven communication',
     indicators: {
       startMarker: '◊',
-      flowDirection: false
-    }
-  }
+      flowDirection: false,
+    },
+  },
 };
 
 /**
  * Health state colors consistent with Gateway component
  */
 export const ConnectionHealthColors: Record<HealthState, string> = {
-  healthy: '#27AE60',      // Green - matches Gateway healthy state
-  degraded: '#F39C12',     // Orange - matches Gateway degraded state
-  'at-risk': '#E67E22',    // Orange-red - warning level
-  critical: '#E74C3C'      // Red - matches Gateway failed state
+  healthy: '#27AE60', // Green - matches Gateway healthy state
+  degraded: '#F39C12', // Orange - matches Gateway degraded state
+  'at-risk': '#E67E22', // Orange-red - warning level
+  critical: '#E74C3C', // Red - matches Gateway failed state
 };
 
 /**
@@ -261,7 +261,7 @@ export class ConnectionStyleCalculator {
       icon: protocolStyle.icon,
       description: `${protocolStyle.description} (${typeStyle.description})`,
       dashArray: this.getDashArray(protocolStyle.style, thickness),
-      opacity: this.getOpacity(healthState, isSelected)
+      opacity: this.getOpacity(healthState, isSelected),
     };
   }
 
@@ -270,9 +270,9 @@ export class ConnectionStyleCalculator {
    */
   private static getBaseThickness(dataVolume: 'LIGHT' | 'MODERATE' | 'HEAVY'): number {
     const thicknessMap = {
-      'LIGHT': 1.5,
-      'MODERATE': 2.5,
-      'HEAVY': 3.5
+      LIGHT: 1.5,
+      MODERATE: 2.5,
+      HEAVY: 3.5,
     };
     return thicknessMap[dataVolume];
   }
@@ -300,10 +300,10 @@ export class ConnectionStyleCalculator {
     if (isSelected) return 1.0;
 
     const healthOpacity = {
-      'healthy': 1.0,
-      'degraded': 0.9,
+      healthy: 1.0,
+      degraded: 0.9,
       'at-risk': 0.8,
-      'critical': 0.7
+      critical: 0.7,
     };
 
     return healthOpacity[healthState];
@@ -411,36 +411,36 @@ export const ConnectionStylePresets = {
   microserviceAPI: {
     protocol: 'HTTP' as ConnectionProtocol,
     connectionType: 'sync' as ConnectionType,
-    description: 'Standard microservice API call'
+    description: 'Standard microservice API call',
   },
 
   // Event-driven architecture
   eventStream: {
     protocol: 'MessageQueue' as ConnectionProtocol,
     connectionType: 'async' as ConnectionType,
-    description: 'Asynchronous event streaming'
+    description: 'Asynchronous event streaming',
   },
 
   // Real-time communication
   realTime: {
     protocol: 'WebSocket' as ConnectionProtocol,
     connectionType: 'stream' as ConnectionType,
-    description: 'Real-time bidirectional communication'
+    description: 'Real-time bidirectional communication',
   },
 
   // Database access
   databaseAccess: {
     protocol: 'Database' as ConnectionProtocol,
     connectionType: 'sync' as ConnectionType,
-    description: 'Database query/transaction'
+    description: 'Database query/transaction',
   },
 
   // High-performance RPC
   highPerformance: {
     protocol: 'gRPC' as ConnectionProtocol,
     connectionType: 'sync' as ConnectionType,
-    description: 'High-performance RPC call'
-  }
+    description: 'High-performance RPC call',
+  },
 };
 
 /**
@@ -451,7 +451,7 @@ export const StyleConstants = {
   ANIMATION_SPEEDS: {
     slow: 3000,
     medium: 2000,
-    fast: 1000
+    fast: 1000,
   },
 
   // Selection indicators
@@ -464,5 +464,5 @@ export const StyleConstants = {
 
   // Label positioning
   LABEL_OFFSET: 10,
-  LABEL_FONT_SIZE: 12
+  LABEL_FONT_SIZE: 12,
 } as const;

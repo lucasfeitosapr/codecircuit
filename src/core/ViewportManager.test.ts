@@ -1,57 +1,61 @@
 /**
  * ViewportManager Test Suite
- * 
+ *
  * Comprehensive tests for viewport management including canvas setup,
  * camera operations, coordinate transformations, and event integration.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ViewportManagerImpl, createViewportManager, destroyViewportManager } from './ViewportManager';
+import {
+  ViewportManagerImpl,
+  createViewportManager,
+  destroyViewportManager,
+} from './ViewportManager';
 import { EventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 
 // Mock DOM elements
-  const createMockCanvas = (width = 800, height = 600) => {
-    const mockContext = {
-      scale: vi.fn(),
-      clearRect: vi.fn(),
-      save: vi.fn(),
-      restore: vi.fn(),
-      translate: vi.fn(),
-      transform: vi.fn()
-    };
-    
-    const canvas = {
-      id: 'test-canvas',
-      width: 0,
-      height: 0,
-      style: { width: '', height: '' },
-      getBoundingClientRect: vi.fn(() => ({ 
-        width, 
-        height, 
-        left: 0, 
-        top: 0,
-        right: width,
-        bottom: height,
-        x: 0,
-        y: 0,
-        toJSON: () => ({})
-      })),
-      getContext: vi.fn(() => mockContext)
-    } as any;
-    
-    // Store reference to context for testing
-    (canvas as any)._mockContext = mockContext;
-    
-    // Mock document.getElementById
-    vi.spyOn(document, 'getElementById').mockReturnValue(canvas);
-    
-    return canvas;
-  };// Mock ResizeObserver
+const createMockCanvas = (width = 800, height = 600) => {
+  const mockContext = {
+    scale: vi.fn(),
+    clearRect: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    translate: vi.fn(),
+    transform: vi.fn(),
+  };
+
+  const canvas = {
+    id: 'test-canvas',
+    width: 0,
+    height: 0,
+    style: { width: '', height: '' },
+    getBoundingClientRect: vi.fn(() => ({
+      width,
+      height,
+      left: 0,
+      top: 0,
+      right: width,
+      bottom: height,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })),
+    getContext: vi.fn(() => mockContext),
+  } as any;
+
+  // Store reference to context for testing
+  (canvas as any)._mockContext = mockContext;
+
+  // Mock document.getElementById
+  vi.spyOn(document, 'getElementById').mockReturnValue(canvas);
+
+  return canvas;
+}; // Mock ResizeObserver
 const mockResizeObserver = vi.fn(() => ({
   observe: vi.fn(),
   disconnect: vi.fn(),
-  unobserve: vi.fn()
+  unobserve: vi.fn(),
 }));
 vi.stubGlobal('ResizeObserver', mockResizeObserver);
 
@@ -64,14 +68,14 @@ describe('ViewportManager', () => {
     eventBus = new EventBus();
     mockCanvas = createMockCanvas();
     mockContext = mockCanvas._mockContext; // Use stored context reference
-    
+
     // Reset mocks
     vi.clearAllMocks();
-    
+
     // Mock window.devicePixelRatio
     Object.defineProperty(window, 'devicePixelRatio', {
       writable: true,
-      value: 2
+      value: 2,
     });
   });
 
@@ -83,7 +87,7 @@ describe('ViewportManager', () => {
   describe('Construction', () => {
     it('should construct with valid canvas and event bus', () => {
       const manager = new ViewportManagerImpl('test-canvas', eventBus);
-      
+
       expect(manager.canvas).toBe(mockCanvas);
       expect(manager.ctx).toEqual(mockContext);
       expect(manager.camera).toEqual({ x: 0, y: 0, zoom: 1 });
@@ -91,7 +95,7 @@ describe('ViewportManager', () => {
 
     it('should throw error if canvas not found', () => {
       vi.spyOn(document, 'getElementById').mockReturnValue(null);
-      
+
       expect(() => {
         new ViewportManagerImpl('missing-canvas', eventBus);
       }).toThrow("Canvas element with id 'missing-canvas' not found");
@@ -99,7 +103,7 @@ describe('ViewportManager', () => {
 
     it('should throw error if 2D context not available', () => {
       mockCanvas.getContext.mockReturnValue(null);
-      
+
       expect(() => {
         new ViewportManagerImpl('test-canvas', eventBus);
       }).toThrow('Failed to get 2D canvas context');
@@ -115,21 +119,21 @@ describe('ViewportManager', () => {
 
     it('should initialize canvas with proper dimensions', () => {
       const emitSpy = vi.spyOn(eventBus, 'emit');
-      
+
       manager.initialize();
-      
+
       expect(mockCanvas.width).toBe(1600); // 800 * 2 devicePixelRatio
       expect(mockCanvas.height).toBe(1200); // 600 * 2 devicePixelRatio
       expect(mockCanvas.style.width).toBe('800px');
       expect(mockCanvas.style.height).toBe('600px');
       expect(mockContext.scale).toHaveBeenCalledWith(2, 2);
-      
+
       expect(emitSpy).toHaveBeenCalledWith(
         Events.VIEWPORT_CANVAS_SETUP_COMPLETED,
         expect.objectContaining({
           canvasId: 'test-canvas',
           width: 800,
-          height: 600
+          height: 600,
         })
       );
     });
@@ -137,17 +141,17 @@ describe('ViewportManager', () => {
     it('should setup ResizeObserver when available', () => {
       const mockObserver = { observe: vi.fn(), disconnect: vi.fn(), unobserve: vi.fn() };
       mockResizeObserver.mockReturnValue(mockObserver);
-      
+
       manager.setupCanvas();
-      
+
       expect(mockResizeObserver).toHaveBeenCalled();
       expect(mockObserver.observe).toHaveBeenCalledWith(mockCanvas);
     });
 
     it('should handle resize events', () => {
       const emitSpy = vi.spyOn(eventBus, 'emit');
-      mockCanvas.getBoundingClientRect.mockReturnValue({ 
-        width: 1000, 
+      mockCanvas.getBoundingClientRect.mockReturnValue({
+        width: 1000,
         height: 800,
         left: 0,
         top: 0,
@@ -155,17 +159,17 @@ describe('ViewportManager', () => {
         bottom: 800,
         x: 0,
         y: 0,
-        toJSON: () => ({})
+        toJSON: () => ({}),
       });
-      
+
       manager.setupCanvas();
-      
+
       expect(emitSpy).toHaveBeenCalledWith(
         Events.VIEWPORT_RESIZED,
         expect.objectContaining({
           width: 1000,
           height: 800,
-          pixelRatio: 2
+          pixelRatio: 2,
         })
       );
     });
@@ -181,15 +185,15 @@ describe('ViewportManager', () => {
     it('should set camera position and zoom', () => {
       const emitSpy = vi.spyOn(eventBus, 'emit');
       const newCamera = { x: 100, y: 50, zoom: 1.5 };
-      
+
       manager.setCamera(newCamera);
-      
+
       expect(manager.camera).toEqual(newCamera);
       expect(emitSpy).toHaveBeenCalledWith(
         Events.VIEWPORT_CAMERA_UPDATED,
         expect.objectContaining({
           camera: newCamera,
-          previousCamera: { x: 0, y: 0, zoom: 1 }
+          previousCamera: { x: 0, y: 0, zoom: 1 },
         })
       );
     });
@@ -197,24 +201,24 @@ describe('ViewportManager', () => {
     it('should clamp zoom to valid range', () => {
       manager.setCamera({ x: 0, y: 0, zoom: 5.0 }); // Above max
       expect(manager.camera.zoom).toBe(3.0);
-      
+
       manager.setCamera({ x: 0, y: 0, zoom: 0.05 }); // Below min
       expect(manager.camera.zoom).toBe(0.1);
     });
 
     it('should update camera with deltas', () => {
       manager.setCamera({ x: 100, y: 50, zoom: 1.0 });
-      
+
       manager.updateCamera(20, 30, 1.5);
-      
+
       expect(manager.camera).toEqual({ x: 120, y: 80, zoom: 1.5 });
     });
 
     it('should pan camera by delta amounts', () => {
       manager.setCamera({ x: 100, y: 50, zoom: 1.0 });
-      
+
       manager.panCamera(25, -10);
-      
+
       expect(manager.camera).toEqual({ x: 125, y: 40, zoom: 1.0 });
     });
   });
@@ -231,9 +235,9 @@ describe('ViewportManager', () => {
       const screenX = 400; // Center of 800px canvas
       const screenY = 300; // Center of 600px canvas
       const zoomFactor = 2.0;
-      
+
       manager.zoomToPoint(zoomFactor, screenX, screenY);
-      
+
       // At zoom 1.0 with camera at (0,0), cursor at screen (400, 300) maps to world (400, 300)
       // At zoom 2.0, to keep cursor at same screen position:
       // worldX = (400 - cameraX) / 2.0 = 400 -> cameraX = 400 - 400 * 2.0 = -400
@@ -246,7 +250,7 @@ describe('ViewportManager', () => {
     it('should not zoom beyond limits', () => {
       manager.zoomToPoint(10.0, 400, 300); // Way above max
       expect(manager.camera.zoom).toBe(3.0);
-      
+
       manager.setCamera({ x: 0, y: 0, zoom: 0.5 });
       manager.zoomToPoint(0.1, 400, 300); // Way below min
       expect(manager.camera.zoom).toBe(0.1);
@@ -255,9 +259,9 @@ describe('ViewportManager', () => {
     it('should not update if zoom change is minimal', () => {
       const emitSpy = vi.spyOn(eventBus, 'emit');
       const initialCamera = { ...manager.camera };
-      
+
       manager.zoomToPoint(1.0001, 400, 300); // Very small change
-      
+
       expect(manager.camera).toEqual(initialCamera);
       expect(emitSpy).not.toHaveBeenCalledWith(Events.VIEWPORT_CAMERA_UPDATED, expect.any(Object));
     });
@@ -272,29 +276,29 @@ describe('ViewportManager', () => {
 
     it('should convert screen to world coordinates', () => {
       manager.setCamera({ x: 100, y: 50, zoom: 2.0 });
-      
+
       const worldCoord = manager.screenToWorld({ x: 300, y: 250 });
-      
+
       // (300 - 100) / 2.0 = 100, (250 - 50) / 2.0 = 100
       expect(worldCoord).toEqual({ x: 100, y: 100 });
     });
 
     it('should convert world to screen coordinates', () => {
       manager.setCamera({ x: 100, y: 50, zoom: 2.0 });
-      
+
       const screenCoord = manager.worldToScreen({ x: 100, y: 100 });
-      
+
       // 100 * 2.0 + 100 = 300, 100 * 2.0 + 50 = 250
       expect(screenCoord).toEqual({ x: 300, y: 250 });
     });
 
     it('should have consistent round-trip transformations', () => {
       manager.setCamera({ x: -50, y: 25, zoom: 1.5 });
-      
+
       const originalScreen = { x: 123, y: 456 };
       const worldCoord = manager.screenToWorld(originalScreen);
       const backToScreen = manager.worldToScreen(worldCoord);
-      
+
       expect(backToScreen.x).toBeCloseTo(originalScreen.x, 10);
       expect(backToScreen.y).toBeCloseTo(originalScreen.y, 10);
     });
@@ -309,9 +313,9 @@ describe('ViewportManager', () => {
 
     it('should calculate viewport bounds correctly', () => {
       manager.setCamera({ x: 100, y: 50, zoom: 2.0 });
-      
+
       const bounds = manager.getViewportBounds();
-      
+
       // Top-left: (0 - 100) / 2.0 = -50, (0 - 50) / 2.0 = -25
       // Bottom-right: (800 - 100) / 2.0 = 350, (600 - 50) / 2.0 = 275
       expect(bounds).toEqual({
@@ -320,13 +324,13 @@ describe('ViewportManager', () => {
         right: 350,
         bottom: 275,
         width: 400,
-        height: 300
+        height: 300,
       });
     });
 
     it('should check if point is in viewport', () => {
       manager.setCamera({ x: 0, y: 0, zoom: 1.0 });
-      
+
       expect(manager.isPointInViewport(400, 300)).toBe(true); // Center
       expect(manager.isPointInViewport(0, 0)).toBe(true); // Top-left
       expect(manager.isPointInViewport(800, 600)).toBe(true); // Bottom-right
@@ -346,9 +350,9 @@ describe('ViewportManager', () => {
 
     it('should fit bounds to viewport with padding', () => {
       const bounds = { x: 100, y: 50, width: 200, height: 100 };
-      
+
       manager.fitToViewport(bounds);
-      
+
       // Available space: 800 - 100 (padding) = 700px width, 600 - 100 = 500px height
       // Zoom to fit: min(700/200, 500/100) = min(3.5, 5.0) = 3.5, but clamped to max 3.0
       // Center should be at bounds center: (100 + 200/2, 50 + 100/2) = (200, 100)
@@ -360,9 +364,9 @@ describe('ViewportManager', () => {
 
     it('should not zoom below minimum', () => {
       const largeBounds = { x: 0, y: 0, width: 10000, height: 8000 };
-      
+
       manager.fitToViewport(largeBounds);
-      
+
       expect(manager.camera.zoom).toBe(0.1); // Minimum zoom
     });
   });
@@ -381,7 +385,7 @@ describe('ViewportManager', () => {
         bottom: 620,
         x: 10,
         y: 20,
-        toJSON: () => ({})
+        toJSON: () => ({}),
       });
     });
 
@@ -390,7 +394,7 @@ describe('ViewportManager', () => {
       const wheelEvent = new WheelEvent('wheel', {
         clientX: 410, // 400 relative to canvas
         clientY: 320, // 300 relative to canvas
-        deltaY: -100  // Zoom in
+        deltaY: -100, // Zoom in
       });
 
       manager.handleWheelEvent(wheelEvent);
@@ -401,7 +405,7 @@ describe('ViewportManager', () => {
           zoomFactor: 1.1, // 1 + 0.1
           screenX: 400,
           screenY: 300,
-          wheelDelta: -100
+          wheelDelta: -100,
         })
       );
     });
@@ -411,7 +415,7 @@ describe('ViewportManager', () => {
       const wheelEvent = new WheelEvent('wheel', {
         clientX: 410,
         clientY: 320,
-        deltaY: 100 // Zoom out
+        deltaY: 100, // Zoom out
       });
 
       manager.handleWheelEvent(wheelEvent);
@@ -422,7 +426,7 @@ describe('ViewportManager', () => {
           zoomFactor: 0.9, // 1 - 0.1
           screenX: 400,
           screenY: 300,
-          wheelDelta: 100
+          wheelDelta: 100,
         })
       );
     });
@@ -431,7 +435,7 @@ describe('ViewportManager', () => {
       const wheelEvent = new WheelEvent('wheel', {
         clientX: 410,
         clientY: 320,
-        deltaY: 100
+        deltaY: 100,
       });
       const preventDefaultSpy = vi.spyOn(wheelEvent, 'preventDefault');
 
@@ -450,13 +454,13 @@ describe('ViewportManager', () => {
 
     it('should respond to pan requests', () => {
       const initialCamera = { ...manager.camera };
-      
+
       eventBus.emit(Events.VIEWPORT_PAN_REQUESTED, {
         deltaX: 50,
         deltaY: -25,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       expect(manager.camera.x).toBe(initialCamera.x + 50);
       expect(manager.camera.y).toBe(initialCamera.y - 25);
     });
@@ -466,9 +470,9 @@ describe('ViewportManager', () => {
         zoomFactor: 1.5,
         screenX: 400,
         screenY: 300,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       expect(manager.camera.zoom).toBe(1.5);
     });
   });
@@ -483,7 +487,7 @@ describe('ViewportManager', () => {
 
     it('should throw error when using destroyed manager', () => {
       manager.destroy();
-      
+
       expect(() => {
         manager.initialize();
       }).toThrow('ViewportManager has been destroyed');
@@ -492,11 +496,11 @@ describe('ViewportManager', () => {
     it('should clean up ResizeObserver', () => {
       const mockObserver = { disconnect: vi.fn(), observe: vi.fn(), unobserve: vi.fn() };
       mockResizeObserver.mockReturnValue(mockObserver);
-      
+
       const newManager = new ViewportManagerImpl('test-canvas', eventBus);
       newManager.setupCanvas();
       newManager.destroy();
-      
+
       expect(mockObserver.disconnect).toHaveBeenCalled();
     });
   });
@@ -508,20 +512,20 @@ describe('ViewportManager', () => {
 
     it('should create singleton instance', () => {
       const manager1 = createViewportManager('test-canvas', eventBus);
-      
+
       expect(() => {
         createViewportManager('test-canvas', eventBus);
       }).toThrow('ViewportManager instance already exists');
-      
+
       expect(manager1).toBeDefined();
     });
 
     it('should allow recreation after destruction', () => {
       const manager1 = createViewportManager('test-canvas', eventBus);
       destroyViewportManager();
-      
+
       const manager2 = createViewportManager('test-canvas', eventBus);
-      
+
       expect(manager2).toBeDefined();
       expect(manager2).not.toBe(manager1);
     });

@@ -33,7 +33,11 @@ describe('ConnectionsLayer', () => {
       to: { x: 30, y: 30 },
     } as any;
 
-    const frame = { timestamp: Date.now(), camera: { x: 0, y: 0, zoom: 1 }, payload: { connections: [conn] } } as any;
+    const frame = {
+      timestamp: Date.now(),
+      camera: { x: 0, y: 0, zoom: 1 },
+      payload: { connections: [conn] },
+    } as any;
 
     ConnectionsLayer.render(ctx, frame);
 
@@ -88,7 +92,11 @@ describe('ConnectionsLayer', () => {
   });
 
   it('handles empty connections array', () => {
-    const frame = { timestamp: Date.now(), camera: { x: 0, y: 0, zoom: 1 }, payload: { connections: [] } } as any;
+    const frame = {
+      timestamp: Date.now(),
+      camera: { x: 0, y: 0, zoom: 1 },
+      payload: { connections: [] },
+    } as any;
 
     ConnectionsLayer.render(ctx, frame);
 
@@ -101,7 +109,11 @@ describe('ConnectionsLayer', () => {
       { id: 'c2', from: { x: 50, y: 50 }, to: { x: 70, y: 70 } },
     ] as any[];
 
-    const frame = { timestamp: Date.now(), camera: { x: 0, y: 0, zoom: 1 }, payload: { connections } } as any;
+    const frame = {
+      timestamp: Date.now(),
+      camera: { x: 0, y: 0, zoom: 1 },
+      payload: { connections },
+    } as any;
 
     ConnectionsLayer.render(ctx, frame);
 
@@ -116,7 +128,11 @@ describe('ConnectionsLayer', () => {
     });
 
     const conn = { id: 'c1', from: { x: 10, y: 10 }, to: { x: 30, y: 30 } } as any;
-    const frame = { timestamp: Date.now(), camera: { x: 0, y: 0, zoom: 1 }, payload: { connections: [conn] } } as any;
+    const frame = {
+      timestamp: Date.now(),
+      camera: { x: 0, y: 0, zoom: 1 },
+      payload: { connections: [conn] },
+    } as any;
 
     expect(() => ConnectionsLayer.render(ctx, frame)).not.toThrow();
     expect(consoleSpy).toHaveBeenCalledWith('ConnectionsLayer render failed', expect.any(Error));

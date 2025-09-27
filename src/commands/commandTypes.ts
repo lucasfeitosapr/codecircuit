@@ -1,6 +1,6 @@
 /**
  * Command Types - Phase 4 State Management Migration
- * 
+ *
  * Defines the command pattern interfaces and types for undo/redo functionality.
  * All state changes will go through these commands to enable reliable state management.
  */
@@ -140,7 +140,7 @@ export interface BatchCommand extends Command {
 }
 
 // Command Factory Types
-export type CommandType = 
+export type CommandType =
   | CreateComponentCommand['type']
   | UpdateComponentCommand['type']
   | DeleteComponentCommand['type']
@@ -155,7 +155,7 @@ export type CommandType =
   | MultiSelectCommand['type']
   | BatchCommand['type'];
 
-export type AnyCommand = 
+export type AnyCommand =
   | CreateComponentCommand
   | UpdateComponentCommand
   | DeleteComponentCommand

@@ -11,12 +11,12 @@ export const BackgroundLayer = {
       const c = ctx as CanvasRenderingContext2D;
       const camera = frame?.camera ?? { x: 0, y: 0, zoom: 1 };
       const canvas = (frame as any)?.canvas;
-      
+
       // If no canvas provided, skip rendering
       if (!canvas) {
         return;
       }
-      
+
       // Clear canvas first
       c.clearRect(
         0,

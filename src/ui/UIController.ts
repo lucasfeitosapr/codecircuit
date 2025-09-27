@@ -19,17 +19,26 @@ export interface UIControllerContext {
   getComponents(): any[];
   getConnections(): any[];
   getSelectedComponent(): any | null;
-  
+  getCanvas(): HTMLCanvasElement;
+  getCamera(): { x: number; y: number; zoom: number };
+
   // State mutation methods
   setComponents(components: any[]): void;
   setConnections(connections: any[]): void;
   setSelectedComponent(component: any | null): void;
-  
+
   // Methods that UIController needs to call back to main app
   exitSchematicView(): void;
   hideDatasheet(): void;
   navigateToBreadcrumbLevel(index: number): void;
   handleKeyboardShortcut(event: KeyboardEvent): void;
+  addComponent(type: string, x: number, y: number): void;
+
+  // Mouse event handlers
+  onMouseDown(e: MouseEvent): void;
+  onMouseMove(e: MouseEvent): void;
+  onMouseUp(e: MouseEvent): void;
+  onWheel(e: WheelEvent): void;
 }
 
 export class UIController {
@@ -43,6 +52,8 @@ export class UIController {
    * Setup main UI event handlers
    */
   setupUI() {
+    this.setupDragAndDrop();
+    this.setupCanvasEvents();
     // Close help overlay when clicking outside
     const helpOverlay = document.getElementById('help-overlay');
     if (helpOverlay) {
@@ -87,7 +98,7 @@ export class UIController {
       exportBtn.addEventListener('click', () => {
         // Phase 5: Use new ExportImportManager instead of legacy method
         eventBus.emit(Events.PROJECT_EXPORT_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       });
     }
@@ -102,7 +113,7 @@ export class UIController {
       importBtn.addEventListener('click', () => {
         // Phase 5: Use new ExportImportManager instead of legacy method
         eventBus.emit(Events.PROJECT_IMPORT_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       });
     }
@@ -112,7 +123,7 @@ export class UIController {
    * Setup keyboard shortcuts
    */
   setupKeyboardShortcuts() {
-    document.addEventListener('keydown', (event) => {
+    document.addEventListener('keydown', event => {
       this.context.handleKeyboardShortcut(event);
     });
   }
@@ -129,10 +140,10 @@ export class UIController {
 
     // Build breadcrumb path from view stack
     const breadcrumbPath = this.buildBreadcrumbPath();
-    
+
     // Clear existing breadcrumbs
     breadcrumbNav.innerHTML = '';
-    
+
     // Create breadcrumb items
     breadcrumbPath.forEach((item, index) => {
       // Add separator before each item (except first)
@@ -142,37 +153,37 @@ export class UIController {
         separator.textContent = '>';
         breadcrumbNav.appendChild(separator);
       }
-      
+
       // Create breadcrumb item
       const breadcrumbItem = document.createElement('span');
       breadcrumbItem.className = `breadcrumb-item ${item.isCurrent ? 'current' : ''}`;
       breadcrumbItem.setAttribute('data-view-index', index.toString());
-      
+
       // Add depth indicator
       const depthIndicator = document.createElement('span');
       depthIndicator.className = 'depth-indicator';
       depthIndicator.textContent = item.icon;
       breadcrumbItem.appendChild(depthIndicator);
-      
+
       // Add text content
       const textNode = document.createTextNode(item.name);
       breadcrumbItem.appendChild(textNode);
-      
+
       // Add click handler for navigation (except current item)
       if (!item.isCurrent) {
         breadcrumbItem.addEventListener('click', () => {
           this.context.navigateToBreadcrumbLevel(index);
         });
       }
-      
+
       breadcrumbNav.appendChild(breadcrumbItem);
     });
-    
+
     // Update back button visibility
     const currentView = this.context.getCurrentView();
     const isMainView = currentView.type === 'main';
     backBtn.style.display = isMainView ? 'none' : 'inline-block';
-    
+
     // Update parts tray context filtering
     this.updatePartsTrayContext();
   }
@@ -198,7 +209,7 @@ export class UIController {
       powerCoreItem.classList.remove('disabled');
       moduleIcItem.classList.remove('disabled');
       taskResistorItem.classList.remove('disabled');
-      
+
       powerCoreItem.querySelector('.context-hint')!.textContent = 'Energy sources';
       moduleIcItem.querySelector('.context-hint')!.textContent = 'Features & Systems';
       taskResistorItem.querySelector('.context-hint')!.textContent = 'Not typical on main board';
@@ -207,9 +218,11 @@ export class UIController {
       powerCoreItem.classList.add('disabled');
       moduleIcItem.classList.remove('disabled');
       taskResistorItem.classList.remove('disabled');
-      
+
       powerCoreItem.querySelector('.context-hint')!.textContent = 'Main board only';
-      moduleIcItem.querySelector('.context-hint')!.textContent = `Sub-systems (Level ${currentDepth + 1})`;
+      moduleIcItem.querySelector('.context-hint')!.textContent = `Sub-systems (Level ${
+        currentDepth + 1
+      })`;
       taskResistorItem.querySelector('.context-hint')!.textContent = 'Individual tasks';
     }
   }
@@ -221,15 +234,15 @@ export class UIController {
     const path = [];
     const currentView = this.context.getCurrentView();
     const viewStack = this.context.getViewStack();
-    
+
     // Always start with main board
     path.push({
       name: 'Project: Motherboard',
       icon: '⚡',
       isCurrent: currentView.type === 'main',
-      viewIndex: 0
+      viewIndex: 0,
     });
-    
+
     // Add each level from view stack
     const stack = viewStack.serialize();
     stack.forEach((view: any, index: number) => {
@@ -237,40 +250,99 @@ export class UIController {
         const depth = index + 1;
         const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
         const icon = depth < depthIcons.length ? depthIcons[depth] : `🔹${depth}`;
-        
+
         path.push({
           name: view.component.title || `Module ${depth}`,
           icon: icon,
           isCurrent: false,
-          viewIndex: depth
+          viewIndex: depth,
         });
       }
     });
-    
+
     // Mark current schematic view
     if (currentView.type === 'schematic') {
       const currentDepth = stack.length + 1;
       const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
-      const icon = currentDepth < depthIcons.length ? depthIcons[currentDepth] : `🔹${currentDepth}`;
-      
+      const icon =
+        currentDepth < depthIcons.length ? depthIcons[currentDepth] : `🔹${currentDepth}`;
+
       path.push({
         name: currentView.component?.title || `Module ${currentDepth}`,
         icon: icon,
         isCurrent: true,
-        viewIndex: currentDepth
+        viewIndex: currentDepth,
       });
     }
-    
+
     return path;
   }
-
-
 
   /**
    * Navigate to specific breadcrumb level
    */
   navigateToBreadcrumbLevel(targetIndex: number) {
     this.context.navigateToBreadcrumbLevel(targetIndex);
+  }
+
+  /**
+   * Setup drag & drop functionality for component creation
+   */
+  private setupDragAndDrop() {
+    // Make parts tray items draggable
+    document.querySelectorAll('.component-item').forEach((item: any) => {
+      item.addEventListener('dragstart', (e: any) => {
+        e.dataTransfer.setData('text/plain', item.dataset.component);
+      });
+      item.setAttribute('draggable', 'true');
+    });
+
+    // Setup canvas as drop zone
+    const canvas = this.context.getCanvas();
+
+    canvas.addEventListener('dragover', (e: any) => {
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('drop', (e: any) => {
+      e.preventDefault();
+      const componentType = e.dataTransfer.getData('text/plain');
+      const rect = canvas.getBoundingClientRect();
+      const camera = this.context.getCamera();
+
+      const x = (e.clientX - rect.left - camera.x) / camera.zoom;
+      const y = (e.clientY - rect.top - camera.y) / camera.zoom;
+
+      this.context.addComponent(componentType, x, y);
+    });
+  }
+
+  /**
+   * Setup canvas mouse event listeners
+   */
+  private setupCanvasEvents() {
+    const canvas = this.context.getCanvas();
+
+    // Canvas mouse interactions
+    canvas.addEventListener('mousedown', this.context.onMouseDown.bind(this.context));
+    canvas.addEventListener('mousemove', this.context.onMouseMove.bind(this.context));
+    canvas.addEventListener('mouseup', this.context.onMouseUp.bind(this.context));
+    canvas.addEventListener('wheel', this.context.onWheel.bind(this.context));
+    canvas.addEventListener('contextmenu', (e: any) => e.preventDefault());
+
+    // Mouse position tracking for connection drawing
+    canvas.addEventListener('mousemove', (e: any) => {
+      const rect = canvas.getBoundingClientRect();
+      const camera = this.context.getCamera();
+
+      // Store mouse position for connection drawing (if mousePos setter exists)
+      if ((this.context as any).setMousePos) {
+        (this.context as any).setMousePos({
+          x: (e.clientX - rect.left - camera.x) / camera.zoom,
+          y: (e.clientY - rect.top - camera.y) / camera.zoom,
+        });
+      }
+    });
   }
 }
 

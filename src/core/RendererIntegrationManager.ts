@@ -12,10 +12,10 @@ import type { ComponentBase, Connection, Camera } from '../types';
 
 /**
  * RendererIntegrationManager
- * 
+ *
  * Coordinates between the legacy renderer and the new LayeredRenderer system.
  * Handles the main render loop, animation timing, and feature flag switching.
- * 
+ *
  * Phase 6A Extraction: ~500-600 lines from MotherboardApp
  */
 export class RendererIntegrationManager {
@@ -23,7 +23,7 @@ export class RendererIntegrationManager {
   private ctx: CanvasRenderingContext2D;
   private animationId: number | null = null;
   private isAnimating: boolean = false;
-  
+
   // Store listener functions for proper cleanup
   private listeners = {
     requestRender: () => this.requestRender(),
@@ -32,7 +32,7 @@ export class RendererIntegrationManager {
   constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
     this.canvas = canvas;
     this.ctx = ctx;
-    
+
     this.setupEventListeners();
   }
 
@@ -44,7 +44,7 @@ export class RendererIntegrationManager {
     eventBus.on(Events.ConnectionCreated, this.listeners.requestRender);
     eventBus.on(Events.ConnectionUpdated, this.listeners.requestRender);
     eventBus.on(Events.VIEWPORT_CAMERA_UPDATED, this.listeners.requestRender);
-    
+
     eventBus.on(Events.COMPONENT_DRAG_UPDATED, this.listeners.requestRender);
     eventBus.on(Events.COMPONENT_DRAG_COMPLETED, this.listeners.requestRender);
   }
@@ -120,29 +120,35 @@ export class RendererIntegrationManager {
           canvas: this.canvas,
           // Additional state for layers
           particles: [], // TODO: Extract particle system
-          pulses: [],   // TODO: Extract pulse system
+          pulses: [], // TODO: Extract pulse system
           ui: {
             showGrid: true,
             showPins: true,
-            showLabels: true
-          }
+            showLabels: true,
+          },
         };
 
         layeredRenderer.render(this.ctx, renderState);
-        
+
         // Emit render completion event
-        eventBus.emit(Events.RENDER_FRAME_COMPLETE, { 
+        eventBus.emit(Events.RENDER_FRAME_COMPLETE, {
           renderer: 'layered',
           timestamp: performance.now(),
           componentsRendered: components.length,
-          connectionsRendered: connections.length
+          connectionsRendered: connections.length,
         });
-
       } catch (error) {
         console.error('LayeredRenderer error, falling back to legacy:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown render error';
         eventBus.emit(Events.RENDER_ERROR, { error: errorMessage, renderer: 'layered' });
-        this.renderLegacy(components, connections, camera, selectedComponent, isDragging, dragOffset);
+        this.renderLegacy(
+          components,
+          connections,
+          camera,
+          selectedComponent,
+          isDragging,
+          dragOffset
+        );
       }
     } else {
       this.renderLegacy(components, connections, camera, selectedComponent, isDragging, dragOffset);
@@ -178,11 +184,11 @@ export class RendererIntegrationManager {
     }
 
     // Emit render completion event
-    eventBus.emit(Events.RENDER_FRAME_COMPLETE, { 
+    eventBus.emit(Events.RENDER_FRAME_COMPLETE, {
       renderer: 'legacy',
       timestamp: performance.now(),
       componentsRendered: components.length,
-      connectionsRendered: connections.length
+      connectionsRendered: connections.length,
     });
   }
 
@@ -243,16 +249,16 @@ export class RendererIntegrationManager {
     // TODO: Extract to ConnectionRenderer or use LayeredRenderer
     // For now, draw a simple line between connection points
     if (!connection.from || !connection.to) return;
-    
+
     this.ctx.strokeStyle = '#00ff41';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    
+
     const fromX = (connection.from.x - camera.x) * camera.zoom;
     const fromY = (connection.from.y - camera.y) * camera.zoom;
     const toX = (connection.to.x - camera.x) * camera.zoom;
     const toY = (connection.to.y - camera.y) * camera.zoom;
-    
+
     rendererDrawOrthogonalTrace(this.ctx, fromX, fromY, toX, toY);
   }
 
@@ -264,12 +270,12 @@ export class RendererIntegrationManager {
     this.ctx.strokeStyle = '#00ff41';
     this.ctx.lineWidth = 2;
     this.ctx.setLineDash([5, 5]);
-    
+
     const x = (component.x - camera.x) * camera.zoom;
     const y = (component.y - camera.y) * camera.zoom;
     const width = component.width * camera.zoom;
     const height = component.height * camera.zoom;
-    
+
     this.ctx.strokeRect(x - 5, y - 5, width + 10, height + 10);
     this.ctx.restore();
   }
@@ -282,15 +288,15 @@ export class RendererIntegrationManager {
     this.ctx.fillStyle = '#ff4444';
     this.ctx.strokeStyle = '#ffffff';
     this.ctx.lineWidth = 2;
-    
+
     const x = (component.x - camera.x) * camera.zoom;
     const y = (component.y - camera.y) * camera.zoom;
     const width = component.width * camera.zoom;
     const height = component.height * camera.zoom;
-    
+
     this.ctx.fillRect(x, y, width, height);
     this.ctx.strokeRect(x, y, width, height);
-    
+
     // Draw X
     this.ctx.strokeStyle = '#ffffff';
     this.ctx.beginPath();
@@ -299,7 +305,7 @@ export class RendererIntegrationManager {
     this.ctx.moveTo(x + width - 5, y + 5);
     this.ctx.lineTo(x + 5, y + height - 5);
     this.ctx.stroke();
-    
+
     this.ctx.restore();
   }
 
@@ -319,7 +325,7 @@ export class RendererIntegrationManager {
   getCanvasSize(): { width: number; height: number } {
     return {
       width: this.canvas.width,
-      height: this.canvas.height
+      height: this.canvas.height,
     };
   }
 
@@ -342,7 +348,7 @@ export class RendererIntegrationManager {
  * Factory function to create and initialize RendererIntegrationManager
  */
 export function createRendererIntegrationManager(
-  canvas: HTMLCanvasElement, 
+  canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D
 ): RendererIntegrationManager {
   return new RendererIntegrationManager(canvas, ctx);

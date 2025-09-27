@@ -31,7 +31,7 @@ describe('LayeredRenderer', () => {
 
   it('delegates to legacy renderer when feature flag is off', () => {
     vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(false);
-  const legacyRenderSpy = vi.spyOn(legacyRenderer, 'render');
+    const legacyRenderSpy = vi.spyOn(legacyRenderer, 'render');
     layeredRenderer.render(ctx, { timestamp: Date.now() });
     expect(legacyRenderSpy).toHaveBeenCalled();
   });

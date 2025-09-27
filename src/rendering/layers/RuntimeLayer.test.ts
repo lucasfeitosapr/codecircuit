@@ -8,7 +8,7 @@ describe('RuntimeLayer', () => {
 
   beforeEach(() => {
     runtimeLayer = new RuntimeLayer();
-    
+
     // Mock canvas context
     mockCtx = {
       save: vi.fn(),
@@ -35,10 +35,8 @@ describe('RuntimeLayer', () => {
       timestamp: 1000,
       camera: { x: 0, y: 0, zoom: 1 },
       payload: {
-        models: [
-          { id: 'comp1', x: 100, y: 100, width: 80, height: 40 }
-        ]
-      }
+        models: [{ id: 'comp1', x: 100, y: 100, width: 80, height: 40 }],
+      },
     };
   });
 
@@ -49,7 +47,7 @@ describe('RuntimeLayer', () => {
         duration: 1000,
         target: { x: 0, y: 0, componentId: 'comp1' },
         config: { color: '#00ff88', intensity: 1.0 },
-        easing: 'easeInOut'
+        easing: 'easeInOut',
       });
 
       expect(animationId).toMatch(/^anim_\d+_\d+$/);
@@ -60,7 +58,7 @@ describe('RuntimeLayer', () => {
         type: 'glow',
         duration: 500,
         target: { x: 100, y: 100 },
-        config: { color: '#ff0000', intensity: 0.8 }
+        config: { color: '#ff0000', intensity: 0.8 },
       });
 
       const removed = runtimeLayer.removeAnimation(animationId);
@@ -72,14 +70,14 @@ describe('RuntimeLayer', () => {
         type: 'pulse',
         duration: 1000,
         target: { x: 0, y: 0 },
-        config: { color: '#00ff88' }
+        config: { color: '#00ff88' },
       });
 
       runtimeLayer.addAnimation({
         type: 'glow',
         duration: 500,
         target: { x: 100, y: 100 },
-        config: { color: '#ff0000' }
+        config: { color: '#ff0000' },
       });
 
       runtimeLayer.clearAnimations();
@@ -92,14 +90,14 @@ describe('RuntimeLayer', () => {
         type: 'pulse',
         duration: 100, // Very short duration
         target: { x: 0, y: 0 },
-        config: { color: '#00ff88' }
+        config: { color: '#00ff88' },
       });
 
       // Simulate time passing
       mockFrame.timestamp = 1200; // Past the animation duration
-      
+
       runtimeLayer.render(mockCtx, mockFrame);
-      
+
       // Animation should be removed (no way to directly test, but should not crash)
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -117,7 +115,7 @@ describe('RuntimeLayer', () => {
         size: 3,
         color: '#00ff88',
         alpha: 1.0,
-        type: 'energy'
+        type: 'energy',
       });
 
       expect(particleId).toMatch(/^particle_\d+_\d+$/);
@@ -134,7 +132,7 @@ describe('RuntimeLayer', () => {
         size: 3,
         color: '#00ff88',
         alpha: 1.0,
-        type: 'energy'
+        type: 'energy',
       });
 
       const removed = runtimeLayer.removeParticle(particleId);
@@ -152,7 +150,7 @@ describe('RuntimeLayer', () => {
         size: 3,
         color: '#00ff88',
         alpha: 1.0,
-        type: 'energy'
+        type: 'energy',
       });
 
       runtimeLayer.clearParticles();
@@ -170,12 +168,12 @@ describe('RuntimeLayer', () => {
         size: 3,
         color: '#00ff88',
         alpha: 1.0,
-        type: 'energy'
+        type: 'energy',
       });
 
       // Render to trigger particle update
       runtimeLayer.render(mockCtx, mockFrame);
-      
+
       // Particle should be updated (no direct way to test, but should not crash)
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -191,7 +189,7 @@ describe('RuntimeLayer', () => {
         size: 3,
         color: '#00ff88',
         alpha: 0,
-        type: 'energy'
+        type: 'energy',
       });
 
       // Render should remove dead particles
@@ -203,25 +201,25 @@ describe('RuntimeLayer', () => {
   describe('Animation Effects', () => {
     it('should create pulse animation for component', () => {
       const animationId = runtimeLayer.pulseComponent('comp1', '#00ff88', 1000);
-      
+
       expect(animationId).toMatch(/^anim_\d+_\d+$/);
     });
 
     it('should create glow effect animation', () => {
       const animationId = runtimeLayer.glowEffect(100, 100, '#ff0000', 800);
-      
+
       expect(animationId).toMatch(/^anim_\d+_\d+$/);
     });
 
     it('should create energy flow animation', () => {
       const animationId = runtimeLayer.energyFlow(0, 0, 100, 100, '#00ff88');
-      
+
       expect(animationId).toMatch(/^energy_flow_\d+$/);
     });
 
     it('should create spark effect', () => {
       const animationId = runtimeLayer.sparkEffect(100, 100, '#ffff00');
-      
+
       expect(animationId).toMatch(/^spark_\d+$/);
     });
   });
@@ -236,7 +234,7 @@ describe('RuntimeLayer', () => {
         type: 'pulse',
         duration: 1000,
         target: { x: 0, y: 0, componentId: 'comp1' },
-        config: { color: '#00ff88', intensity: 1.0 }
+        config: { color: '#00ff88', intensity: 1.0 },
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -255,7 +253,7 @@ describe('RuntimeLayer', () => {
         size: 3,
         color: '#00ff88',
         alpha: 1.0,
-        type: 'energy'
+        type: 'energy',
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -268,7 +266,7 @@ describe('RuntimeLayer', () => {
         type: 'pulse',
         duration: 1000,
         target: { x: 0, y: 0, componentId: 'nonexistent' },
-        config: { color: '#00ff88', intensity: 1.0 }
+        config: { color: '#00ff88', intensity: 1.0 },
       });
 
       // Should not throw when component is not found
@@ -277,7 +275,7 @@ describe('RuntimeLayer', () => {
 
     it('should render different particle types', () => {
       const particleTypes: Particle['type'][] = ['energy', 'spark', 'glow', 'data'];
-      
+
       particleTypes.forEach(type => {
         runtimeLayer.addParticle({
           x: 100,
@@ -289,7 +287,7 @@ describe('RuntimeLayer', () => {
           size: 3,
           color: '#00ff88',
           alpha: 1.0,
-          type
+          type,
         });
       });
 
@@ -298,7 +296,7 @@ describe('RuntimeLayer', () => {
 
     it('should apply camera transformations', () => {
       mockFrame.camera = { x: 50, y: 50, zoom: 2 };
-      
+
       runtimeLayer.addParticle({
         x: 100,
         y: 100,
@@ -309,7 +307,7 @@ describe('RuntimeLayer', () => {
         size: 3,
         color: '#00ff88',
         alpha: 1.0,
-        type: 'energy'
+        type: 'energy',
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -323,7 +321,7 @@ describe('RuntimeLayer', () => {
         duration: 1000,
         target: { x: 0, y: 0 },
         config: { color: '#00ff88' },
-        easing: 'linear'
+        easing: 'linear',
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -335,7 +333,7 @@ describe('RuntimeLayer', () => {
         duration: 1000,
         target: { x: 0, y: 0 },
         config: { color: '#00ff88' },
-        easing: 'easeIn'
+        easing: 'easeIn',
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -347,7 +345,7 @@ describe('RuntimeLayer', () => {
         duration: 1000,
         target: { x: 0, y: 0 },
         config: { color: '#00ff88' },
-        easing: 'easeOut'
+        easing: 'easeOut',
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -359,7 +357,7 @@ describe('RuntimeLayer', () => {
         duration: 1000,
         target: { x: 0, y: 0 },
         config: { color: '#00ff88' },
-        easing: 'easeInOut'
+        easing: 'easeInOut',
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -371,7 +369,7 @@ describe('RuntimeLayer', () => {
         duration: 1000,
         target: { x: 0, y: 0 },
         config: { color: '#00ff88' },
-        easing: 'bounce'
+        easing: 'bounce',
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -381,7 +379,9 @@ describe('RuntimeLayer', () => {
   describe('Error Handling', () => {
     it('should handle render errors gracefully', () => {
       const errorCtx = {
-        save: vi.fn(() => { throw new Error('Canvas error'); }),
+        save: vi.fn(() => {
+          throw new Error('Canvas error');
+        }),
         restore: vi.fn(),
       } as any;
 
@@ -389,7 +389,7 @@ describe('RuntimeLayer', () => {
         type: 'pulse',
         duration: 1000,
         target: { x: 0, y: 0 },
-        config: { color: '#00ff88' }
+        config: { color: '#00ff88' },
       });
 
       // Should not throw even if canvas operations fail
@@ -398,7 +398,7 @@ describe('RuntimeLayer', () => {
 
     it('should handle missing frame properties', () => {
       const incompleteFrame = {
-        timestamp: 1000
+        timestamp: 1000,
         // Missing camera and payload
       };
 
@@ -410,7 +410,7 @@ describe('RuntimeLayer', () => {
         type: 'pulse',
         duration: 1000,
         target: { x: 0, y: 0 },
-        config: {} // Missing required config properties
+        config: {}, // Missing required config properties
       });
 
       expect(() => runtimeLayer.render(mockCtx, mockFrame)).not.toThrow();
@@ -425,7 +425,7 @@ describe('RuntimeLayer', () => {
           type: 'pulse',
           duration: 1000,
           target: { x: i * 10, y: i * 10 },
-          config: { color: '#00ff88' }
+          config: { color: '#00ff88' },
         });
       }
 
@@ -445,7 +445,7 @@ describe('RuntimeLayer', () => {
           size: 2,
           color: '#00ff88',
           alpha: 1.0,
-          type: 'energy'
+          type: 'energy',
         });
       }
 

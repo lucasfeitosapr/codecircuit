@@ -15,11 +15,11 @@ export interface ModuleICComponent extends ComponentBase {
 
 /**
  * ModuleICPluginV2 - Phase 2A migration success #3!
- * 
+ *
  * The most complex core plugin migration - handles hierarchical component structure.
  * Module ICs can contain other components internally (schematic view navigation).
  * 95% code salvage achieved from original ModuleICPlugin + main.ts integration logic.
- * 
+ *
  * Key characteristics:
  * - Input and output pins (energy flow-through)
  * - Internal component hierarchy (internalComponents array)
@@ -37,19 +37,23 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
     width: 100,
     height: 60,
     pins: {
-      input: [{
-        x: 0,
-        y: 30,
-        type: 'energy',
-        label: 'input'
-      }],
-      output: [{
-        x: 100,
-        y: 30,
-        type: 'energy',
-        label: 'output'
-      }]
-    }
+      input: [
+        {
+          x: 0,
+          y: 30,
+          type: 'energy',
+          label: 'input',
+        },
+      ],
+      output: [
+        {
+          x: 100,
+          y: 30,
+          type: 'energy',
+          label: 'output',
+        },
+      ],
+    },
   };
 
   /**
@@ -73,24 +77,28 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
       title: config.title || 'Module IC',
       color: '#4444ff',
       status: 'defined',
-      
+
       // Hierarchical structure (salvaged from main.ts logic)
       internalComponents: config.internalComponents || [], // Initialize empty internal structure
       internalConnections: [], // Internal connections between components
-      
+
       // Pin configuration - input and output (flow-through component)
       pins: {
-        input: [{
-          x: 0,
-          y: 30,
-          type: 'energy'
-        }],
-        output: [{
-          x: 100,
-          y: 30,
-          type: 'energy'
-        }]
-      }
+        input: [
+          {
+            x: 0,
+            y: 30,
+            type: 'energy',
+          },
+        ],
+        output: [
+          {
+            x: 100,
+            y: 30,
+            type: 'energy',
+          },
+        ],
+      },
     };
   }
 
@@ -190,8 +198,15 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
       ctx.globalAlpha = 1;
 
       // Draw pins
-      this.drawPins(ctx, component, screenX, screenY, camera, (frame as any).categories ?? {}, (frame as any).payload?.connections ?? []);
-
+      this.drawPins(
+        ctx,
+        component,
+        screenX,
+        screenY,
+        camera,
+        (frame as any).categories ?? {},
+        (frame as any).payload?.connections ?? []
+      );
     } catch (e) {
       console.error('ModuleICPluginV2.render failed', e);
     }
@@ -228,7 +243,10 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
         const pinY = screenY + pin.y * camera.zoom;
 
         const hasActiveInput = connections.some(
-          (conn: any) => conn.to.component === component && conn.to.pinIndex === index && (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
+          (conn: any) =>
+            conn.to.component === component &&
+            conn.to.pinIndex === index &&
+            (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
         );
 
         if (hasActiveInput) {
@@ -246,12 +264,14 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
         const pinX = screenX + pin.x * camera.zoom;
         const pinY = screenY + pin.y * camera.zoom;
 
-        const hasActiveOutput = connections.some(
-          (conn: any) => conn.from.component === component && conn.from.pinIndex === index
-        ) && isActive;
+        const hasActiveOutput =
+          connections.some(
+            (conn: any) => conn.from.component === component && conn.from.pinIndex === index
+          ) && isActive;
 
         if (hasActiveOutput) {
-          const pulseIntensity = component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
+          const pulseIntensity =
+            component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
           ctx.shadowBlur = 12 * camera.zoom * pulseIntensity;
           const size = pinSize * (1.1 + 0.05 * Math.sin(Date.now() * 0.005));
           ctx.fillRect(pinX - size / 2, pinY - size / 2, size, size);
@@ -270,20 +290,22 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
    */
   serialize(component: ModuleICComponent): any {
     const serialized = {
-      ...component
+      ...component,
     };
-    
+
     // === SALVAGED FROM MAIN.TS ===
     // Handle internal components serialization (from main.ts line ~580)
     if (component.internalComponents && component.internalComponents.length > 0) {
-      serialized.internalComponents = this.serializeInternalComponents(component.internalComponents);
+      serialized.internalComponents = this.serializeInternalComponents(
+        component.internalComponents
+      );
     }
-    
+
     // Handle internal connections if any
     if (component.internalConnections && component.internalConnections.length > 0) {
       serialized.internalConnections = component.internalConnections;
     }
-    
+
     return serialized;
   }
 
@@ -296,20 +318,20 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
       ...data,
       type: 'module-ic', // Ensure type consistency
       internalComponents: [],
-      internalConnections: []
+      internalConnections: [],
     };
-    
+
     // === SALVAGED FROM MAIN.TS ===
     // Handle internal components deserialization (from main.ts line ~678)
     if (data.internalComponents && Array.isArray(data.internalComponents)) {
       component.internalComponents = this.deserializeInternalComponents(data.internalComponents);
     }
-    
+
     // Handle internal connections restoration
     if (data.internalConnections && Array.isArray(data.internalConnections)) {
       component.internalConnections = data.internalConnections;
     }
-    
+
     return component;
   }
 
@@ -327,7 +349,7 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
       x: comp.x,
       y: comp.y,
       width: comp.width,
-      height: comp.height
+      height: comp.height,
     }));
   }
 
@@ -348,7 +370,7 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
       status: compData.status || 'defined',
       pins: compData.pins || {},
       // Restore any component-specific properties
-      ...compData
+      ...compData,
     }));
   }
 
@@ -356,10 +378,13 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
    * Phase 3+: Hierarchical navigation support
    * This would handle entering/exiting schematic views
    */
-  enterSchematicView(component: ModuleICComponent): { components: ComponentBase[], connections: any[] } {
+  enterSchematicView(component: ModuleICComponent): {
+    components: ComponentBase[];
+    connections: any[];
+  } {
     return {
       components: component.internalComponents || [],
-      connections: component.internalConnections || []
+      connections: component.internalConnections || [],
     };
   }
 

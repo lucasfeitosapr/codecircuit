@@ -4,17 +4,17 @@ import type { Camera, ComponentBase, PinHit } from '../types';
 
 /**
  * InputHandler - Phase 5 Legacy Code Extraction
- * 
+ *
  * Handles all mouse, keyboard, and touch interactions for the Living Blueprint system.
  * Extracted from the monolithic MotherboardApp as part of Phase 5 modularization.
- * 
+ *
  * Responsibilities:
  * - Mouse event handling (click, drag, wheel, context menu)
  * - Keyboard shortcuts and navigation
  * - Touch support for mobile devices
  * - Coordinate transformation between screen and world space
  * - Interaction state management (dragging, panning, connecting)
- * 
+ *
  * Event-driven: Emits interaction events through the global EventBus
  * instead of directly manipulating application state.
  */
@@ -45,7 +45,7 @@ export class InputHandler {
     this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
     this.canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
     this.canvas.addEventListener('wheel', this.onWheel.bind(this));
-    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.canvas.addEventListener('contextmenu', e => e.preventDefault());
 
     // Drag and drop for component creation
     this.setupDragAndDrop();
@@ -78,12 +78,12 @@ export class InputHandler {
       e.preventDefault();
       const componentType = e.dataTransfer.getData('text/plain');
       const worldPos = this.screenToWorld(e.clientX, e.clientY);
-      
+
       // Emit component creation event
       eventBus.emit(Events.COMPONENT_CREATE_REQUESTED, {
         type: componentType,
         position: worldPos,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     });
   }
@@ -92,17 +92,17 @@ export class InputHandler {
    * Setup keyboard event listeners
    */
   private setupKeyboardListeners(): void {
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', e => {
       // Escape key - cancel current operation
       if (e.key === 'Escape') {
         this.cancelCurrentOperation();
       }
-      
+
       // Delete key - delete selected component
       if (e.key === 'Delete' && this.selectedComponent) {
         eventBus.emit(Events.COMPONENT_DELETE_REQUESTED, {
           componentId: this.selectedComponent.id,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -110,7 +110,7 @@ export class InputHandler {
       if (e.key === ' ') {
         e.preventDefault();
         eventBus.emit(Events.CAMERA_RESET_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -118,7 +118,7 @@ export class InputHandler {
       if (e.ctrlKey && e.key === 'z') {
         e.preventDefault();
         eventBus.emit(Events.UNDO_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -126,7 +126,7 @@ export class InputHandler {
       if (e.ctrlKey && e.key === 'y') {
         e.preventDefault();
         eventBus.emit(Events.REDO_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
     });
@@ -140,7 +140,7 @@ export class InputHandler {
     if (backBtn) {
       backBtn.addEventListener('click', () => {
         eventBus.emit(Events.VIEW_EXIT_SCHEMATIC_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       });
     }
@@ -157,7 +157,7 @@ export class InputHandler {
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         eventBus.emit(Events.PROJECT_RESET_REQUESTED, {
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       });
     }
@@ -186,7 +186,7 @@ export class InputHandler {
           this.handleComponentInteraction(worldPos, e);
         }
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -201,7 +201,7 @@ export class InputHandler {
     eventBus.emit(Events.MOUSE_POSITION_UPDATED, {
       position: worldPos,
       screenPosition: { x: e.clientX, y: e.clientY },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     if (this.isPanning) {
@@ -230,14 +230,14 @@ export class InputHandler {
    */
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
-    
+
     const worldPos = this.screenToWorld(e.clientX, e.clientY);
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
 
     eventBus.emit(Events.CAMERA_ZOOM_REQUESTED, {
       factor: zoomFactor,
       center: worldPos,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -246,9 +246,9 @@ export class InputHandler {
    */
   private startPanning(e: MouseEvent): void {
     this.isPanning = true;
-    this.panStart = { 
-      x: e.clientX - this.camera.x, 
-      y: e.clientY - this.camera.y 
+    this.panStart = {
+      x: e.clientX - this.camera.x,
+      y: e.clientY - this.camera.y,
     };
     this.canvas.style.cursor = 'grabbing';
   }
@@ -260,12 +260,12 @@ export class InputHandler {
     const newCamera = {
       x: e.clientX - this.panStart.x,
       y: e.clientY - this.panStart.y,
-      zoom: this.camera.zoom
+      zoom: this.camera.zoom,
     };
 
     eventBus.emit(Events.CAMERA_PAN_UPDATED, {
       camera: newCamera,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -285,13 +285,13 @@ export class InputHandler {
 
     const newPosition = {
       x: worldPos.x - this.dragOffset.x,
-      y: worldPos.y - this.dragOffset.y
+      y: worldPos.y - this.dragOffset.y,
     };
 
     eventBus.emit(Events.COMPONENT_DRAG_UPDATED, {
       componentId: this.selectedComponent.id,
       position: newPosition,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -302,7 +302,7 @@ export class InputHandler {
     if (this.isDragging && this.selectedComponent) {
       eventBus.emit(Events.COMPONENT_DRAG_COMPLETED, {
         componentId: this.selectedComponent.id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
     this.isDragging = false;
@@ -318,7 +318,7 @@ export class InputHandler {
       eventBus.emit(Events.CONNECTION_CREATE_REQUESTED, {
         startPin: this.connectionStart,
         endPin: pinHit,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       this.cancelConnectionMode();
     } else {
@@ -347,7 +347,7 @@ export class InputHandler {
           this.clearSelection();
         }
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -359,13 +359,13 @@ export class InputHandler {
       // Enter schematic view
       eventBus.emit(Events.VIEW_ENTER_SCHEMATIC_REQUESTED, {
         component,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     } else {
       // Toggle status
       eventBus.emit(Events.COMPONENT_STATUS_TOGGLE_REQUESTED, {
         componentId: component.id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -378,12 +378,12 @@ export class InputHandler {
     this.isDragging = true;
     this.dragOffset = {
       x: worldPos.x - component.x,
-      y: worldPos.y - component.y
+      y: worldPos.y - component.y,
     };
 
     eventBus.emit(Events.COMPONENT_SELECTED, {
       component,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -394,7 +394,7 @@ export class InputHandler {
     if (this.selectedComponent) {
       eventBus.emit(Events.COMPONENT_DESELECTED, {
         componentId: this.selectedComponent.id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
     this.selectedComponent = null;
@@ -407,10 +407,10 @@ export class InputHandler {
     this.isConnecting = true;
     this.connectionStart = pinHit;
     this.canvas.style.cursor = 'crosshair';
-    
+
     eventBus.emit(Events.CONNECTION_MODE_STARTED, {
       startPin: pinHit,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -421,9 +421,9 @@ export class InputHandler {
     this.isConnecting = false;
     this.connectionStart = null;
     this.canvas.style.cursor = 'grab';
-    
+
     eventBus.emit(Events.CONNECTION_MODE_CANCELLED, {
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -462,11 +462,11 @@ export class InputHandler {
             callback: (component: ComponentBase | null) => {
               this.canvas.style.cursor = component ? 'grab' : 'default';
             },
-            timestamp: Date.now()
+            timestamp: Date.now(),
           });
         }
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -477,7 +477,7 @@ export class InputHandler {
     const rect = this.canvas.getBoundingClientRect();
     return {
       x: (screenX - rect.left - this.camera.x) / this.camera.zoom,
-      y: (screenY - rect.top - this.camera.y) / this.camera.zoom
+      y: (screenY - rect.top - this.camera.y) / this.camera.zoom,
     };
   }
 
@@ -487,7 +487,7 @@ export class InputHandler {
   private worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
     return {
       x: worldX * this.camera.zoom + this.camera.x,
-      y: worldY * this.camera.zoom + this.camera.y
+      y: worldY * this.camera.zoom + this.camera.y,
     };
   }
 
@@ -521,17 +521,17 @@ export class InputHandler {
     this.canvas.removeEventListener('mousemove', this.onMouseMove.bind(this));
     this.canvas.removeEventListener('mouseup', this.onMouseUp.bind(this));
     this.canvas.removeEventListener('wheel', this.onWheel.bind(this));
-    
+
     // Remove keyboard listeners
     document.removeEventListener('keydown', () => {});
-    
+
     // Clear UI control listeners
     const backBtn = document.getElementById('back-btn');
     if (backBtn) backBtn.removeEventListener('click', () => {});
-    
+
     const helpBtn = document.getElementById('help-btn');
     if (helpBtn) helpBtn.removeEventListener('click', () => {});
-    
+
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) resetBtn.removeEventListener('click', () => {});
   }

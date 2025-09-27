@@ -56,7 +56,11 @@ export class ViewNavigationManager {
   }
 
   private calculateTransitionDuration(start: Camera, end: Camera): number {
-    return cameraTransitions.calculateTransitionDuration(start, end, this.transitionConfig.duration);
+    return cameraTransitions.calculateTransitionDuration(
+      start,
+      end,
+      this.transitionConfig.duration
+    );
   }
 
   /**
@@ -71,8 +75,11 @@ export class ViewNavigationManager {
 
     // Calculate camera positions for the animation
     const startCamera = this.context.viewportManager.camera;
-    const focusCamera = this.getFocusCameraPosition(moduleComponent, this.transitionConfig.focusZoom);
-    
+    const focusCamera = this.getFocusCameraPosition(
+      moduleComponent,
+      this.transitionConfig.focusZoom
+    );
+
     const finalCamera: Camera = { x: 0, y: 0, zoom: 1 }; // Schematic view starts at origin
 
     // Calculate midpoint for smooth transition
@@ -85,7 +92,7 @@ export class ViewNavigationManager {
     // Animation state
     const startTime = Date.now();
     const animationDuration = this.calculateTransitionDuration(startCamera, finalCamera);
-    
+
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / animationDuration, 1);
@@ -94,17 +101,23 @@ export class ViewNavigationManager {
         // Phase 1: Move to midpoint with zoom out
         const phaseProgress = progress / 0.4;
         const phaseEased = this.transitionConfig.easingFunction(phaseProgress);
-        this.context.viewportManager.setCamera(this.interpolateCamera(startCamera, midCamera, phaseEased));
+        this.context.viewportManager.setCamera(
+          this.interpolateCamera(startCamera, midCamera, phaseEased)
+        );
       } else if (progress < 0.7) {
         // Phase 2: Move to focus position
         const focusProgress = (progress - 0.4) / 0.3;
         const focusPhase = this.transitionConfig.easingFunction(focusProgress);
-        this.context.viewportManager.setCamera(this.interpolateCamera(midCamera, focusCamera, focusPhase));
+        this.context.viewportManager.setCamera(
+          this.interpolateCamera(midCamera, focusCamera, focusPhase)
+        );
       } else {
         // Phase 3: Final zoom out to schematic view
         const finalProgress = (progress - 0.7) / 0.3;
         const finalPhase = Math.min(finalProgress, 1);
-        this.context.viewportManager.setCamera(this.interpolateCamera(focusCamera, finalCamera, this.easeInOutCubic(finalPhase)));
+        this.context.viewportManager.setCamera(
+          this.interpolateCamera(focusCamera, finalCamera, this.easeInOutCubic(finalPhase))
+        );
       }
 
       if (progress < 1) {
@@ -134,7 +147,9 @@ export class ViewNavigationManager {
       const progress = Math.min(elapsed / animationDuration, 1);
       const easedProgress = this.transitionConfig.easingFunction(progress);
 
-      this.context.viewportManager.setCamera(this.interpolateCamera(startCamera, mainCamera, easedProgress));
+      this.context.viewportManager.setCamera(
+        this.interpolateCamera(startCamera, mainCamera, easedProgress)
+      );
 
       if (progress < 1) {
         this.context.requestAnimationFrame(animate);
@@ -146,8 +161,4 @@ export class ViewNavigationManager {
 
     animate();
   }
-
-
-
-
 }

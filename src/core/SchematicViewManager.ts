@@ -63,9 +63,15 @@ export class SchematicViewManager {
       component: currentView.component,
       camera: { ...viewportManager.camera },
       selectedComponent: this.context.getSelectedComponent(),
-      // Create defensive copies to prevent reference issues
-      components: [...currentView.components],
-      connections: [...currentView.connections],
+      // For main view, save global arrays; for schematic view, save view arrays
+      components:
+        currentView.type === 'main'
+          ? [...this.context.getComponents()]
+          : [...currentView.components],
+      connections:
+        currentView.type === 'main'
+          ? [...this.context.getConnections()]
+          : [...currentView.connections],
     };
     viewStack.push(currentViewState);
 
@@ -102,14 +108,14 @@ export class SchematicViewManager {
       eventBus.emit('schematic.view.entered', {
         moduleComponent,
         view: newView,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     });
   }
 
   exitSchematicView(): void {
     const viewStack = this.context.getViewStack();
-    
+
     if (this.context.isTransitioning() || viewStack.size() === 0) return;
 
     const currentView = this.context.getCurrentView();
@@ -152,11 +158,11 @@ export class SchematicViewManager {
         // Restore global arrays from the saved state
         const components = this.context.getComponents();
         const connections = this.context.getConnections();
-        
+
         components.length = 0; // Clear existing
         components.push(...restoredView.components);
-        
-        connections.length = 0; // Clear existing  
+
+        connections.length = 0; // Clear existing
         connections.push(...restoredView.connections);
       }
 
@@ -168,7 +174,7 @@ export class SchematicViewManager {
       // Emit event for other systems
       eventBus.emit('schematic.view.exited', {
         previousView: restoredView,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     });
   }
@@ -181,19 +187,19 @@ export class SchematicViewManager {
 
     // Exit all the way to main board
     this.context.setTransitioning(true);
-    
+
     const mainCamera = { x: 0, y: 0, zoom: 1 };
-    
+
     viewNavigationManager.animateToMainView(mainCamera, () => {
       // Transition complete
       viewStack.clear();
-      
+
       const mainView: ViewState = {
         type: 'main',
         component: null,
         camera: { ...mainCamera },
-        components: this.context.getComponents(),
-        connections: this.context.getConnections(),
+        components: [...this.context.getComponents()],
+        connections: [...this.context.getConnections()],
       };
 
       this.context.setCurrentView(mainView);
@@ -204,7 +210,7 @@ export class SchematicViewManager {
       // Emit event for other systems
       eventBus.emit('schematic.view.main.entered', {
         view: mainView,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     });
   }
@@ -212,17 +218,20 @@ export class SchematicViewManager {
   navigateToBreadcrumbLevel(targetIndex: number): void {
     // Navigate directly to a specific breadcrumb level
     if (this.context.isTransitioning()) return;
-    
+
     const viewStack = this.context.getViewStack();
     const currentView = this.context.getCurrentView();
-    const currentDepth = viewStack.size() + (currentView.type === 'schematic' ? 1 : 0);
-    
+    const currentDepth = this.getViewDepth();
+
     if (targetIndex === 0) {
       // Navigate to main board
       this.exitToMainBoard();
     } else if (targetIndex < currentDepth) {
-      // Navigate to intermediate level by popping the right number of views
+      // Navigate to intermediate level by exiting the right number of levels
       const levelsToExit = currentDepth - targetIndex;
+
+      // For now, just exit one level at a time
+      // TODO: Implement batch exit for better UX
       for (let i = 0; i < levelsToExit; i++) {
         this.exitSchematicView();
       }
@@ -238,15 +247,15 @@ export class SchematicViewManager {
     const path = [];
     const viewStack = this.context.getViewStack();
     const currentView = this.context.getCurrentView();
-    
+
     // Always start with main board
     path.push({
       name: 'Project: Motherboard',
       icon: '⚡',
       isCurrent: currentView.type === 'main',
-      viewIndex: 0
+      viewIndex: 0,
     });
-    
+
     // Add each level from view stack
     const stack = viewStack.serialize();
     stack.forEach((view: any, index: number) => {
@@ -254,30 +263,31 @@ export class SchematicViewManager {
         const depth = index + 1;
         const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
         const icon = depth < depthIcons.length ? depthIcons[depth] : `🔹${depth}`;
-        
+
         path.push({
           name: view.component.title || `Module ${depth}`,
           icon: icon,
           isCurrent: false,
-          viewIndex: depth
+          viewIndex: depth,
         });
       }
     });
-    
+
     // Mark current schematic view
     if (currentView.type === 'schematic') {
       const currentDepth = stack.length + 1;
       const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
-      const icon = currentDepth < depthIcons.length ? depthIcons[currentDepth] : `🔹${currentDepth}`;
-      
+      const icon =
+        currentDepth < depthIcons.length ? depthIcons[currentDepth] : `🔹${currentDepth}`;
+
       path.push({
         name: currentView.component?.title || `Module ${currentDepth}`,
         icon: icon,
         isCurrent: true,
-        viewIndex: currentDepth
+        viewIndex: currentDepth,
       });
     }
-    
+
     return path;
   }
 
@@ -286,7 +296,10 @@ export class SchematicViewManager {
     return allComponents.some(containerComponent => {
       if (containerComponent.type === 'module-ic') {
         const moduleComponent = containerComponent as ModuleComponent;
-        return moduleComponent.internalComponents?.some(internal => internal.id === component.id) || false;
+        return (
+          moduleComponent.internalComponents?.some(internal => internal.id === component.id) ||
+          false
+        );
       }
       return false;
     });
@@ -300,17 +313,21 @@ export class SchematicViewManager {
   // Get current schematic component (if in schematic view)
   getCurrentSchematicComponent(): ModuleComponent | null {
     const currentView = this.context.getCurrentView();
-    return currentView.type === 'schematic' ? currentView.component as ModuleComponent : null;
+    return currentView.type === 'schematic' ? (currentView.component as ModuleComponent) : null;
   }
 
   // Get view depth (0 = main, 1+ = schematic levels)
   getViewDepth(): number {
     const viewStack = this.context.getViewStack();
     const currentView = this.context.getCurrentView();
-    return viewStack.size() + (currentView.type === 'schematic' ? 1 : 0);
+    // If we're in main view, depth is 0
+    // If we're in schematic view, depth is the number of views saved in the stack
+    return currentView.type === 'schematic' ? viewStack.size() : 0;
   }
 }
 
-export function createSchematicViewManager(context: SchematicViewManagerContext): SchematicViewManager {
+export function createSchematicViewManager(
+  context: SchematicViewManagerContext
+): SchematicViewManager {
   return new SchematicViewManager(context);
 }

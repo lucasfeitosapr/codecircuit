@@ -4,7 +4,7 @@ export const Events = {
   PLUGIN_UNREGISTERED: 'plugin:unregistered',
   UI_PARTS_TRAY_UPDATE: 'ui:parts_tray_update',
   UI_COMPONENT_TYPES_UPDATE: 'ui:component_types_update',
-  
+
   // Legacy events (Phase 1-4)
   ComponentCreated: 'component.created',
   ComponentUpdated: 'component.updated',
@@ -15,7 +15,7 @@ export const Events = {
   CommandDispatched: 'command.dispatched',
   RuntimePulse: 'runtime.pulse',
   SystemError: 'system.error',
-  
+
   // Phase 5 Input Handler Events
   COMPONENT_CREATE_REQUESTED: 'input.component.create.requested',
   COMPONENT_DELETE_REQUESTED: 'input.component.delete.requested',
@@ -25,29 +25,29 @@ export const Events = {
   COMPONENT_DRAG_COMPLETED: 'input.component.drag.completed',
   COMPONENT_HIT_TEST_REQUESTED: 'input.component.hit.test.requested',
   COMPONENT_STATUS_TOGGLE_REQUESTED: 'input.component.status.toggle.requested',
-  
+
   CONNECTION_CREATE_REQUESTED: 'input.connection.create.requested',
   CONNECTION_START_REQUESTED: 'connection.start.requested',
   CONNECTION_END_REQUESTED: 'connection.end.requested',
   CONNECTION_CANCEL_REQUESTED: 'connection.cancel.requested',
   CONNECTION_MODE_STARTED: 'input.connection.mode.started',
   CONNECTION_MODE_CANCELLED: 'input.connection.mode.cancelled',
-  
+
   PIN_HIT_TEST_REQUESTED: 'input.pin.hit.test.requested',
-  
+
   CAMERA_ZOOM_REQUESTED: 'input.camera.zoom.requested',
   CAMERA_PAN_UPDATED: 'input.camera.pan.updated',
   CAMERA_RESET_REQUESTED: 'input.camera.reset.requested',
-  
+
   VIEW_ENTER_SCHEMATIC_REQUESTED: 'input.view.enter.schematic.requested',
   VIEW_EXIT_SCHEMATIC_REQUESTED: 'input.view.exit.schematic.requested',
-  
+
   MOUSE_POSITION_UPDATED: 'input.mouse.position.updated',
-  
+
   PROJECT_RESET_REQUESTED: 'input.project.reset.requested',
   UNDO_REQUESTED: 'input.undo.requested',
   REDO_REQUESTED: 'input.redo.requested',
-  
+
   // Phase 5 Export/Import Events
   PROJECT_EXPORT_REQUESTED: 'export.project.requested',
   PROJECT_IMPORT_REQUESTED: 'import.project.requested',
@@ -58,24 +58,24 @@ export const Events = {
   PROJECT_IMPORTED: 'project.imported',
   PROJECT_DOWNLOAD_COMPLETED: 'project.download.completed',
   PROJECT_IMPORT_ERROR: 'project.import.error',
-  
+
   // Phase 5 Viewport Manager Events
   VIEWPORT_CAMERA_UPDATED: 'viewport.camera.updated',
   VIEWPORT_RESIZED: 'viewport.resized',
   VIEWPORT_ZOOM_REQUESTED: 'viewport.zoom.requested',
   VIEWPORT_PAN_REQUESTED: 'viewport.pan.requested',
   VIEWPORT_CANVAS_SETUP_COMPLETED: 'viewport.canvas.setup.completed',
-  
+
   // Phase 6 Renderer Integration Events
   RENDER_FRAME_COMPLETE: 'render.frame.complete',
   RENDER_ERROR: 'render.error',
-  
+
   // Phase 7 Extended Component Events
   EXTENDED_COMPONENTS_INITIALIZED: 'extended.components.initialized',
   DECISION_EVALUATED: 'decision.evaluated',
 } as const;
 
-export type EventName = typeof Events[keyof typeof Events];
+export type EventName = (typeof Events)[keyof typeof Events];
 
 export interface ComponentCreatedPayload {
   id: string;

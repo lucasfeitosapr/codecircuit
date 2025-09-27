@@ -1,12 +1,14 @@
 import { PluginDescriptor, componentSystem } from '../ComponentSystem';
 import { renderComponent } from '../../rendering/ImplementationHelpers';
 
-export const ModuleICPlugin: PluginDescriptor = {
-  id: 'module-ic',
-  displayName: 'Module IC',
+export const PowerCorePlugin: PluginDescriptor = {
+  id: 'power-core',
+  displayName: 'Power Core',
   render: (ctx: CanvasRenderingContext2D | WebGLRenderingContext, frame: any, model?: any) => {
+    // If a canvas context is provided, draw a simple filled rectangle representing the power core
     try {
       if (ctx && (ctx as CanvasRenderingContext2D).fillRect && model) {
+        // Use centralized implementation helper for consistent visuals
         renderComponent(ctx as CanvasRenderingContext2D, frame, model, {
           camera: frame.camera,
           categories: (frame as any).categories ?? {},
@@ -14,16 +16,17 @@ export const ModuleICPlugin: PluginDescriptor = {
           connections: (frame as any).payload?.connections ?? [],
         });
       } else {
-        return { shape: 'chip', color: '#66cc66', model };
+        // Fallback: return a passive render descriptor
+        return { shape: 'square', color: '#ffcc00', model };
       }
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error('ModuleICPlugin.render failed', e);
+      console.error('PowerCorePlugin.render failed', e);
     }
   },
-  serialize: (model) => model,
-  deserialize: (data) => data,
+  serialize: model => model,
+  deserialize: data => data,
 };
 
 // PHASE 2: Temporarily disabled to prevent dual registration conflicts with V2 plugins
-// componentSystem.register(ModuleICPlugin);
+// componentSystem.register(PowerCorePlugin);

@@ -377,20 +377,20 @@
         right: 0;
         bottom: 0;
         background-color: rgba(255, 68, 68, 0.3);
-        transition: .4s;
+        transition: 0.4s;
         border-radius: 24px;
         border: 1px solid #ff4444;
       }
 
       .slider:before {
         position: absolute;
-        content: "";
+        content: '';
         height: 18px;
         width: 18px;
         left: 2px;
         bottom: 2px;
         background-color: #ff4444;
-        transition: .4s;
+        transition: 0.4s;
         border-radius: 50%;
       }
 
@@ -405,8 +405,12 @@
       }
 
       @keyframes pulse {
-        from { opacity: 0.6; }
-        to { opacity: 1; }
+        from {
+          opacity: 0.6;
+        }
+        to {
+          opacity: 1;
+        }
       }
 
       .pulse {
@@ -438,7 +442,7 @@
       <div class="test-panel">
         <div class="test-section">
           <h3>🎯 Phase 1: Event-Driven Foundation</h3>
-          
+
           <div class="test-group">
             <h4>EventBus Tests</h4>
             <button class="test-btn" id="test-eventbus-emit">Emit Test Event</button>
@@ -461,7 +465,7 @@
 
         <div class="test-section">
           <h3>🎨 Phase 2: Layered Renderer</h3>
-          
+
           <div class="test-group">
             <h4>Renderer Tests</h4>
             <button class="test-btn" id="test-layered-renderer">Test Layered Renderer</button>
@@ -479,7 +483,7 @@
 
         <div class="test-section">
           <h3>✨ Phase 3: Runtime Effects & UI</h3>
-          
+
           <div class="test-group">
             <h4>Runtime Layer Tests</h4>
             <button class="test-btn" id="test-runtime-animations">Test Animations</button>
@@ -497,7 +501,7 @@
 
         <div class="test-section">
           <h3>⚡ Phase 4: Command Pattern</h3>
-          
+
           <div class="test-group">
             <h4>Command Executor Tests</h4>
             <button class="test-btn" id="test-command-execution">Execute Command</button>
@@ -536,17 +540,15 @@
         </div>
       </div>
 
-      <div class="copy-feedback" id="copy-feedback">
-        📋 Event log copied to clipboard!
-      </div>
+      <div class="copy-feedback" id="copy-feedback">📋 Event log copied to clipboard!</div>
 
       <div class="feature-flag-toggle">
         <h4>🎛️ Feature Flags</h4>
         <label class="toggle-switch">
-          <input type="checkbox" id="new-renderer-toggle">
+          <input type="checkbox" id="new-renderer-toggle" />
           <span class="slider"></span>
         </label>
-        <span style="margin-left: 10px; font-size: 11px;">New Renderer</span>
+        <span style="margin-left: 10px; font-size: 11px">New Renderer</span>
       </div>
     </div>
 
@@ -558,11 +560,11 @@
       import { componentSystem } from './src/components/ComponentSystem.ts';
       import { stateManager } from './src/state/StateManager.ts';
       import { commandExecutor } from './src/commands/CommandExecutor.ts';
-      import { 
-        createComponentCommand, 
-        updateComponentCommand, 
-        deleteComponentCommand, 
-        moveComponentCommand 
+      import {
+        createComponentCommand,
+        updateComponentCommand,
+        deleteComponentCommand,
+        moveComponentCommand,
       } from './src/commands/ComponentCommands.ts';
       import { layeredRenderer } from './src/rendering/LayeredRenderer.ts?v=20240120';
       import BackgroundLayer from './src/rendering/layers/BackgroundLayer.ts?v=20240120';
@@ -571,7 +573,7 @@
       import RuntimeLayer from './src/rendering/layers/RuntimeLayer.ts?v=20240120';
       import UILayer from './src/rendering/layers/UILayer.ts?v=20240120';
       import { isNewRendererEnabled } from './src/config/featureFlags.ts';
-      
+
       // Import plugins to register them
       import { PowerCorePlugin } from './src/components/plugins/PowerCorePlugin.ts?v=20240120';
       import { ModuleICPlugin } from './src/components/plugins/ModuleICPlugin.ts?v=20240120';
@@ -592,7 +594,7 @@
           this.fps = 0;
           this.eventLog = document.getElementById('event-log-content');
           this.fpsCounter = document.getElementById('fps-counter');
-          
+
           this.setupCanvas();
           this.setupEventListeners();
           this.setupFeatureFlags();
@@ -761,8 +763,8 @@
         setupFeatureFlags() {
           const toggle = document.getElementById('new-renderer-toggle');
           toggle.checked = isNewRendererEnabled();
-          
-          toggle.addEventListener('change', (e) => {
+
+          toggle.addEventListener('change', e => {
             const url = new URL(window.location);
             if (e.target.checked) {
               url.searchParams.set('new-renderer', 'true');
@@ -779,21 +781,21 @@
           let lastMouseY = 0;
 
           // Mouse wheel zoom
-          this.canvas.addEventListener('wheel', (e) => {
+          this.canvas.addEventListener('wheel', e => {
             e.preventDefault();
             const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
             this.camera.zoom = Math.max(0.1, Math.min(5, this.camera.zoom * zoomFactor));
           });
 
           // Mouse drag to pan
-          this.canvas.addEventListener('mousedown', (e) => {
+          this.canvas.addEventListener('mousedown', e => {
             isDragging = true;
             lastMouseX = e.clientX;
             lastMouseY = e.clientY;
             this.canvas.style.cursor = 'grabbing';
           });
 
-          this.canvas.addEventListener('mousemove', (e) => {
+          this.canvas.addEventListener('mousemove', e => {
             if (isDragging) {
               const deltaX = e.clientX - lastMouseX;
               const deltaY = e.clientY - lastMouseY;
@@ -822,7 +824,7 @@
           layeredRenderer.registerLayer('connections', ConnectionsLayer);
           layeredRenderer.registerLayer('runtime', new RuntimeLayer());
           layeredRenderer.registerLayer('ui', new UILayer());
-          
+
           this.logEvent('Layers initialized', 'success');
         }
 
@@ -832,7 +834,7 @@
             componentSystem.register(PowerCorePlugin);
             componentSystem.register(ModuleICPlugin);
             componentSystem.register(TaskResistorPlugin);
-            
+
             const plugins = componentSystem.list();
             this.logEvent(`Plugins registered - ${plugins.length} plugins available`, 'success');
             plugins.forEach(plugin => {
@@ -844,13 +846,16 @@
         }
 
         startRenderLoop() {
-          const render = (currentTime) => {
+          const render = currentTime => {
             // Calculate FPS using a rolling window (~0.5s)
             const dt = currentTime - this.prevTime;
             this.prevTime = currentTime;
             this.frameCount++;
             if (currentTime - this.lastFpsUpdate >= 500) {
-              this.fps = Math.max(1, Math.round((this.frameCount * 1000) / (currentTime - this.lastFpsUpdate)));
+              this.fps = Math.max(
+                1,
+                Math.round((this.frameCount * 1000) / (currentTime - this.lastFpsUpdate))
+              );
               this.fpsCounter.textContent = `FPS: ${this.fps}`;
               this.frameCount = 0;
               this.lastFpsUpdate = currentTime;
@@ -877,10 +882,10 @@
                   models: this.components,
                   connections: this.connections,
                   categories: {},
-                  selectedComponentId: this.selectedComponent?.id || null
-                }
+                  selectedComponentId: this.selectedComponent?.id || null,
+                },
               };
-              
+
               layeredRenderer.render(this.ctx, frame);
             } else {
               // Fallback to simple rendering
@@ -897,20 +902,20 @@
           // Simple fallback rendering with components
           this.ctx.strokeStyle = '#00ff88';
           this.ctx.lineWidth = 2;
-          
+
           // Draw grid background
           this.drawSimpleGrid();
-          
+
           // Draw components
           this.components.forEach(component => {
             this.drawSimpleComponent(component);
           });
-          
+
           // Draw connections
           this.connections.forEach(connection => {
             this.drawSimpleConnection(connection);
           });
-          
+
           // Draw status indicator
           this.ctx.fillStyle = '#00ff88';
           this.ctx.font = '12px monospace';
@@ -921,14 +926,14 @@
           const gridSize = 50;
           this.ctx.strokeStyle = 'rgba(0, 255, 136, 0.1)';
           this.ctx.lineWidth = 1;
-          
+
           for (let x = 0; x < this.canvas.width; x += gridSize) {
             this.ctx.beginPath();
             this.ctx.moveTo(x, 0);
             this.ctx.lineTo(x, this.canvas.height);
             this.ctx.stroke();
           }
-          
+
           for (let y = 0; y < this.canvas.height; y += gridSize) {
             this.ctx.beginPath();
             this.ctx.moveTo(0, y);
@@ -942,22 +947,22 @@
           const y = component.y;
           const width = 80;
           const height = 40;
-          
+
           // Component background
           this.ctx.fillStyle = this.getComponentColor(component.status);
           this.ctx.fillRect(x, y, width, height);
-          
+
           // Component border
           this.ctx.strokeStyle = '#00ff88';
           this.ctx.lineWidth = 2;
           this.ctx.strokeRect(x, y, width, height);
-          
+
           // Component text
           this.ctx.fillStyle = '#000';
           this.ctx.font = '10px monospace';
           this.ctx.textAlign = 'center';
-          this.ctx.fillText(component.title || component.type, x + width/2, y + height/2 + 3);
-          
+          this.ctx.fillText(component.title || component.type, x + width / 2, y + height / 2 + 3);
+
           // Status indicator
           this.ctx.fillStyle = this.getStatusColor(component.status);
           this.ctx.fillRect(x + 5, y + 5, 8, 8);
@@ -966,53 +971,68 @@
         drawSimpleConnection(connection) {
           const fromComp = this.components.find(c => c.id === connection.from);
           const toComp = this.components.find(c => c.id === connection.to);
-          
+
           if (!fromComp || !toComp) {
-            console.log(`Connection ${connection.id}: Missing components`, { from: connection.from, to: connection.to });
+            console.log(`Connection ${connection.id}: Missing components`, {
+              from: connection.from,
+              to: connection.to,
+            });
             return;
           }
-          
+
           const fromX = fromComp.x + 80; // Right side of source
           const fromY = fromComp.y + 20; // Middle of source
           const toX = toComp.x; // Left side of target
           const toY = toComp.y + 20; // Middle of target
-          
+
           this.ctx.strokeStyle = this.getConnectionColor(connection.type);
           this.ctx.lineWidth = 2;
           this.ctx.setLineDash(connection.type === 'cache' ? [5, 5] : []);
-          
+
           this.ctx.beginPath();
           this.ctx.moveTo(fromX, fromY);
           this.ctx.lineTo(toX, toY);
           this.ctx.stroke();
-          
+
           this.ctx.setLineDash([]); // Reset dash
         }
 
         getComponentColor(status) {
           switch (status) {
-            case 'done': return 'rgba(0, 255, 136, 0.3)';
-            case 'in-progress': return 'rgba(255, 170, 0, 0.3)';
-            case 'todo': return 'rgba(255, 68, 68, 0.3)';
-            default: return 'rgba(0, 255, 136, 0.2)';
+            case 'done':
+              return 'rgba(0, 255, 136, 0.3)';
+            case 'in-progress':
+              return 'rgba(255, 170, 0, 0.3)';
+            case 'todo':
+              return 'rgba(255, 68, 68, 0.3)';
+            default:
+              return 'rgba(0, 255, 136, 0.2)';
           }
         }
 
         getStatusColor(status) {
           switch (status) {
-            case 'done': return '#00ff88';
-            case 'in-progress': return '#ffaa00';
-            case 'todo': return '#ff4444';
-            default: return '#00ff88';
+            case 'done':
+              return '#00ff88';
+            case 'in-progress':
+              return '#ffaa00';
+            case 'todo':
+              return '#ff4444';
+            default:
+              return '#00ff88';
           }
         }
 
         getConnectionColor(type) {
           switch (type) {
-            case 'data': return '#00ff88';
-            case 'cache': return '#00c8ff';
-            case 'validation': return '#ffaa00';
-            default: return '#00ff88';
+            case 'data':
+              return '#00ff88';
+            case 'cache':
+              return '#00c8ff';
+            case 'validation':
+              return '#ffaa00';
+            default:
+              return '#00ff88';
           }
         }
 
@@ -1023,7 +1043,7 @@
               id: 'test-component',
               type: 'power-core',
               model: { id: 'test-component', type: 'power-core' },
-              source: 'test'
+              source: 'test',
             });
             this.logEvent('EventBus emit test: SUCCESS', 'success');
           } catch (error) {
@@ -1033,7 +1053,7 @@
 
         testEventBusSubscribe() {
           try {
-            const handler = (payload) => {
+            const handler = payload => {
               this.logEvent(`Received event: ${Events.ComponentCreated}`, 'success');
             };
             eventBus.on(Events.ComponentCreated, handler);
@@ -1086,7 +1106,10 @@
         testStateManager() {
           try {
             const state = stateManager.getState();
-            this.logEvent(`State manager test: SUCCESS - Components: ${Object.keys(state.components).length}`, 'success');
+            this.logEvent(
+              `State manager test: SUCCESS - Components: ${Object.keys(state.components).length}`,
+              'success'
+            );
           } catch (error) {
             this.logEvent(`State manager test: ERROR - ${error.message}`, 'error');
           }
@@ -1094,7 +1117,7 @@
 
         testStateSubscription() {
           try {
-            const unsubscribe = stateManager.subscribe('stateChanged', (state) => {
+            const unsubscribe = stateManager.subscribe('stateChanged', state => {
               this.logEvent('State change detected', 'success');
             });
             this.stateUnsubscribers = this.stateUnsubscribers || [];
@@ -1116,8 +1139,8 @@
                 models: this.components,
                 connections: this.connections,
                 categories: {},
-                selectedComponentId: null
-              }
+                selectedComponentId: null,
+              },
             };
             layeredRenderer.render(this.ctx, frame);
             this.logEvent('Layered renderer test: SUCCESS', 'success');
@@ -1148,8 +1171,8 @@
                 models: this.components,
                 connections: this.connections,
                 categories: {},
-                selectedComponentId: null
-              }
+                selectedComponentId: null,
+              },
             };
             layeredRenderer.render(this.ctx, frame);
             this.logEvent('Render layers test: SUCCESS', 'success');
@@ -1164,24 +1187,27 @@
               timestamp: Date.now(),
               camera: this.camera,
               canvas: this.canvas,
-              payload: {}
+              payload: {},
             };
-            
+
             // Override console.error to catch layer errors
             const originalError = console.error;
             let layerError = null;
             console.error = (message, error) => {
-              if (typeof message === 'string' && message.includes('BackgroundLayer render failed')) {
+              if (
+                typeof message === 'string' &&
+                message.includes('BackgroundLayer render failed')
+              ) {
                 layerError = error || new Error(message);
               }
               originalError(message, error);
             };
-            
+
             BackgroundLayer.render(this.ctx, frame);
-            
+
             // Restore console.error
             console.error = originalError;
-            
+
             if (layerError) {
               this.logEvent(`Background layer test: ERROR - ${layerError.message}`, 'error');
             } else {
@@ -1202,25 +1228,28 @@
                 models: this.components,
                 connections: this.connections,
                 categories: {},
-                selectedComponentId: null
-              }
+                selectedComponentId: null,
+              },
             };
-            
+
             // Override console.error to catch layer errors
             const originalError = console.error;
             let layerError = null;
             console.error = (message, error) => {
-              if (typeof message === 'string' && message.includes('ImplementationLayer render failed')) {
+              if (
+                typeof message === 'string' &&
+                message.includes('ImplementationLayer render failed')
+              ) {
                 layerError = error || new Error(message);
               }
               originalError(message, error);
             };
-            
+
             ImplementationLayer.render(this.ctx, frame);
-            
+
             // Restore console.error
             console.error = originalError;
-            
+
             if (layerError) {
               this.logEvent(`Implementation layer test: ERROR - ${layerError.message}`, 'error');
             } else {
@@ -1241,25 +1270,28 @@
                 models: this.components,
                 connections: this.connections,
                 categories: {},
-                selectedComponentId: null
-              }
+                selectedComponentId: null,
+              },
             };
-            
+
             // Override console.error to catch layer errors
             const originalError = console.error;
             let layerError = null;
             console.error = (message, error) => {
-              if (typeof message === 'string' && message.includes('ConnectionsLayer render failed')) {
+              if (
+                typeof message === 'string' &&
+                message.includes('ConnectionsLayer render failed')
+              ) {
                 layerError = error || new Error(message);
               }
               originalError(message, error);
             };
-            
+
             ConnectionsLayer.render(this.ctx, frame);
-            
+
             // Restore console.error
             console.error = originalError;
-            
+
             if (layerError) {
               this.logEvent(`Connections layer test: ERROR - ${layerError.message}`, 'error');
             } else {
@@ -1278,9 +1310,9 @@
               timestamp: Date.now(),
               camera: this.camera,
               canvas: this.canvas,
-              payload: {}
+              payload: {},
             };
-            
+
             // Override console.error to catch layer errors
             const originalError = console.error;
             let layerError = null;
@@ -1290,12 +1322,12 @@
               }
               originalError(message, error);
             };
-            
+
             layer.render(this.ctx, frame);
-            
+
             // Restore console.error
             console.error = originalError;
-            
+
             if (layerError) {
               this.logEvent(`Runtime animations test: ERROR - ${layerError.message}`, 'error');
             } else {
@@ -1311,9 +1343,12 @@
             const layer = new RuntimeLayer();
             // Add some test particles
             layer.addParticle({
-              x: 100, y: 100, type: 'energy', 
-              life: 1000, maxLife: 1000, 
-              velocity: { x: 1, y: 1 }
+              x: 100,
+              y: 100,
+              type: 'energy',
+              life: 1000,
+              maxLife: 1000,
+              velocity: { x: 1, y: 1 },
             });
             this.logEvent('Particle system test: SUCCESS', 'success');
           } catch (error) {
@@ -1338,9 +1373,9 @@
               timestamp: Date.now(),
               camera: this.camera,
               canvas: this.canvas,
-              payload: {}
+              payload: {},
             };
-            
+
             // Override console.error to catch layer errors
             const originalError = console.error;
             let layerError = null;
@@ -1350,12 +1385,12 @@
               }
               originalError(message, error);
             };
-            
+
             layer.render(this.ctx, frame);
-            
+
             // Restore console.error
             console.error = originalError;
-            
+
             if (layerError) {
               this.logEvent(`Selection boxes test: ERROR - ${layerError.message}`, 'error');
             } else {
@@ -1373,9 +1408,9 @@
               timestamp: Date.now(),
               camera: this.camera,
               canvas: this.canvas,
-              payload: {}
+              payload: {},
             };
-            
+
             // Override console.error to catch layer errors
             const originalError = console.error;
             let layerError = null;
@@ -1385,12 +1420,12 @@
               }
               originalError(message, error);
             };
-            
+
             layer.render(this.ctx, frame);
-            
+
             // Restore console.error
             console.error = originalError;
-            
+
             if (layerError) {
               this.logEvent(`Alignment guides test: ERROR - ${layerError.message}`, 'error');
             } else {
@@ -1408,9 +1443,9 @@
               timestamp: Date.now(),
               camera: this.camera,
               canvas: this.canvas,
-              payload: {}
+              payload: {},
             };
-            
+
             // Override console.error to catch layer errors
             const originalError = console.error;
             let layerError = null;
@@ -1420,12 +1455,12 @@
               }
               originalError(message, error);
             };
-            
+
             layer.render(this.ctx, frame);
-            
+
             // Restore console.error
             console.error = originalError;
-            
+
             if (layerError) {
               this.logEvent(`UI overlays test: ERROR - ${layerError.message}`, 'error');
             } else {
@@ -1442,7 +1477,7 @@
             const command = createComponentCommand({
               type: 'power-core',
               x: 100,
-              y: 100
+              y: 100,
             });
             const result = await commandExecutor.execute(command);
             if (result.success) {
@@ -1458,7 +1493,10 @@
         testCommandHistory() {
           try {
             const history = commandExecutor.getHistory();
-            this.logEvent(`Command history test: ${history.past.length} past, ${history.future.length} future`, 'success');
+            this.logEvent(
+              `Command history test: ${history.past.length} past, ${history.future.length} future`,
+              'success'
+            );
           } catch (error) {
             this.logEvent(`Command history test: ERROR - ${error.message}`, 'error');
           }
@@ -1469,10 +1507,13 @@
             const canUndo = commandExecutor.canUndo();
             const canRedo = commandExecutor.canRedo();
             this.logEvent(`Undo/Redo test: Can undo: ${canUndo}, Can redo: ${canRedo}`, 'success');
-            
+
             if (canUndo) {
               const undoResult = await commandExecutor.undo();
-              this.logEvent(`Undo result: ${undoResult.success ? 'SUCCESS' : 'FAILED'}`, undoResult.success ? 'success' : 'error');
+              this.logEvent(
+                `Undo result: ${undoResult.success ? 'SUCCESS' : 'FAILED'}`,
+                undoResult.success ? 'success' : 'error'
+              );
             }
           } catch (error) {
             this.logEvent(`Undo/Redo test: ERROR - ${error.message}`, 'error');
@@ -1484,7 +1525,7 @@
             const command = createComponentCommand({
               type: 'module-ic',
               x: 200,
-              y: 200
+              y: 200,
             });
             const result = await commandExecutor.execute(command);
             if (result.success) {
@@ -1503,7 +1544,7 @@
               const component = this.components[0];
               const command = updateComponentCommand({
                 id: component.id,
-                updates: { status: 'in-progress' }
+                updates: { status: 'in-progress' },
               });
               const result = await commandExecutor.execute(command);
               if (result.success) {
@@ -1524,7 +1565,7 @@
             if (this.components.length > 0) {
               const component = this.components[0];
               const command = deleteComponentCommand({
-                id: component.id
+                id: component.id,
               });
               const result = await commandExecutor.execute(command);
               if (result.success) {
@@ -1547,7 +1588,7 @@
               const command = moveComponentCommand({
                 id: component.id,
                 x: component.x + 50,
-                y: component.y + 50
+                y: component.y + 50,
               });
               const result = await commandExecutor.execute(command);
               if (result.success) {
@@ -1567,9 +1608,9 @@
           try {
             const commands = [
               createComponentCommand({ type: 'task-resistor', x: 300, y: 300 }),
-              createComponentCommand({ type: 'module-ic', x: 400, y: 400 })
+              createComponentCommand({ type: 'module-ic', x: 400, y: 400 }),
             ];
-            
+
             for (const command of commands) {
               const result = await commandExecutor.execute(command);
               if (!result.success) {
@@ -1599,17 +1640,20 @@
           console.log('Connections:', this.connections.length, this.connections);
           console.log('Camera:', this.camera);
           console.log('New Renderer Enabled:', isNewRendererEnabled());
-          
+
           const plugins = componentSystem.list();
-          console.log('Registered Plugins:', plugins.map(p => ({ id: p.id, hasRender: !!p.render })));
-          
+          console.log(
+            'Registered Plugins:',
+            plugins.map(p => ({ id: p.id, hasRender: !!p.render }))
+          );
+
           const componentTypes = [...new Set(this.components.map(c => c.type))];
           console.log('Component Types in Scene:', componentTypes);
           componentTypes.forEach(type => {
             const plugin = componentSystem.get(type);
             console.log(`Plugin for ${type}:`, plugin ? 'FOUND' : 'NOT FOUND');
           });
-          
+
           console.log('=== END DEBUG STATUS ===');
         }
 
@@ -1630,7 +1674,7 @@
                 y: 100,
                 status: 'done',
                 title: 'Data Source',
-                description: 'Main data input source'
+                description: 'Main data input source',
               },
               {
                 id: 'module-ic-1',
@@ -1639,7 +1683,7 @@
                 y: 100,
                 status: 'in-progress',
                 title: 'Data Processor',
-                description: 'Processes incoming data'
+                description: 'Processes incoming data',
               },
               {
                 id: 'task-resistor-1',
@@ -1648,7 +1692,7 @@
                 y: 100,
                 status: 'todo',
                 title: 'Validation',
-                description: 'Validates processed data'
+                description: 'Validates processed data',
               },
               {
                 id: 'module-ic-2',
@@ -1657,7 +1701,7 @@
                 y: 250,
                 status: 'todo',
                 title: 'Transformer',
-                description: 'Transforms data format'
+                description: 'Transforms data format',
               },
               {
                 id: 'power-core-2',
@@ -1666,7 +1710,7 @@
                 y: 250,
                 status: 'done',
                 title: 'Cache Layer',
-                description: 'Caches processed data'
+                description: 'Caches processed data',
               },
               {
                 id: 'task-resistor-2',
@@ -1675,8 +1719,8 @@
                 y: 250,
                 status: 'todo',
                 title: 'Output Handler',
-                description: 'Handles final output'
-              }
+                description: 'Handles final output',
+              },
             ];
 
             // Create connections between components
@@ -1687,7 +1731,7 @@
                 to: 'module-ic-1',
                 fromPin: 'output',
                 toPin: 'input',
-                type: 'data'
+                type: 'data',
               },
               {
                 id: 'conn-2',
@@ -1695,7 +1739,7 @@
                 to: 'task-resistor-1',
                 fromPin: 'output',
                 toPin: 'input',
-                type: 'data'
+                type: 'data',
               },
               {
                 id: 'conn-3',
@@ -1703,7 +1747,7 @@
                 to: 'power-core-2',
                 fromPin: 'output',
                 toPin: 'input',
-                type: 'cache'
+                type: 'cache',
               },
               {
                 id: 'conn-4',
@@ -1711,7 +1755,7 @@
                 to: 'module-ic-2',
                 fromPin: 'output',
                 toPin: 'input',
-                type: 'data'
+                type: 'data',
               },
               {
                 id: 'conn-5',
@@ -1719,7 +1763,7 @@
                 to: 'task-resistor-2',
                 fromPin: 'output',
                 toPin: 'input',
-                type: 'data'
+                type: 'data',
               },
               {
                 id: 'conn-6',
@@ -1727,8 +1771,8 @@
                 to: 'task-resistor-2',
                 fromPin: 'output',
                 toPin: 'input',
-                type: 'validation'
-              }
+                type: 'validation',
+              },
             ];
 
             // Add components to the board
@@ -1742,7 +1786,7 @@
                   id: component.id,
                   type: component.type,
                   model: component,
-                  source: 'demo'
+                  source: 'demo',
                 });
               } catch (e) {
                 console.warn('Failed to emit component created event:', e);
@@ -1757,7 +1801,7 @@
                   from: connection.from,
                   to: connection.to,
                   model: connection,
-                  source: 'demo'
+                  source: 'demo',
                 });
               } catch (e) {
                 console.warn('Failed to emit connection created event:', e);
@@ -1774,15 +1818,15 @@
                   ...demoComponents.reduce((acc, comp) => {
                     acc[comp.id] = comp;
                     return acc;
-                  }, {})
+                  }, {}),
                 },
                 connections: {
                   ...currentState.connections,
                   ...demoConnections.reduce((acc, conn) => {
                     acc[conn.id] = conn;
                     return acc;
-                  }, {})
-                }
+                  }, {}),
+                },
               };
               stateManager.setSnapshot(newState);
             } catch (e) {
@@ -1790,11 +1834,17 @@
             }
 
             this.logEvent('Demo workflow created successfully', 'success');
-            this.logEvent(`Added ${demoComponents.length} components and ${demoConnections.length} connections`, 'success');
-            
+            this.logEvent(
+              `Added ${demoComponents.length} components and ${demoConnections.length} connections`,
+              'success'
+            );
+
             // Log component details
             demoComponents.forEach(comp => {
-              this.logEvent(`  - ${comp.title} (${comp.type}) at (${comp.x}, ${comp.y})`, 'success');
+              this.logEvent(
+                `  - ${comp.title} (${comp.type}) at (${comp.x}, ${comp.y})`,
+                'success'
+              );
             });
 
             // Enable the animate button
@@ -1802,7 +1852,6 @@
 
             // Debug the system status after creating workflow
             this.debugSystemStatus();
-
           } catch (error) {
             this.logEvent(`Failed to create demo workflow: ${error.message}`, 'error');
           }
@@ -1816,7 +1865,7 @@
             }
 
             this.logEvent('Starting workflow animation...', 'success');
-            
+
             // Define animation sequence
             const animationSequence = [
               { componentId: 'power-core-1', status: 'done', delay: 0 },
@@ -1828,7 +1877,7 @@
               { componentId: 'module-ic-1', status: 'done', delay: 3000 },
               { componentId: 'module-ic-2', status: 'done', delay: 3500 },
               { componentId: 'task-resistor-1', status: 'done', delay: 4000 },
-              { componentId: 'task-resistor-2', status: 'done', delay: 4500 }
+              { componentId: 'task-resistor-2', status: 'done', delay: 4500 },
             ];
 
             // Execute animation sequence
@@ -1837,14 +1886,14 @@
                 const component = this.components.find(c => c.id === step.componentId);
                 if (component) {
                   component.status = step.status;
-                  
+
                   // Emit component update event
                   try {
                     eventBus.emit(Events.ComponentUpdated, {
                       id: component.id,
                       type: component.type,
                       model: component,
-                      source: 'animation'
+                      source: 'animation',
                     });
                   } catch (e) {
                     console.warn('Failed to emit component update event:', e);
@@ -1859,7 +1908,6 @@
             setTimeout(() => {
               this.logEvent('Workflow animation completed!', 'success');
             }, 5000);
-
           } catch (error) {
             this.logEvent(`Failed to animate workflow: ${error.message}`, 'error');
           }
@@ -1896,10 +1944,10 @@
           const eventItem = document.createElement('div');
           eventItem.className = `event-item ${type}`;
           eventItem.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
-          
+
           this.eventLog.appendChild(eventItem);
           this.eventLog.scrollTop = this.eventLog.scrollHeight;
-          
+
           // Keep only last 50 events
           while (this.eventLog.children.length > 50) {
             this.eventLog.removeChild(this.eventLog.firstChild);
@@ -1913,22 +1961,25 @@
             const logText = Array.from(eventItems)
               .map(item => item.textContent)
               .join('\n');
-            
+
             // Copy to clipboard
-            navigator.clipboard.writeText(logText).then(() => {
-              this.showCopyFeedback();
-              this.logEvent('Event log copied to clipboard', 'success');
-            }).catch(err => {
-              // Fallback for older browsers
-              const textArea = document.createElement('textarea');
-              textArea.value = logText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand('copy');
-              document.body.removeChild(textArea);
-              this.showCopyFeedback();
-              this.logEvent('Event log copied to clipboard (fallback)', 'success');
-            });
+            navigator.clipboard
+              .writeText(logText)
+              .then(() => {
+                this.showCopyFeedback();
+                this.logEvent('Event log copied to clipboard', 'success');
+              })
+              .catch(err => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = logText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                this.showCopyFeedback();
+                this.logEvent('Event log copied to clipboard (fallback)', 'success');
+              });
           } catch (error) {
             this.logEvent(`Failed to copy event log: ${error.message}`, 'error');
           }
@@ -1957,20 +2008,24 @@
             if (this.eventUnsubscribers) {
               while (this.eventUnsubscribers.length) {
                 const off = this.eventUnsubscribers.pop();
-                try { off && off(); } catch {}
+                try {
+                  off && off();
+                } catch {}
               }
             }
             if (this.stateUnsubscribers) {
               while (this.stateUnsubscribers.length) {
                 const off = this.stateUnsubscribers.pop();
-                try { off && off(); } catch {}
+                try {
+                  off && off();
+                } catch {}
               }
             }
           } catch {}
-          
+
           // Disable animate button
           document.getElementById('animate-workflow-btn').disabled = true;
-          
+
           // Clear event log
           this.clearEventLog();
           this.logEvent('Test environment reset', 'success');
@@ -1979,7 +2034,7 @@
 
       // Initialize the test application
       const app = new RefactoredFeaturesTest();
-      
+
       // Make app globally available for debugging
       window.testApp = app;
     </script>

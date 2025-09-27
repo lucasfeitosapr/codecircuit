@@ -40,7 +40,7 @@ export interface Particle {
 export default class RuntimeLayer {
   static name = 'runtime';
   name = RuntimeLayer.name;
-  
+
   private animations: Map<string, Animation> = new Map();
   private particles: Map<string, Particle> = new Map();
   private animationIdCounter = 0;
@@ -49,11 +49,11 @@ export default class RuntimeLayer {
   render(ctx: CanvasRenderingContext2D, frame: RenderFrame) {
     try {
       const timestamp = frame.timestamp;
-      
+
       // Update and render animations
       this.updateAnimations(timestamp);
       this.renderAnimations(ctx, frame);
-      
+
       // Update and render particles
       this.updateParticles(timestamp);
       this.renderParticles(ctx, frame);
@@ -71,7 +71,7 @@ export default class RuntimeLayer {
       id,
       startTime: performance.now(),
     };
-    
+
     this.animations.set(id, fullAnimation);
     return id;
   }
@@ -91,7 +91,7 @@ export default class RuntimeLayer {
       ...particle,
       id,
     };
-    
+
     this.particles.set(id, fullParticle);
     return id;
   }
@@ -125,19 +125,25 @@ export default class RuntimeLayer {
     });
   }
 
-  energyFlow(fromX: number, fromY: number, toX: number, toY: number, color: string = '#00ff88'): string {
+  energyFlow(
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    color: string = '#00ff88'
+  ): string {
     // Create particle flow animation
     const particleCount = 8;
     const flowDuration = 1500;
-    
+
     for (let i = 0; i < particleCount; i++) {
       const delay = (i / particleCount) * flowDuration;
       setTimeout(() => {
         this.addParticle({
           x: fromX,
           y: fromY,
-          vx: (toX - fromX) / flowDuration * 1000,
-          vy: (toY - fromY) / flowDuration * 1000,
+          vx: ((toX - fromX) / flowDuration) * 1000,
+          vy: ((toY - fromY) / flowDuration) * 1000,
           life: flowDuration,
           maxLife: flowDuration,
           size: 3,
@@ -147,7 +153,7 @@ export default class RuntimeLayer {
         });
       }, delay);
     }
-    
+
     return `energy_flow_${Date.now()}`;
   }
 
@@ -155,11 +161,11 @@ export default class RuntimeLayer {
     // Create multiple spark particles
     const sparkCount = 6;
     const sparkId = `spark_${Date.now()}`;
-    
+
     for (let i = 0; i < sparkCount; i++) {
       const angle = (i / sparkCount) * Math.PI * 2;
       const speed = 50 + Math.random() * 100;
-      
+
       this.addParticle({
         x,
         y,
@@ -173,53 +179,53 @@ export default class RuntimeLayer {
         type: 'spark',
       });
     }
-    
+
     return sparkId;
   }
 
   // Animation Updates
   private updateAnimations(timestamp: number): void {
     const toRemove: string[] = [];
-    
+
     for (const [id, animation] of this.animations) {
       const elapsed = timestamp - animation.startTime;
       const progress = Math.min(elapsed / animation.duration, 1);
-      
+
       if (progress >= 1) {
         toRemove.push(id);
       }
     }
-    
+
     // Remove completed animations
     toRemove.forEach(id => this.animations.delete(id));
   }
 
   private updateParticles(timestamp: number): void {
     const toRemove: string[] = [];
-    
+
     for (const [id, particle] of this.particles) {
       // Update particle position
       particle.x += particle.vx * (16.67 / 1000); // Assume 60fps
       particle.y += particle.vy * (16.67 / 1000);
-      
+
       // Update particle life
       particle.life -= 16.67; // Assume 60fps
-      
+
       // Apply gravity and drag for certain particle types
       if (particle.type === 'spark') {
         particle.vy += 0.2; // gravity
         particle.vx *= 0.98; // drag
         particle.vy *= 0.98;
       }
-      
+
       // Fade out particles
       particle.alpha = particle.life / particle.maxLife;
-      
+
       if (particle.life <= 0) {
         toRemove.push(id);
       }
     }
-    
+
     // Remove dead particles
     toRemove.forEach(id => this.particles.delete(id));
   }
@@ -227,12 +233,12 @@ export default class RuntimeLayer {
   // Rendering
   private renderAnimations(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
     const timestamp = frame.timestamp;
-    
+
     for (const animation of this.animations.values()) {
       const elapsed = timestamp - animation.startTime;
       const progress = Math.min(elapsed / animation.duration, 1);
       const easedProgress = this.applyEasing(progress, animation.easing || 'linear');
-      
+
       switch (animation.type) {
         case 'pulse':
           this.renderPulseAnimation(ctx, animation, easedProgress, frame);
@@ -259,83 +265,114 @@ export default class RuntimeLayer {
     }
   }
 
-  private renderPulseAnimation(ctx: CanvasRenderingContext2D, animation: Animation, progress: number, frame: RenderFrame): void {
+  private renderPulseAnimation(
+    ctx: CanvasRenderingContext2D,
+    animation: Animation,
+    progress: number,
+    frame: RenderFrame
+  ): void {
     if (!animation.target.componentId) return;
-    
+
     // Find component in frame payload
-    const component = frame.payload?.models?.find((m: any) => m.id === animation.target.componentId);
+    const component = frame.payload?.models?.find(
+      (m: any) => m.id === animation.target.componentId
+    );
     if (!component) return;
-    
+
     const centerX = (component.x + component.width / 2) * frame.camera.zoom + frame.camera.x;
     const centerY = (component.y + component.height / 2) * frame.camera.zoom + frame.camera.y;
-    
+
     // Create pulsing effect
-    const pulseSize = 20 + (Math.sin(progress * Math.PI * 4) * 10);
+    const pulseSize = 20 + Math.sin(progress * Math.PI * 4) * 10;
     const alpha = (1 - progress) * animation.config.intensity!;
-    
+
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = animation.config.color!;
     ctx.lineWidth = 3;
     ctx.shadowColor = animation.config.color!;
     ctx.shadowBlur = 10;
-    
+
     ctx.beginPath();
     ctx.arc(centerX, centerY, pulseSize, 0, Math.PI * 2);
     ctx.stroke();
-    
+
     ctx.restore();
   }
 
-  private renderGlowAnimation(ctx: CanvasRenderingContext2D, animation: Animation, progress: number, frame: RenderFrame): void {
+  private renderGlowAnimation(
+    ctx: CanvasRenderingContext2D,
+    animation: Animation,
+    progress: number,
+    frame: RenderFrame
+  ): void {
     const x = animation.target.x * frame.camera.zoom + frame.camera.x;
     const y = animation.target.y * frame.camera.zoom + frame.camera.y;
-    
+
     const glowSize = animation.config.size! * (1 + progress * 2);
     const alpha = (1 - progress) * animation.config.intensity!;
-    
+
     ctx.save();
     ctx.globalAlpha = alpha;
-    
+
     // Create radial gradient for glow effect
     const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowSize);
     gradient.addColorStop(0, animation.config.color! + 'ff');
     gradient.addColorStop(0.5, animation.config.color! + '80');
     gradient.addColorStop(1, animation.config.color! + '00');
-    
+
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.arc(x, y, glowSize, 0, Math.PI * 2);
     ctx.fill();
-    
+
     ctx.restore();
   }
 
-  private renderFadeAnimation(ctx: CanvasRenderingContext2D, animation: Animation, progress: number, frame: RenderFrame): void {
+  private renderFadeAnimation(
+    ctx: CanvasRenderingContext2D,
+    animation: Animation,
+    progress: number,
+    frame: RenderFrame
+  ): void {
     // Implementation for fade effects
     const alpha = animation.config.opacity! * (1 - progress);
     // Add fade rendering logic here
   }
 
-  private renderScaleAnimation(ctx: CanvasRenderingContext2D, animation: Animation, progress: number, frame: RenderFrame): void {
+  private renderScaleAnimation(
+    ctx: CanvasRenderingContext2D,
+    animation: Animation,
+    progress: number,
+    frame: RenderFrame
+  ): void {
     // Implementation for scale effects
     const scale = 1 + (animation.config.scale! - 1) * progress;
     // Add scale rendering logic here
   }
 
-  private renderRotateAnimation(ctx: CanvasRenderingContext2D, animation: Animation, progress: number, frame: RenderFrame): void {
+  private renderRotateAnimation(
+    ctx: CanvasRenderingContext2D,
+    animation: Animation,
+    progress: number,
+    frame: RenderFrame
+  ): void {
     // Implementation for rotation effects
     const rotation = animation.config.rotation! * progress;
     // Add rotation rendering logic here
   }
 
-  private renderParticle(ctx: CanvasRenderingContext2D, particle: Particle, frame: RenderFrame): void {
+  private renderParticle(
+    ctx: CanvasRenderingContext2D,
+    particle: Particle,
+    frame: RenderFrame
+  ): void {
     const x = particle.x * frame.camera.zoom + frame.camera.x;
     const y = particle.y * frame.camera.zoom + frame.camera.y;
-    
+
     ctx.save();
     ctx.globalAlpha = particle.alpha;
-    
+
     switch (particle.type) {
       case 'energy':
         this.renderEnergyParticle(ctx, x, y, particle);
@@ -350,28 +387,38 @@ export default class RuntimeLayer {
         this.renderDataParticle(ctx, x, y, particle);
         break;
     }
-    
+
     ctx.restore();
   }
 
-  private renderEnergyParticle(ctx: CanvasRenderingContext2D, x: number, y: number, particle: Particle): void {
+  private renderEnergyParticle(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    particle: Particle
+  ): void {
     // Energy particles with glow effect
     ctx.fillStyle = particle.color;
     ctx.shadowColor = particle.color;
     ctx.shadowBlur = 8;
-    
+
     ctx.beginPath();
     ctx.arc(x, y, particle.size, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  private renderSparkParticle(ctx: CanvasRenderingContext2D, x: number, y: number, particle: Particle): void {
+  private renderSparkParticle(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    particle: Particle
+  ): void {
     // Sharp spark particles
     ctx.strokeStyle = particle.color;
     ctx.lineWidth = 1;
     ctx.shadowColor = particle.color;
     ctx.shadowBlur = 4;
-    
+
     ctx.beginPath();
     ctx.moveTo(x - particle.size, y - particle.size);
     ctx.lineTo(x + particle.size, y + particle.size);
@@ -380,25 +427,35 @@ export default class RuntimeLayer {
     ctx.stroke();
   }
 
-  private renderGlowParticle(ctx: CanvasRenderingContext2D, x: number, y: number, particle: Particle): void {
+  private renderGlowParticle(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    particle: Particle
+  ): void {
     // Soft glow particles
     const gradient = ctx.createRadialGradient(x, y, 0, x, y, particle.size * 2);
     gradient.addColorStop(0, particle.color + 'ff');
     gradient.addColorStop(1, particle.color + '00');
-    
+
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.arc(x, y, particle.size * 2, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  private renderDataParticle(ctx: CanvasRenderingContext2D, x: number, y: number, particle: Particle): void {
+  private renderDataParticle(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    particle: Particle
+  ): void {
     // Data particles as small squares
     ctx.fillStyle = particle.color;
     ctx.shadowColor = particle.color;
     ctx.shadowBlur = 2;
-    
-    ctx.fillRect(x - particle.size/2, y - particle.size/2, particle.size, particle.size);
+
+    ctx.fillRect(x - particle.size / 2, y - particle.size / 2, particle.size, particle.size);
   }
 
   // Easing Functions

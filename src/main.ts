@@ -8,10 +8,17 @@ import { eventBus } from './events/EventBus';
 import { Events } from './events/eventTypes';
 
 // Core managers
-import { createViewportManager, getViewportManager, type ViewportManager } from './core/ViewportManager';
+import {
+  createViewportManager,
+  getViewportManager,
+  type ViewportManager,
+} from './core/ViewportManager';
 import { ExportImportManager } from './core/ExportImportManager';
 import { ConnectionManager, createConnectionManager } from './core/ConnectionManager';
-import { ComponentLifecycleManager, createComponentLifecycleManager } from './core/ComponentLifecycleManager';
+import {
+  ComponentLifecycleManager,
+  createComponentLifecycleManager,
+} from './core/ComponentLifecycleManager';
 import { InputEventCoordinator, createInputEventCoordinator } from './core/InputEventCoordinator';
 import { ComponentRegistry, createComponentRegistry } from './components/ComponentRegistry';
 import { UIController, createUIController } from './ui/UIController';
@@ -19,16 +26,21 @@ import { ViewNavigationManager } from './ui/ViewNavigationManager';
 
 // New extracted managers
 import { AppStateManager, createAppStateManager } from './core/AppStateManager';
-import { KeyboardShortcutManager, createKeyboardShortcutManager } from './core/KeyboardShortcutManager';
+import {
+  KeyboardShortcutManager,
+  createKeyboardShortcutManager,
+} from './core/KeyboardShortcutManager';
 import { NotificationManager, createNotificationManager } from './core/NotificationManager';
 import { SchematicViewManager, createSchematicViewManager } from './core/SchematicViewManager';
-import { ApplicationInitializer, createApplicationInitializer } from './core/ApplicationInitializer';
+import {
+  ApplicationInitializer,
+  createApplicationInitializer,
+} from './core/ApplicationInitializer';
 
 // Legacy imports (to be gradually reduced)
-import { setupInputListeners } from './inputHandler';
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
-import { layeredRenderer } from './rendering/LayeredRenderer';
+// import { layeredRenderer } from './rendering/LayeredRenderer'; // Unused import
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
 
@@ -44,7 +56,7 @@ import type {
 
 /**
  * MotherboardApp - Main application class (significantly refactored)
- * 
+ *
  * This class now primarily serves as a coordinator between specialized managers
  * rather than containing business logic directly. Most functionality has been
  * extracted to dedicated modules following the architectural principles.
@@ -74,6 +86,9 @@ export class MotherboardApp {
   // Configuration data
   private componentTypes!: Record<string, Partial<ComponentBase>>;
   private categories!: Record<string, { name: string; color: string }>;
+
+  // Mouse position tracking for connection drawing
+  public mousePos: { x: number; y: number } = { x: 0, y: 0 };
 
   // Convenience getters that delegate to managers
   get canvas(): HTMLCanvasElement {
@@ -116,28 +131,46 @@ export class MotherboardApp {
   }
 
   private initializeManagers() {
-    // Initialize core managers
-    this.appStateManager = createAppStateManager();
-    this.notificationManager = createNotificationManager();
-
-    // Initialize ViewportManager
     try {
-      this.viewportManager = createViewportManager('circuit-board', eventBus);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('ViewportManager instance already exists')) {
-        this.viewportManager = getViewportManager();
-      } else {
-        throw error;
-      }
-    }
+      console.log('🚀 Starting application initialization...');
 
-    // Initialize existing managers
-    this.exportImportManager = new ExportImportManager();
-    this.componentRegistry = createComponentRegistry(eventBus);
-    
-    // These will be initialized after configuration is set up
-    this.runtimeLayer = new RuntimeLayer();
-    this.uiLayer = new UILayer();
+      // Initialize core managers first (order matters)
+      this.appStateManager = createAppStateManager();
+      this.notificationManager = createNotificationManager();
+
+      // Initialize ViewportManager with proper error handling
+      try {
+        this.viewportManager = createViewportManager('circuit-board', eventBus);
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.includes('ViewportManager instance already exists')
+        ) {
+          this.viewportManager = getViewportManager();
+        } else {
+          throw new Error(
+            `Failed to initialize ViewportManager: ${
+              error instanceof Error ? error.message : 'Unknown error'
+            }`
+          );
+        }
+      }
+
+      // Initialize managers that don't have dependencies
+      this.exportImportManager = new ExportImportManager();
+      this.componentRegistry = createComponentRegistry(eventBus);
+
+      // Initialize rendering layers (these will be configured later)
+      this.runtimeLayer = new RuntimeLayer();
+      this.uiLayer = new UILayer();
+
+      console.log('✅ Core managers initialized');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown initialization error';
+      console.error('❌ Failed to initialize managers:', errorMessage);
+      this.notificationManager?.error(`Initialization failed: ${errorMessage}`);
+      throw error;
+    }
   }
 
   private setupConfiguration() {
@@ -157,159 +190,261 @@ export class MotherboardApp {
   }
 
   private initializeApplication() {
-    // Initialize dependent managers that need configuration
-    this.connectionManager = createConnectionManager(eventBus, this.categories);
-    
-    this.componentLifecycleManager = createComponentLifecycleManager(
-      eventBus,
-      this.runtimeLayer,
-      this.componentTypes,
-      this.categories
-    );
+    try {
+      console.log('⚙️ Initializing application components...');
 
-    // Initialize keyboard shortcut manager
-    this.keyboardShortcutManager = createKeyboardShortcutManager({
-      getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
-      setSelectedComponent: (component) => this.appStateManager.setSelectedComponent(component),
-      getCurrentView: () => this.appStateManager.getCurrentView(),
-      isTransitioning: () => this.appStateManager.isInTransition(),
-      getViewStackSize: () => new ViewStack().size(), // TODO: Get from schematicViewManager
-      getMainComponents: () => this.appStateManager.getComponents(),
-      toggleComponentStatus: (component) => this.componentLifecycleManager.toggleComponentStatus(component),
-      showTemporaryMessage: (message, duration) => this.notificationManager.showTemporaryMessage(message, duration),
-      exitSchematicView: () => this.schematicViewManager.exitSchematicView(),
-      enterSchematicView: (component) => this.schematicViewManager.enterSchematicView(component as ModuleComponent),
-      cancelConnection: () => this.connectionManager.cancelConnection(),
-      isConnecting: () => this.connectionManager.getConnectionState().isConnecting,
-    });
+      // Initialize dependent managers that need configuration
+      this.connectionManager = createConnectionManager(eventBus, this.categories);
 
-    // Initialize schematic view manager
-    this.schematicViewManager = createSchematicViewManager({
-      getCurrentView: () => this.appStateManager.getCurrentView(),
-      setCurrentView: (view) => this.appStateManager.setCurrentView(view),
-      getViewStack: () => new ViewStack(), // TODO: Make this a shared instance
-      getViewportManager: () => this.viewportManager,
-      getViewNavigationManager: () => this.viewNavigationManager,
-      getUIController: () => this.uiController,
-      isTransitioning: () => this.appStateManager.isInTransition(),
-      setTransitioning: (transitioning) => this.appStateManager.setTransitioning(transitioning),
-      getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
-      setSelectedComponent: (component) => this.appStateManager.setSelectedComponent(component),
-      hideDatasheet: () => hideDatasheetUI(),
-      getComponents: () => this.appStateManager.getComponents(),
-      getConnections: () => this.appStateManager.getConnections(),
-      setComponents: (components) => this.appStateManager.setComponents(components),
-      setConnections: (connections) => this.appStateManager.setConnections(connections),
-    });
+      this.componentLifecycleManager = createComponentLifecycleManager(
+        eventBus,
+        this.runtimeLayer,
+        this.componentTypes,
+        this.categories
+      );
 
-    // Initialize InputEventCoordinator
-    this.inputEventCoordinator = createInputEventCoordinator({
-      canvas: this.viewportManager.canvas,
-      viewportManager: this.viewportManager,
-      getComponentAt: this.getComponentAt.bind(this),
-      getPinAt: this.getPinAt.bind(this),
-      getCurrentViewComponents: this.getCurrentViewComponents.bind(this),
-      getCurrentViewConnections: this.getCurrentViewConnections.bind(this),
-      addComponent: this.addComponent.bind(this),
-      toggleComponentStatus: this.toggleComponentStatus.bind(this),
-      showDatasheet: this.showDatasheet.bind(this),
-      hideDatasheet: this.hideDatasheet.bind(this),
-      showTemporaryMessage: (message, duration) => this.notificationManager.showTemporaryMessage(message, duration),
-      currentView: this.appStateManager.getCurrentView(),
-      enterSchematicView: (component) => this.schematicViewManager.enterSchematicView(component),
-      exitSchematicView: () => this.schematicViewManager.exitSchematicView(),
-      viewStack: new ViewStack(), // TODO: Make this shared
-      isTransitioning: this.appStateManager.isInTransition(),
-      selectedComponent: this.appStateManager.getSelectedComponent(),
-      setSelectedComponent: (component) => this.appStateManager.setSelectedComponent(component),
-      connectionManager: this.connectionManager,
-      updateConnectionModeUI: this.updateConnectionModeUI.bind(this),
-      componentLifecycleManager: this.componentLifecycleManager,
-      uiLayer: this.uiLayer,
-      runtimeLayer: this.runtimeLayer,
-      components: this.appStateManager.getComponents(),
-      connections: this.appStateManager.getConnections()
-    });
+      // Initialize keyboard shortcut manager
+      this.keyboardShortcutManager = createKeyboardShortcutManager({
+        getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
+        setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
+        getCurrentView: () => this.appStateManager.getCurrentView(),
+        isTransitioning: () => this.appStateManager.isInTransition(),
+        getViewStackSize: () => ViewStack.getInstance().size(),
+        getMainComponents: () => this.appStateManager.getComponents(),
+        toggleComponentStatus: component =>
+          this.componentLifecycleManager.toggleComponentStatus(component),
+        showTemporaryMessage: (message, duration) =>
+          this.notificationManager.showTemporaryMessage(message, duration),
+        exitSchematicView: () => this.schematicViewManager.exitSchematicView(),
+        enterSchematicView: component =>
+          this.schematicViewManager.enterSchematicView(component as ModuleComponent),
+        cancelConnection: () => this.connectionManager.cancelConnection(),
+        isConnecting: () => this.connectionManager.getConnectionState().isConnecting,
+      });
 
-    // Initialize ViewNavigationManager
-    this.viewNavigationManager = new ViewNavigationManager({
-      viewportManager: this.viewportManager,
-      components: this.appStateManager.getComponents(),
-      getCurrentView: () => this.schematicViewManager.getCurrentViewType(),
-      getViewStack: () => {
-        // TODO: This should come from schematicViewManager
-        return [];
-      },
-      setCurrentView: (view: string) => {
-        const currentView = this.appStateManager.getCurrentView();
-        currentView.type = view as ViewState['type'];
-        this.appStateManager.setCurrentView(currentView);
-      },
-      pushView: (view: string) => {
-        // TODO: Delegate to schematicViewManager
-      },
-      popView: () => {
-        // TODO: Delegate to schematicViewManager
-      },
-      requestAnimationFrame: (callback: FrameRequestCallback) => requestAnimationFrame(callback),
-      getComponent: (id: string) => this.appStateManager.getComponents().find(c => c.id === id)
-    });
+      // Initialize schematic view manager
+      this.schematicViewManager = createSchematicViewManager({
+        getCurrentView: () => this.appStateManager.getCurrentView(),
+        setCurrentView: view => this.appStateManager.setCurrentView(view),
+        getViewStack: () => ViewStack.getInstance(),
+        getViewportManager: () => this.viewportManager,
+        getViewNavigationManager: () => this.viewNavigationManager,
+        getUIController: () => this.uiController,
+        isTransitioning: () => this.appStateManager.isInTransition(),
+        setTransitioning: transitioning => this.appStateManager.setTransitioning(transitioning),
+        getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
+        setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
+        hideDatasheet: () => hideDatasheetUI(),
+        getComponents: () => this.appStateManager.getComponents(),
+        getConnections: () => this.appStateManager.getConnections(),
+        setComponents: components => this.appStateManager.setComponents(components),
+        setConnections: connections => this.appStateManager.setConnections(connections),
+      });
 
-    // Initialize UIController
-    this.uiController = createUIController({
-      getCurrentView: () => this.appStateManager.getCurrentView(),
-      getViewStack: () => new ViewStack(), // TODO: Make this shared
-      getComponents: () => this.appStateManager.getComponents(),
-      getConnections: () => this.appStateManager.getConnections(),
-      getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
-      setComponents: (components) => this.appStateManager.setComponents(components),
-      setConnections: (connections) => this.appStateManager.setConnections(connections),
-      setSelectedComponent: (component) => this.appStateManager.setSelectedComponent(component),
-      exitSchematicView: () => this.schematicViewManager.exitSchematicView(),
-      hideDatasheet: () => this.hideDatasheet(),
-      navigateToBreadcrumbLevel: (level) => this.schematicViewManager.navigateToBreadcrumbLevel(level),
-      handleKeyboardShortcut: () => {}, // Now handled by KeyboardShortcutManager
-    });
+      // Initialize InputEventCoordinator
+      this.inputEventCoordinator = createInputEventCoordinator({
+        canvas: this.viewportManager.canvas,
+        viewportManager: this.viewportManager,
+        getComponentAt: this.getComponentAt.bind(this),
+        getPinAt: this.getPinAt.bind(this),
+        getCurrentViewComponents: this.getCurrentViewComponents.bind(this),
+        getCurrentViewConnections: this.getCurrentViewConnections.bind(this),
+        addComponent: this.addComponent.bind(this),
+        toggleComponentStatus: this.toggleComponentStatus.bind(this),
+        showDatasheet: this.showDatasheet.bind(this),
+        hideDatasheet: this.hideDatasheet.bind(this),
+        showTemporaryMessage: (message, duration) =>
+          this.notificationManager.showTemporaryMessage(message, duration),
+        currentView: this.appStateManager.getCurrentView(),
+        enterSchematicView: component => this.schematicViewManager.enterSchematicView(component),
+        exitSchematicView: () => this.schematicViewManager.exitSchematicView(),
+        viewStack: ViewStack.getInstance(),
+        isTransitioning: this.appStateManager.isInTransition(),
+        selectedComponent: this.appStateManager.getSelectedComponent(),
+        setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
+        connectionManager: this.connectionManager,
+        updateConnectionModeUI: this.updateConnectionModeUI.bind(this),
+        componentLifecycleManager: this.componentLifecycleManager,
+        uiLayer: this.uiLayer,
+        runtimeLayer: this.runtimeLayer,
+        components: this.appStateManager.getComponents(),
+        connections: this.appStateManager.getConnections(),
+      });
 
-    // Initialize ApplicationInitializer
-    this.applicationInitializer = createApplicationInitializer({
-      getComponents: () => this.appStateManager.getComponents(),
-      getConnections: () => this.appStateManager.getConnections(),
-      getCurrentView: () => this.appStateManager.getCurrentView(),
-      getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
-      getCamera: () => this.viewportManager.camera,
-      addComponent: this.addComponent.bind(this),
-      createConnection: this.createConnection.bind(this),
-      componentRegistry: this.componentRegistry,
-      componentTypes: this.componentTypes,
-      categories: this.categories,
-    });
+      // Initialize ViewNavigationManager
+      this.viewNavigationManager = new ViewNavigationManager({
+        viewportManager: this.viewportManager,
+        components: this.appStateManager.getComponents(),
+        getCurrentView: () => this.schematicViewManager.getCurrentViewType(),
+        getViewStack: () => {
+          // TODO: This should come from schematicViewManager
+          return [];
+        },
+        setCurrentView: (viewType: string) => {
+          const currentView = this.appStateManager.getCurrentView();
+          currentView.type = viewType as ViewState['type'];
+          this.appStateManager.setCurrentView(currentView);
+        },
+        pushView: (view: string) => {
+          // TODO: Delegate to schematicViewManager
+        },
+        popView: () => {
+          // TODO: Delegate to schematicViewManager
+        },
+        requestAnimationFrame: (callback: (time: number) => void) =>
+          requestAnimationFrame(callback),
+        getComponent: (id: string) => {
+          // Enhanced component lookup that searches across all possible component locations
+          // to fix the deep nesting animation bug
 
-    // Start the application
-    this.start();
+          // 1. First try global components (main view navigation)
+          const globalComponent = this.appStateManager.getComponents().find(c => c.id === id);
+          if (globalComponent) {
+            return globalComponent;
+          }
+
+          // 2. Try current view components (schematic view navigation)
+          const currentView = this.appStateManager.getCurrentView();
+          if (currentView.type === 'schematic' && currentView.components) {
+            const currentViewComponent = currentView.components.find(c => c.id === id);
+            if (currentViewComponent) {
+              return currentViewComponent;
+            }
+          }
+
+          // 3. Try internal components of current view's component (nested navigation)
+          if (currentView.type === 'schematic' && currentView.component?.type === 'module-ic') {
+            const moduleComponent = currentView.component as any; // ModuleComponent
+            if (moduleComponent.internalComponents) {
+              const internalComponent = moduleComponent.internalComponents.find((c: any) => c.id === id);
+              if (internalComponent) {
+                return internalComponent;
+              }
+            }
+          }
+
+          // 4. Try components in ViewStack (back navigation scenarios)
+          const viewStack = ViewStack.getInstance();
+          const stackViews = viewStack.serialize();
+          for (const stackView of stackViews) {
+            if (stackView.components) {
+              const stackComponent = stackView.components.find((c: any) => c.id === id);
+              if (stackComponent) {
+                return stackComponent;
+              }
+            }
+          }
+
+          // 5. Deep search in all Module IC internal components (thorough fallback)
+          const searchInModuleICs = (components: ComponentBase[]): ComponentBase | undefined => {
+            for (const component of components) {
+              if (component.type === 'module-ic') {
+                const moduleIC = component as any; // ModuleComponent
+                if (moduleIC.internalComponents) {
+                  const found = moduleIC.internalComponents.find((c: any) => c.id === id);
+                  if (found) {
+                    return found;
+                  }
+                  // Recursive search in nested Module ICs
+                  const deepFound = searchInModuleICs(moduleIC.internalComponents);
+                  if (deepFound) {
+                    return deepFound;
+                  }
+                }
+              }
+            }
+            return undefined;
+          };
+
+          // Search in global components' internal structure
+          const deepGlobalSearch = searchInModuleICs(this.appStateManager.getComponents());
+          if (deepGlobalSearch) {
+            return deepGlobalSearch;
+          }
+
+          // Search in current view components' internal structure
+          if (currentView.components) {
+            const deepCurrentViewSearch = searchInModuleICs(currentView.components);
+            if (deepCurrentViewSearch) {
+              return deepCurrentViewSearch;
+            }
+          }
+
+          console.warn(`Component ${id} not found in any component location (global, current view, ViewStack, or nested)`);
+          return undefined;
+        },
+      });
+
+      // Initialize UIController
+      this.uiController = createUIController({
+        getCurrentView: () => this.appStateManager.getCurrentView(),
+        getViewStack: () => ViewStack.getInstance(),
+        getComponents: () => this.appStateManager.getComponents(),
+        getConnections: () => this.appStateManager.getConnections(),
+        getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
+        getCanvas: () => this.canvas,
+        getCamera: () => this.viewportManager.camera,
+        setComponents: components => this.appStateManager.setComponents(components),
+        setConnections: connections => this.appStateManager.setConnections(connections),
+        setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
+        exitSchematicView: () => this.schematicViewManager.exitSchematicView(),
+        hideDatasheet: () => this.hideDatasheet(),
+        navigateToBreadcrumbLevel: level =>
+          this.schematicViewManager.navigateToBreadcrumbLevel(level),
+        handleKeyboardShortcut: () => {}, // Now handled by KeyboardShortcutManager
+        addComponent: this.addComponent.bind(this),
+        onMouseDown: this.onMouseDown.bind(this),
+        onMouseMove: this.onMouseMove.bind(this),
+        onMouseUp: this.onMouseUp.bind(this),
+        onWheel: this.onWheel.bind(this),
+        setMousePos: this.setMousePos.bind(this),
+      });
+
+      // Initialize ApplicationInitializer
+      this.applicationInitializer = createApplicationInitializer({
+        getComponents: () => this.appStateManager.getComponents(),
+        getConnections: () => this.appStateManager.getConnections(),
+        getCurrentView: () => this.appStateManager.getCurrentView(),
+        getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
+        getCamera: () => this.viewportManager.camera,
+        addComponent: this.addComponent.bind(this),
+        createConnection: this.createConnection.bind(this),
+        componentRegistry: this.componentRegistry,
+        componentTypes: this.componentTypes,
+        categories: this.categories,
+      });
+
+      // Start the application
+      this.start();
+
+      console.log('✅ Application components initialized successfully');
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown application initialization error';
+      console.error('❌ Failed to initialize application:', errorMessage);
+      this.notificationManager?.error(`Application initialization failed: ${errorMessage}`);
+      throw error;
+    }
   }
 
   private start() {
     // Initialize ViewportManager
     this.viewportManager.initialize();
-    
-    // Setup input listeners
-    setupInputListeners(this);
-    
+
     // Setup UI
     this.uiController.setupKeyboardShortcuts();
     this.uiController.setupImportHandler();
     this.uiController.setupUI();
-    
+
     // Initialize main view
     this.initializeMainView();
-    
+
     // Run application initialization
     this.applicationInitializer.initialize();
-    
+
     // Setup event handlers
     this.setupEventHandlers();
-    
+
     // Start animation loop
     this.animate();
 
@@ -329,27 +464,40 @@ export class MotherboardApp {
       components: [...this.appStateManager.getComponents()],
       connections: [...this.appStateManager.getConnections()],
     };
-    
+
     this.appStateManager.setCurrentView(mainView);
     this.uiController.updateBreadcrumbs();
   }
 
   // Delegated methods - these now primarily delegate to appropriate managers
-  
+
   addComponent(type: string, x: number, y: number): ComponentBase | null {
-    const component = this.componentLifecycleManager.createComponent(type, x, y, this.appStateManager.getCurrentView());
-    
+    const component = this.componentLifecycleManager.createComponent(
+      type,
+      x,
+      y,
+      this.appStateManager.getCurrentView()
+    );
+
     if (component) {
-      this.appStateManager.addComponent(component);
+      this.appStateManager.addComponentToCurrentView(component);
       this.appStateManager.setSelectedComponent(component);
       this.showDatasheet(component);
     }
-    
+
     return component;
   }
 
   getComponentAt(x: number, y: number): ComponentBase | null {
-    return this.componentLifecycleManager.getComponentAt(x, y, this.appStateManager.getCurrentView());
+    return this.componentLifecycleManager.getComponentAt(
+      x,
+      y,
+      this.appStateManager.getCurrentView()
+    );
+  }
+
+  setMousePos(pos: { x: number; y: number }): void {
+    this.mousePos = pos;
   }
 
   getPinAt(x: number, y: number): PinHit | null {
@@ -357,7 +505,14 @@ export class MotherboardApp {
   }
 
   getCurrentViewComponents(): ComponentBase[] {
-    return this.appStateManager.getCurrentView().components;
+    const currentView = this.appStateManager.getCurrentView();
+    if (currentView.type === 'main') {
+      // Main view: return global components
+      return this.appStateManager.getComponents();
+    } else {
+      // Schematic view: return view-specific components (module internal)
+      return currentView.components;
+    }
   }
 
   getCurrentViewConnections(): Connection[] {
@@ -372,16 +527,16 @@ export class MotherboardApp {
   createConnection(startPin: PinHit, endPin: PinHit): Connection | null {
     const connection = this.connectionManager.createConnection(startPin, endPin);
     if (connection) {
-      this.appStateManager.addConnection(connection);
-      
+      this.appStateManager.addConnectionToCurrentView(connection);
+
       // Emit the legacy ConnectionCreated event for backward compatibility
-      eventBus.emit(Events.ConnectionCreated, { 
-        id: connection.id, 
-        from: connection.from, 
-        to: connection.to, 
-        type: connection.category, 
-        metadata: {}, 
-        source: 'legacy' 
+      eventBus.emit(Events.ConnectionCreated, {
+        id: connection.id,
+        from: connection.from,
+        to: connection.to,
+        type: connection.category,
+        metadata: {},
+        source: 'legacy',
       });
     }
     return connection;
@@ -389,7 +544,7 @@ export class MotherboardApp {
 
   toggleComponentStatus(component: ComponentBase): void {
     this.componentLifecycleManager.toggleComponentStatus(component);
-    
+
     // Update datasheet if this is the selected component
     if (this.appStateManager.getSelectedComponent() === component) {
       this.showDatasheet(component);
@@ -434,7 +589,7 @@ export class MotherboardApp {
       inputEventCoordinator: this.inputEventCoordinator,
       isTransitioning: this.appStateManager.isInTransition(),
       getCurrentViewComponents: () => this.getCurrentViewComponents(),
-      getCurrentViewConnections: () => this.getCurrentViewConnections()
+      getCurrentViewConnections: () => this.getCurrentViewConnections(),
     };
   }
 
@@ -462,7 +617,7 @@ export class MotherboardApp {
   // Project management methods (delegated to managers)
   exportProject(): void {
     eventBus.emit(Events.PROJECT_EXPORT_REQUESTED, {
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -480,19 +635,32 @@ export class MotherboardApp {
   importProjectData(projectData: any): void {
     eventBus.emit(Events.PROJECT_IMPORT_REQUESTED, {
       projectData,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
   // Event handler setup methods (extracted)
   private setupExportImportEventHandlers(): void {
     // Handle requests for current project state
-    eventBus.on(Events.PROJECT_STATE_REQUEST, (payload: { callback: (components: any[], connections: any[]) => void }) => {
-      payload.callback(this.appStateManager.getComponents(), this.appStateManager.getConnections());
-    });
+    eventBus.on(
+      Events.PROJECT_STATE_REQUEST,
+      (payload: { callback: (components: any[], connections: any[]) => void }) => {
+        // Ensure current view state is saved to module internal structure before export
+        const currentView = this.appStateManager.getCurrentView();
+        if (currentView.type === 'schematic' && currentView.component) {
+          currentView.component.internalComponents = [...currentView.components];
+          currentView.component.internalConnections = [...currentView.connections];
+        }
+
+        payload.callback(
+          this.appStateManager.getComponents(),
+          this.appStateManager.getConnections()
+        );
+      }
+    );
 
     // Handle project import completion
-    eventBus.on(Events.PROJECT_IMPORTED, (payload: { components: any[], connections: any[] }) => {
+    eventBus.on(Events.PROJECT_IMPORTED, (payload: { components: any[]; connections: any[] }) => {
       this.appStateManager.setComponents(payload.components);
       this.appStateManager.setConnections(payload.connections);
       this.appStateManager.setSelectedComponent(null);
@@ -506,15 +674,24 @@ export class MotherboardApp {
     });
 
     // Handle export completion
-    eventBus.on(Events.PROJECT_EXPORTED, (payload: { componentCount: number, connectionCount: number }) => {
-      this.notificationManager.success(`Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`);
-    });
+    eventBus.on(
+      Events.PROJECT_EXPORTED,
+      (payload: { componentCount: number; connectionCount: number }) => {
+        this.notificationManager.success(
+          `Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`
+        );
+      }
+    );
   }
 
   private setupConnectionManagerEventHandlers(): void {
     // Handle connection creation requests from UI
     eventBus.on(Events.CONNECTION_CREATE_REQUESTED, (payload: any) => {
-      const pinHit = this.connectionManager.getPinAt(payload.x, payload.y, this.getCurrentViewComponents());
+      const pinHit = this.connectionManager.getPinAt(
+        payload.x,
+        payload.y,
+        this.getCurrentViewComponents()
+      );
       if (pinHit) {
         if (this.connectionManager.getConnectionState().isConnecting) {
           this.connectionManager.endConnection(pinHit);
@@ -536,10 +713,13 @@ export class MotherboardApp {
 
     // Handle successful connection creation
     eventBus.on(Events.ConnectionCreated, (payload: any) => {
-      if (payload.connection && !this.appStateManager.getConnections().find(c => c.id === payload.connection.id)) {
-        this.appStateManager.addConnection(payload.connection);
+      if (
+        payload.connection &&
+        !this.appStateManager.getConnections().find(c => c.id === payload.connection.id)
+      ) {
+        this.appStateManager.addConnectionToCurrentView(payload.connection);
       }
-      
+
       // Add runtime effects for new connection
       const categoryColor = this.categories[payload.type ?? 'frontend']?.color || '#00ff88';
       this.runtimeLayer.energyFlow(
@@ -549,7 +729,7 @@ export class MotherboardApp {
         payload.to.y,
         categoryColor
       );
-      
+
       this.updateConnectionModeUI();
     });
   }
@@ -565,7 +745,9 @@ export class MotherboardApp {
   }
 
   setupEventListeners(): void {
-    console.warn('setupEventListeners() is deprecated. Event listeners are handled by specialized managers.');
+    console.warn(
+      'setupEventListeners() is deprecated. Event listeners are handled by specialized managers.'
+    );
   }
 }
 

@@ -29,18 +29,24 @@ export const ConnectionsLayer = {
 
         // If connections are specified by id strings, skip the advanced path.
         // The simple fallback below renders using models.
-        const hasCoords = typeof from === 'object' && typeof to === 'object' &&
-          from.x != null && from.y != null && to.x != null && to.y != null;
+        const hasCoords =
+          typeof from === 'object' &&
+          typeof to === 'object' &&
+          from.x != null &&
+          from.y != null &&
+          to.x != null &&
+          to.y != null;
         if (!hasCoords) {
           continue;
         }
 
-        const fromX = (from.x) * camera.zoom + camera.x;
-        const fromY = (from.y) * camera.zoom + camera.y;
-        const toX = (to.x) * camera.zoom + camera.x;
-        const toY = (to.y) * camera.zoom + camera.y;
+        const fromX = from.x * camera.zoom + camera.x;
+        const fromY = from.y * camera.zoom + camera.y;
+        const toX = to.x * camera.zoom + camera.x;
+        const toY = to.y * camera.zoom + camera.y;
 
-        const categoryColor = (connection.category && (connection as any)._categoryColor) || '#00ff88';
+        const categoryColor =
+          (connection.category && (connection as any)._categoryColor) || '#00ff88';
 
         // For now determine statuses based on available component status fields (best-effort)
         const fromStatus = from.component?.status ?? 'defined';
@@ -70,7 +76,7 @@ export const ConnectionsLayer = {
         }
 
         // Background trace
-        c.strokeStyle = (isActive ? categoryColor + '40' : categoryColor + '20');
+        c.strokeStyle = isActive ? categoryColor + '40' : categoryColor + '20';
         c.lineWidth = 2;
         c.shadowBlur = 0;
         drawOrthogonal(c, fromX, fromY, toX, toY);
@@ -92,7 +98,17 @@ export const ConnectionsLayer = {
           c.shadowBlur = 0;
 
           // Data flow particles
-          drawDataFlow(c, connection as any, fromX, fromY, toX, toY, categoryColor, isPowered, camera);
+          drawDataFlow(
+            c,
+            connection as any,
+            fromX,
+            fromY,
+            toX,
+            toY,
+            categoryColor,
+            isPowered,
+            camera
+          );
         }
       }
 
@@ -102,22 +118,22 @@ export const ConnectionsLayer = {
         connections.forEach(connection => {
           const fromComp = models.find((m: any) => m.id === connection.from);
           const toComp = models.find((m: any) => m.id === connection.to);
-          
+
           if (fromComp && toComp) {
             const fromX = fromComp.x + 60; // Right side of source
             const fromY = fromComp.y + 20; // Middle of source
             const toX = toComp.x; // Left side of target
             const toY = toComp.y + 20; // Middle of target
-            
+
             c.strokeStyle = '#00ff88';
             c.lineWidth = 2;
             c.setLineDash(connection.type === 'cache' ? [5, 5] : []);
-            
+
             c.beginPath();
             c.moveTo(fromX, fromY);
             c.lineTo(toX, toY);
             c.stroke();
-            
+
             c.setLineDash([]); // Reset dash
           }
         });
@@ -129,7 +145,13 @@ export const ConnectionsLayer = {
   },
 };
 
-function drawOrthogonal(c: CanvasRenderingContext2D, fromX: number, fromY: number, toX: number, toY: number) {
+function drawOrthogonal(
+  c: CanvasRenderingContext2D,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number
+) {
   const midX = fromX + (toX - fromX) * 0.7;
   c.beginPath();
   c.moveTo(fromX, fromY);

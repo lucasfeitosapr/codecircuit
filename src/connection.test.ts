@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import MotherboardApp from './main';
-import type { ComponentBase } from './types';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { eventBus } from './events/EventBus';
+import { ConnectionManager, createConnectionManager } from './core/ConnectionManager';
+import { createAppStateManager, resetAppStateManager } from './core/AppStateManager';
+import { ViewStack } from './viewStack';
+import type { ComponentBase, PinHit } from './types';
 
 function makeCanvasStub() {
   const c = document.createElement('canvas');
@@ -37,16 +40,33 @@ function makeCanvasStub() {
 }
 
 describe('Connection creation', () => {
+  let connectionManager: ConnectionManager;
+  let appStateManager: ReturnType<typeof createAppStateManager>;
+  let categories: Record<string, { name: string; color: string }>;
+
   beforeEach(() => {
     document.body.innerHTML = ''; // clean DOM
+    makeCanvasStub(); // Ensure canvas exists for managers
+
+    // Reset singletons to avoid conflicts
+    vi.clearAllMocks();
+
+    // Reset singletons
+    (ViewStack as any).instance = null;
+    resetAppStateManager();
+
+    // Setup categories
+    categories = {
+      frontend: { name: 'Frontend', color: '#00ff88' },
+      backend: { name: 'Backend', color: '#4488ff' },
+    };
+
+    // Create fresh instances
+    appStateManager = createAppStateManager();
+    connectionManager = createConnectionManager(eventBus, categories);
   });
 
   it('creates a connection between output and input pins and prevents duplicates', () => {
-    const canvas = makeCanvasStub();
-    const app = new (MotherboardApp as any)();
-    app.canvas = canvas;
-    app.ctx = canvas.getContext('2d');
-
     const a: ComponentBase = {
       id: 'a',
       type: 'power-core',
@@ -56,7 +76,10 @@ describe('Connection creation', () => {
       height: 40,
       pins: { output: [{ x: 80, y: 20 }] },
       status: 'done',
-    } as any;
+      name: 'Power Core A',
+      category: 'frontend',
+      createdAt: new Date(),
+    };
 
     const b: ComponentBase = {
       id: 'b',
@@ -67,47 +90,49 @@ describe('Connection creation', () => {
       height: 20,
       pins: { input: [{ x: 0, y: 10 }] },
       status: 'todo',
-    } as any;
+      name: 'Task Resistor B',
+      category: 'frontend',
+      createdAt: new Date(),
+    };
 
-    app.components = [];
-    app.connections = [];
-    app.components.push(a);
-    app.components.push(b);
+    // Set components in state manager
+    appStateManager.setComponents([a, b]);
 
-    const outPin = {
+    const outPin: PinHit = {
       component: a,
       pinType: 'output',
       pinIndex: 0,
       x: a.x + 80,
       y: a.y + 20,
       category: 'frontend',
+      isInputPin: false,
     };
-    const inPin = {
+    const inPin: PinHit = {
       component: b,
       pinType: 'input',
       pinIndex: 0,
       x: b.x + 0,
       y: b.y + 10,
       category: 'frontend',
+      isInputPin: true,
     };
 
-    (app as any).createConnection(outPin, inPin);
-    expect(app.connections.length).toBe(1);
-    const conn = app.connections[0];
-    expect(conn.from.component).toBe(a);
-    expect(conn.to.component).toBe(b);
+    const connection = connectionManager.createConnection(outPin, inPin);
+    expect(connection).toBeTruthy();
+    expect(connection?.from.component).toBe(a);
+    expect(connection?.to.component).toBe(b);
+
+    // Add connection to state for duplicate test
+    if (connection) {
+      appStateManager.addConnectionToCurrentView(connection);
+    }
 
     // Duplicate should be prevented
-    (app as any).createConnection(outPin, inPin);
-    expect(app.connections.length).toBe(1);
+    const duplicateConnection = connectionManager.createConnection(outPin, inPin);
+    expect(duplicateConnection).toBeNull();
   });
 
   it('prevents invalid pin direction connections (input->input)', () => {
-    const canvas = makeCanvasStub();
-    const app = new (MotherboardApp as any)();
-    app.canvas = canvas;
-    app.ctx = canvas.getContext('2d');
-
     const a: ComponentBase = {
       id: 'a',
       type: 'task-resistor',
@@ -117,31 +142,47 @@ describe('Connection creation', () => {
       height: 20,
       pins: { input: [{ x: 0, y: 10 }], output: [{ x: 60, y: 10 }] },
       status: 'todo',
-    } as any;
+      name: 'Task Resistor A',
+      category: 'frontend',
+      createdAt: new Date(),
+    };
 
-    const b = { ...a, id: 'b' } as ComponentBase;
+    const b: ComponentBase = {
+      id: 'b',
+      type: 'task-resistor',
+      x: 100,
+      y: 10,
+      width: 60,
+      height: 20,
+      pins: { input: [{ x: 0, y: 10 }], output: [{ x: 60, y: 10 }] },
+      status: 'todo',
+      name: 'Task Resistor B',
+      category: 'frontend',
+      createdAt: new Date(),
+    };
 
-    app.components = [a, b];
-    app.connections = [];
+    appStateManager.setComponents([a, b]);
 
-    const pinA = {
+    const pinA: PinHit = {
       component: a,
       pinType: 'input',
       pinIndex: 0,
       x: a.x,
-      y: a.y,
+      y: a.y + 10,
       category: 'frontend',
+      isInputPin: true,
     };
-    const pinB = {
+    const pinB: PinHit = {
       component: b,
       pinType: 'input',
       pinIndex: 0,
       x: b.x,
-      y: b.y,
+      y: b.y + 10,
       category: 'frontend',
+      isInputPin: true,
     };
 
-    (app as any).createConnection(pinA, pinB);
-    expect(app.connections.length).toBe(0);
+    const connection = connectionManager.createConnection(pinA, pinB);
+    expect(connection).toBeNull();
   });
 });

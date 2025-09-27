@@ -34,23 +34,23 @@ export interface ConnectionV2 extends Connection {
  * Connection types for different communication patterns
  */
 export type ConnectionType =
-  | 'sync'        // Synchronous request-response
-  | 'async'       // Asynchronous messaging
-  | 'stream'      // Continuous data stream
-  | 'event';      // Event-driven communication
+  | 'sync' // Synchronous request-response
+  | 'async' // Asynchronous messaging
+  | 'stream' // Continuous data stream
+  | 'event'; // Event-driven communication
 
 /**
  * Supported protocols for visual styling and validation
  */
 export type ConnectionProtocol =
-  | 'HTTP'        // REST APIs, web services
-  | 'TCP'         // Direct TCP connections
-  | 'WebSocket'   // Real-time bidirectional
-  | 'MessageQueue'// Async message brokers
-  | 'GraphQL'     // GraphQL APIs
-  | 'gRPC'        // High-performance RPC
-  | 'Database'    // Database connections
-  | 'Custom';     // Custom/undefined protocols
+  | 'HTTP' // REST APIs, web services
+  | 'TCP' // Direct TCP connections
+  | 'WebSocket' // Real-time bidirectional
+  | 'MessageQueue' // Async message brokers
+  | 'GraphQL' // GraphQL APIs
+  | 'gRPC' // High-performance RPC
+  | 'Database' // Database connections
+  | 'Custom'; // Custom/undefined protocols
 
 /**
  * Design-time configuration for architectural planning
@@ -112,8 +112,8 @@ export interface PerformanceImpact {
  * Gateway integration for external connections
  */
 export interface GatewayEndpoints {
-  sourceGateway?: string;    // Source Gateway component ID
-  targetGateway?: string;    // Target Gateway component ID
+  sourceGateway?: string; // Source Gateway component ID
+  targetGateway?: string; // Target Gateway component ID
   externalSystemName?: string; // Name of external system
 }
 
@@ -122,7 +122,7 @@ export interface GatewayEndpoints {
  */
 export interface VisualProperties {
   // Line appearance
-  thickness: number;         // Based on data volume
+  thickness: number; // Based on data volume
   style: 'solid' | 'dashed' | 'dotted';
 
   // Animation (for data flow visualization)
@@ -167,19 +167,11 @@ export interface ExportConfiguration {
  * Factory interface for creating ConnectionV2 instances
  */
 export interface ConnectionV2Factory {
-  createConnection(
-    source: any,
-    target: any,
-    options?: Partial<ConnectionV2>
-  ): ConnectionV2;
+  createConnection(source: any, target: any, options?: Partial<ConnectionV2>): ConnectionV2;
 
   upgradeConnection(connection: Connection): ConnectionV2;
 
-  createFromTemplate(
-    template: ConnectionTemplate,
-    source: any,
-    target: any
-  ): ConnectionV2;
+  createFromTemplate(template: ConnectionTemplate, source: any, target: any): ConnectionV2;
 }
 
 /**
@@ -224,8 +216,8 @@ export const ConnectionTemplates: ConnectionTemplate[] = [
       expectedLatency: 'MEDIUM',
       dataVolume: 'MODERATE',
       reliability: 'GUARANTEED',
-      security: 'INTERNAL'
-    }
+      security: 'INTERNAL',
+    },
   },
   {
     id: 'event-streaming',
@@ -237,8 +229,8 @@ export const ConnectionTemplates: ConnectionTemplate[] = [
       expectedLatency: 'LOW',
       dataVolume: 'HEAVY',
       reliability: 'GUARANTEED',
-      security: 'INTERNAL'
-    }
+      security: 'INTERNAL',
+    },
   },
   {
     id: 'database-connection',
@@ -250,9 +242,9 @@ export const ConnectionTemplates: ConnectionTemplate[] = [
       expectedLatency: 'LOW',
       dataVolume: 'MODERATE',
       reliability: 'CRITICAL',
-      security: 'ENCRYPTED'
+      security: 'ENCRYPTED',
     },
-    applicableTargetTypes: ['gateway']
+    applicableTargetTypes: ['gateway'],
   },
   {
     id: 'real-time-socket',
@@ -264,9 +256,9 @@ export const ConnectionTemplates: ConnectionTemplate[] = [
       expectedLatency: 'LOW',
       dataVolume: 'LIGHT',
       reliability: 'GUARANTEED',
-      security: 'SECURE'
-    }
-  }
+      security: 'SECURE',
+    },
+  },
 ];
 
 /**
@@ -285,9 +277,9 @@ export class ConnectionV2Utils {
    */
   static getThicknessForDataVolume(dataVolume: DataVolumeLevel): number {
     const thicknessMap: Record<DataVolumeLevel, number> = {
-      'LIGHT': 1.5,
-      'MODERATE': 2.5,
-      'HEAVY': 3.5
+      LIGHT: 1.5,
+      MODERATE: 2.5,
+      HEAVY: 3.5,
     };
     return thicknessMap[dataVolume];
   }
@@ -297,10 +289,10 @@ export class ConnectionV2Utils {
    */
   static getAnimationForConnectionType(connectionType: ConnectionType): AnimationType {
     const animationMap: Record<ConnectionType, AnimationType> = {
-      'sync': 'none',
-      'async': 'pulse',
-      'stream': 'flow',
-      'event': 'pulse'
+      sync: 'none',
+      async: 'pulse',
+      stream: 'flow',
+      event: 'pulse',
     };
     return animationMap[connectionType];
   }
@@ -310,10 +302,10 @@ export class ConnectionV2Utils {
    */
   static calculateHealthScore(designHealth: DesignTimeHealth): number {
     const stateScores = {
-      'healthy': 1.0,
-      'degraded': 0.7,
+      healthy: 1.0,
+      degraded: 0.7,
       'at-risk': 0.4,
-      'critical': 0.1
+      critical: 0.1,
     };
 
     const baseScore = stateScores[designHealth.simulatedState];
@@ -333,7 +325,16 @@ export class ConnectionV2TypeGuards {
   }
 
   static isValidProtocol(protocol: string): protocol is ConnectionProtocol {
-    return ['HTTP', 'TCP', 'WebSocket', 'MessageQueue', 'GraphQL', 'gRPC', 'Database', 'Custom'].includes(protocol);
+    return [
+      'HTTP',
+      'TCP',
+      'WebSocket',
+      'MessageQueue',
+      'GraphQL',
+      'gRPC',
+      'Database',
+      'Custom',
+    ].includes(protocol);
   }
 
   static isValidLatencyLevel(level: string): level is LatencyLevel {

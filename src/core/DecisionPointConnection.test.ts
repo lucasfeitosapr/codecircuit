@@ -17,8 +17,8 @@ describe('Decision Point Connections', () => {
     eventBus = new EventBus();
     const mockCategories = {
       'flow-control': { name: 'Flow Control', color: '#4ECDC4' },
-      'backend': { name: 'Backend', color: '#66cc66' },
-      'frontend': { name: 'Frontend', color: '#cc6666' }
+      backend: { name: 'Backend', color: '#66cc66' },
+      frontend: { name: 'Frontend', color: '#cc6666' },
     };
     connectionManager = new ConnectionManager(eventBus, mockCategories);
 
@@ -34,13 +34,13 @@ describe('Decision Point Connections', () => {
         input: [{ x: 30, y: 0, type: 'input', label: 'condition' }],
         output: [
           { x: 60, y: 30, type: 'success', label: 'TRUE' },
-          { x: 0, y: 30, type: 'failure', label: 'FALSE' }
-        ]
+          { x: 0, y: 30, type: 'failure', label: 'FALSE' },
+        ],
       },
       name: 'Decision Point',
       status: 'defined',
       category: 'flow-control',
-      createdAt: new Date()
+      createdAt: new Date(),
     } as ComponentBase;
 
     // Create PowerCore component
@@ -53,12 +53,12 @@ describe('Decision Point Connections', () => {
       height: 40,
       pins: {
         input: [],
-        output: [{ x: 80, y: 20, type: 'energy', label: 'energy' }]
+        output: [{ x: 80, y: 20, type: 'energy', label: 'energy' }],
       },
       name: 'Power Core',
       status: 'done',
       category: 'backend',
-      createdAt: new Date()
+      createdAt: new Date(),
     } as ComponentBase;
 
     // Create ModuleIC component
@@ -71,12 +71,12 @@ describe('Decision Point Connections', () => {
       height: 60,
       pins: {
         input: [{ x: 0, y: 30, type: 'energy', label: 'power' }],
-        output: [{ x: 100, y: 30, type: 'data', label: 'output' }]
+        output: [{ x: 100, y: 30, type: 'data', label: 'output' }],
       },
       name: 'Module IC',
       status: 'in-progress',
       category: 'frontend',
-      createdAt: new Date()
+      createdAt: new Date(),
     } as ComponentBase;
 
     // Create TaskResistor component
@@ -89,12 +89,12 @@ describe('Decision Point Connections', () => {
       height: 30,
       pins: {
         input: [{ x: 0, y: 15, type: 'input', label: 'input' }],
-        output: [{ x: 60, y: 15, type: 'output', label: 'output' }]
+        output: [{ x: 60, y: 15, type: 'output', label: 'output' }],
       },
       name: 'Task Resistor',
       status: 'todo',
       category: 'frontend',
-      createdAt: new Date()
+      createdAt: new Date(),
     } as ComponentBase;
 
     allComponents = [decisionPoint, powerCore, moduleIC, taskResistor];
@@ -187,17 +187,17 @@ describe('Decision Point Connections', () => {
       console.log('Decision Success Pin:', {
         id: decisionSuccess?.component.id,
         type: decisionSuccess?.pinType,
-        coords: { x: decisionSuccess?.x, y: decisionSuccess?.y }
+        coords: { x: decisionSuccess?.x, y: decisionSuccess?.y },
       });
       console.log('Module Input Pin:', {
         id: moduleInput?.component.id,
         type: moduleInput?.pinType,
-        coords: { x: moduleInput?.x, y: moduleInput?.y }
+        coords: { x: moduleInput?.x, y: moduleInput?.y },
       });
 
       const validation = connectionManager.validateConnection(decisionSuccess!, moduleInput!);
       console.log('Validation Result:', validation);
-      
+
       expect(validation.isValid).toBe(true);
 
       const connection = connectionManager.createConnection(decisionSuccess!, moduleInput!);
@@ -216,17 +216,17 @@ describe('Decision Point Connections', () => {
       console.log('Decision Failure Pin:', {
         id: decisionFailure?.component.id,
         type: decisionFailure?.pinType,
-        coords: { x: decisionFailure?.x, y: decisionFailure?.y }
+        coords: { x: decisionFailure?.x, y: decisionFailure?.y },
       });
       console.log('Task Input Pin:', {
         id: taskInput?.component.id,
         type: taskInput?.pinType,
-        coords: { x: taskInput?.x, y: taskInput?.y }
+        coords: { x: taskInput?.x, y: taskInput?.y },
       });
 
       const validation = connectionManager.validateConnection(decisionFailure!, taskInput!);
       console.log('Validation Result:', validation);
-      
+
       expect(validation.isValid).toBe(true);
 
       const connection = connectionManager.createConnection(decisionFailure!, taskInput!);
@@ -244,15 +244,24 @@ describe('Decision Point Connections', () => {
       const moduleInput = connectionManager.getPinAt(200, 230, allComponents);
 
       // Test input pin classification by trying to connect two inputs (should fail)
-      const inputToInputValidation = connectionManager.validateConnection(decisionInput!, moduleInput!);
+      const inputToInputValidation = connectionManager.validateConnection(
+        decisionInput!,
+        moduleInput!
+      );
       expect(inputToInputValidation.isValid).toBe(false);
-      
+
       // Test output pin classification by connecting success to input (should work)
-      const successToInputValidation = connectionManager.validateConnection(decisionSuccess!, moduleInput!);
+      const successToInputValidation = connectionManager.validateConnection(
+        decisionSuccess!,
+        moduleInput!
+      );
       expect(successToInputValidation.isValid).toBe(true);
-      
+
       // Test output pin classification by connecting failure to input (should work)
-      const failureToInputValidation = connectionManager.validateConnection(decisionFailure!, moduleInput!);
+      const failureToInputValidation = connectionManager.validateConnection(
+        decisionFailure!,
+        moduleInput!
+      );
       expect(failureToInputValidation.isValid).toBe(true);
     });
 
@@ -298,8 +307,10 @@ describe('Decision Point Connections', () => {
       // Verify all connections exist
       const connections = connectionManager.getAllConnections();
       expect(connections).toHaveLength(3);
-      
-      const connectionIds = connections.map((c: any) => `${c.from.component.id}->${c.to.component.id}`);
+
+      const connectionIds = connections.map(
+        (c: any) => `${c.from.component.id}->${c.to.component.id}`
+      );
       expect(connectionIds).toContain('power-1->decision-1');
       expect(connectionIds).toContain('decision-1->module-1');
       expect(connectionIds).toContain('decision-1->task-1');

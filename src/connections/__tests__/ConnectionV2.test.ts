@@ -13,7 +13,7 @@ import {
   HealthState,
   ConnectionTemplates,
   ConnectionV2Utils,
-  ConnectionV2TypeGuards
+  ConnectionV2TypeGuards,
 } from '../ConnectionV2';
 
 describe('ConnectionV2', () => {
@@ -22,8 +22,22 @@ describe('ConnectionV2', () => {
       const mockConnectionV2: ConnectionV2 = {
         // Base Connection properties
         id: 'conn-1',
-        from: { component: { id: 'comp1' }, pinIndex: 0, pinType: 'output', x: 0, y: 0, category: 'test' },
-        to: { component: { id: 'comp2' }, pinIndex: 0, pinType: 'input', x: 100, y: 100, category: 'test' },
+        from: {
+          component: { id: 'comp1' },
+          pinIndex: 0,
+          pinType: 'output',
+          x: 0,
+          y: 0,
+          category: 'test',
+        },
+        to: {
+          component: { id: 'comp2' },
+          pinIndex: 0,
+          pinType: 'input',
+          x: 100,
+          y: 100,
+          category: 'test',
+        },
 
         // ConnectionV2 enhancements
         connectionType: 'sync',
@@ -32,17 +46,17 @@ describe('ConnectionV2', () => {
           expectedLatency: 'MEDIUM',
           dataVolume: 'MODERATE',
           reliability: 'GUARANTEED',
-          security: 'INTERNAL'
+          security: 'INTERNAL',
         },
         designHealth: {
           simulatedState: 'healthy',
           bottleneckRisk: 0.1,
-          failureScenarios: []
+          failureScenarios: [],
         },
         visual: {
           thickness: 2.5,
-          style: 'solid'
-        }
+          style: 'solid',
+        },
       };
 
       expect(mockConnectionV2.id).toBeDefined();
@@ -62,13 +76,27 @@ describe('ConnectionV2', () => {
 
     it('should support all protocols', () => {
       const protocols: ConnectionProtocol[] = [
-        'HTTP', 'TCP', 'WebSocket', 'MessageQueue',
-        'GraphQL', 'gRPC', 'Database', 'Custom'
+        'HTTP',
+        'TCP',
+        'WebSocket',
+        'MessageQueue',
+        'GraphQL',
+        'gRPC',
+        'Database',
+        'Custom',
       ];
 
       protocols.forEach(protocol => {
-        expect(['HTTP', 'TCP', 'WebSocket', 'MessageQueue', 'GraphQL', 'gRPC', 'Database', 'Custom'])
-          .toContain(protocol);
+        expect([
+          'HTTP',
+          'TCP',
+          'WebSocket',
+          'MessageQueue',
+          'GraphQL',
+          'gRPC',
+          'Database',
+          'Custom',
+        ]).toContain(protocol);
       });
     });
   });
@@ -112,7 +140,7 @@ describe('ConnectionV2', () => {
         dataVolume: 'HEAVY' as DataVolumeLevel,
         reliability: 'CRITICAL' as ReliabilityLevel,
         security: 'ENCRYPTED' as SecurityLevel,
-        businessCriticality: 'CRITICAL' as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+        businessCriticality: 'CRITICAL' as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
       };
 
       expect(mockDesignConfig.businessCriticality).toBe('CRITICAL');
@@ -124,7 +152,7 @@ describe('ConnectionV2', () => {
         dataVolume: 'MODERATE' as DataVolumeLevel,
         reliability: 'GUARANTEED' as ReliabilityLevel,
         security: 'ENCRYPTED' as SecurityLevel,
-        complianceRequirements: ['GDPR', 'HIPAA', 'SOX']
+        complianceRequirements: ['GDPR', 'HIPAA', 'SOX'],
       };
 
       expect(mockDesignConfig.complianceRequirements).toHaveLength(3);
@@ -145,7 +173,7 @@ describe('ConnectionV2', () => {
       const healthModel = {
         simulatedState: 'degraded' as HealthState,
         bottleneckRisk: 0.7,
-        failureScenarios: []
+        failureScenarios: [],
       };
 
       expect(healthModel.bottleneckRisk).toBeGreaterThanOrEqual(0);
@@ -158,7 +186,7 @@ describe('ConnectionV2', () => {
         description: 'Network partition between services',
         probability: 0.05,
         impact: 'HIGH' as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
-        mitigations: ['Circuit breaker', 'Retry with backoff']
+        mitigations: ['Circuit breaker', 'Retry with backoff'],
       };
 
       expect(failureScenario.probability).toBe(0.05);
@@ -170,7 +198,7 @@ describe('ConnectionV2', () => {
       const performanceImpact = {
         estimatedThroughput: '1000 req/sec',
         resourceUtilization: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
-        scalabilityLimits: 'Limited by database connections'
+        scalabilityLimits: 'Limited by database connections',
       };
 
       expect(performanceImpact.estimatedThroughput).toBe('1000 req/sec');
@@ -183,7 +211,7 @@ describe('ConnectionV2', () => {
       const gatewayEndpoints = {
         sourceGateway: 'gateway-1',
         targetGateway: 'gateway-2',
-        externalSystemName: 'Payment Service'
+        externalSystemName: 'Payment Service',
       };
 
       expect(gatewayEndpoints.sourceGateway).toBe('gateway-1');
@@ -194,7 +222,7 @@ describe('ConnectionV2', () => {
     it('should handle single gateway endpoint (external connection)', () => {
       const gatewayEndpoints = {
         targetGateway: 'external-api-gateway',
-        externalSystemName: 'Third-party API'
+        externalSystemName: 'Third-party API',
       };
 
       expect(gatewayEndpoints.sourceGateway).toBeUndefined();
@@ -208,7 +236,7 @@ describe('ConnectionV2', () => {
         thickness: 3.0,
         style: 'dashed' as 'solid' | 'dashed' | 'dotted',
         animation: 'flow' as 'none' | 'flow' | 'pulse' | 'bidirectional',
-        colorOverride: '#FF6B6B'
+        colorOverride: '#FF6B6B',
       };
 
       expect(visualProps.thickness).toBe(3.0);
@@ -224,8 +252,8 @@ describe('ConnectionV2', () => {
         label: {
           text: 'API Call',
           position: 'middle' as 'start' | 'middle' | 'end',
-          visible: true
-        }
+          visible: true,
+        },
       };
 
       expect(visualProps.label?.text).toBe('API Call');
@@ -240,7 +268,7 @@ describe('ConnectionV2', () => {
         const visualProps = {
           thickness: 2.0,
           style: 'solid' as const,
-          animation
+          animation,
         };
 
         expect(visualProps.animation).toBe(animation);
@@ -255,8 +283,8 @@ describe('ConnectionV2', () => {
         implementationHints: {
           timeout: 30000,
           retryPolicy: 'exponential-backoff',
-          circuitBreaker: true
-        }
+          circuitBreaker: true,
+        },
       };
 
       expect(exportConfig.targetPlatform).toBe('kubernetes');
@@ -268,8 +296,8 @@ describe('ConnectionV2', () => {
       const exportConfig = {
         endpointMapping: {
           source: 'http://service-a:8080',
-          target: 'http://service-b:8080'
-        }
+          target: 'http://service-b:8080',
+        },
       };
 
       expect(exportConfig.endpointMapping?.source).toBe('http://service-a:8080');
@@ -332,31 +360,59 @@ describe('ConnectionV2Utils', () => {
     it('should identify ConnectionV2 instances', () => {
       const connectionV2: ConnectionV2 = {
         id: 'test',
-        from: { component: { id: 'c1' }, pinIndex: 0, pinType: 'output', x: 0, y: 0, category: 'test' },
-        to: { component: { id: 'c2' }, pinIndex: 0, pinType: 'input', x: 0, y: 0, category: 'test' },
+        from: {
+          component: { id: 'c1' },
+          pinIndex: 0,
+          pinType: 'output',
+          x: 0,
+          y: 0,
+          category: 'test',
+        },
+        to: {
+          component: { id: 'c2' },
+          pinIndex: 0,
+          pinType: 'input',
+          x: 0,
+          y: 0,
+          category: 'test',
+        },
         connectionType: 'sync',
         protocol: 'HTTP',
         designConfig: {
           expectedLatency: 'LOW',
           dataVolume: 'LIGHT',
           reliability: 'BEST_EFFORT',
-          security: 'PUBLIC'
+          security: 'PUBLIC',
         },
         designHealth: {
           simulatedState: 'healthy',
           bottleneckRisk: 0,
-          failureScenarios: []
+          failureScenarios: [],
         },
         visual: {
           thickness: 2,
-          style: 'solid'
-        }
+          style: 'solid',
+        },
       };
 
       const basicConnection = {
         id: 'basic',
-        from: { component: { id: 'c1' }, pinIndex: 0, pinType: 'output', x: 0, y: 0, category: 'test' },
-        to: { component: { id: 'c2' }, pinIndex: 0, pinType: 'input', x: 0, y: 0, category: 'test' }
+        from: {
+          component: { id: 'c1' },
+          pinIndex: 0,
+          pinType: 'output',
+          x: 0,
+          y: 0,
+          category: 'test',
+        },
+        to: {
+          component: { id: 'c2' },
+          pinIndex: 0,
+          pinType: 'input',
+          x: 0,
+          y: 0,
+          category: 'test',
+        },
       };
 
       expect(ConnectionV2Utils.isConnectionV2(connectionV2)).toBe(true);
@@ -384,7 +440,7 @@ describe('ConnectionV2Utils', () => {
       const healthyDesign = {
         simulatedState: 'healthy' as HealthState,
         bottleneckRisk: 0.1,
-        failureScenarios: []
+        failureScenarios: [],
       };
 
       const score = ConnectionV2Utils.calculateHealthScore(healthyDesign);
@@ -401,9 +457,9 @@ describe('ConnectionV2Utils', () => {
             description: 'Request timeout',
             probability: 0.05,
             impact: 'MEDIUM' as const,
-            mitigations: ['Retry logic']
-          }
-        ]
+            mitigations: ['Retry logic'],
+          },
+        ],
       };
 
       const score = ConnectionV2Utils.calculateHealthScore(degradedDesign);
@@ -415,9 +471,21 @@ describe('ConnectionV2Utils', () => {
         simulatedState: 'critical' as HealthState,
         bottleneckRisk: 0.8,
         failureScenarios: [
-          { id: 'f1', description: 'Failure 1', probability: 0.1, impact: 'HIGH' as const, mitigations: [] },
-          { id: 'f2', description: 'Failure 2', probability: 0.15, impact: 'CRITICAL' as const, mitigations: [] }
-        ]
+          {
+            id: 'f1',
+            description: 'Failure 1',
+            probability: 0.1,
+            impact: 'HIGH' as const,
+            mitigations: [],
+          },
+          {
+            id: 'f2',
+            description: 'Failure 2',
+            probability: 0.15,
+            impact: 'CRITICAL' as const,
+            mitigations: [],
+          },
+        ],
       };
 
       const score = ConnectionV2Utils.calculateHealthScore(criticalDesign);

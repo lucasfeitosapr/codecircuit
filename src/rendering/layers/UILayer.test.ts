@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import UILayer, { type SelectionBox, type GuideLine, type UIOverlay, type ConnectionIntent } from './UILayer';
+import UILayer, {
+  type SelectionBox,
+  type GuideLine,
+  type UIOverlay,
+  type ConnectionIntent,
+} from './UILayer';
 import type { ComponentBase, PinHit } from '../../types';
 
 describe('UILayer', () => {
@@ -11,7 +16,7 @@ describe('UILayer', () => {
 
   beforeEach(() => {
     uiLayer = new UILayer();
-    
+
     // Mock canvas context
     mockCtx = {
       save: vi.fn(),
@@ -36,7 +41,7 @@ describe('UILayer', () => {
 
     mockFrame = {
       timestamp: 1000,
-      camera: { x: 0, y: 0, zoom: 1 }
+      camera: { x: 0, y: 0, zoom: 1 },
     };
 
     mockComponent = {
@@ -52,7 +57,7 @@ describe('UILayer', () => {
       title: 'Test Component',
       description: '',
       category: 'frontend',
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
     mockPinHit = {
@@ -61,14 +66,14 @@ describe('UILayer', () => {
       pinIndex: 0,
       x: 180,
       y: 120,
-      category: 'frontend'
+      category: 'frontend',
     };
   });
 
   describe('Selection Box Management', () => {
     it('should add selection box', () => {
       const selectionId = uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       expect(selectionId).toMatch(/^selection_\d+_\d+$/);
     });
 
@@ -76,7 +81,7 @@ describe('UILayer', () => {
       const singleId = uiLayer.addSelectionBox(mockComponent, 'single');
       const multiId = uiLayer.addSelectionBox(mockComponent, 'multi');
       const hoverId = uiLayer.addSelectionBox(mockComponent, 'hover');
-      
+
       expect(singleId).toMatch(/^selection_\d+_\d+$/);
       expect(multiId).toMatch(/^selection_\d+_\d+$/);
       expect(hoverId).toMatch(/^selection_\d+_\d+$/);
@@ -84,17 +89,17 @@ describe('UILayer', () => {
 
     it('should update selection box', () => {
       const selectionId = uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       const updatedComponent = { ...mockComponent, x: 200, y: 200 };
       uiLayer.updateSelectionBox(selectionId, updatedComponent);
-      
+
       // Should not throw
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
 
     it('should remove selection box', () => {
       const selectionId = uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       const removed = uiLayer.removeSelectionBox(selectionId);
       expect(removed).toBe(true);
     });
@@ -102,14 +107,14 @@ describe('UILayer', () => {
     it('should clear all selection boxes', () => {
       uiLayer.addSelectionBox(mockComponent, 'single');
       uiLayer.addSelectionBox(mockComponent, 'multi');
-      
+
       uiLayer.clearSelectionBoxes();
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
 
     it('should render selection boxes', () => {
       uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
       expect(mockCtx.save).toHaveBeenCalled();
       expect(mockCtx.restore).toHaveBeenCalled();
@@ -127,9 +132,9 @@ describe('UILayer', () => {
         color: '#00ff88',
         opacity: 0.8,
         dashed: true,
-        label: 'Test Guide'
+        label: 'Test Guide',
       });
-      
+
       expect(guideId).toMatch(/^guide_\d+_\d+$/);
     });
 
@@ -141,9 +146,9 @@ describe('UILayer', () => {
         endX: 100,
         endY: 200,
         color: '#ff0000',
-        opacity: 0.6
+        opacity: 0.6,
       });
-      
+
       const removed = uiLayer.removeGuideLine(guideId);
       expect(removed).toBe(true);
     });
@@ -156,9 +161,9 @@ describe('UILayer', () => {
         endX: 200,
         endY: 100,
         color: '#00ff88',
-        opacity: 0.8
+        opacity: 0.8,
       });
-      
+
       uiLayer.clearGuideLines();
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -172,9 +177,9 @@ describe('UILayer', () => {
         endY: 100,
         color: '#00ff88',
         opacity: 0.8,
-        dashed: true
+        dashed: true,
       });
-      
+
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
       expect(mockCtx.save).toHaveBeenCalled();
       expect(mockCtx.restore).toHaveBeenCalled();
@@ -186,9 +191,9 @@ describe('UILayer', () => {
         { ...mockComponent, id: 'comp2', x: 100, y: 150 }, // Same x, different y
         { ...mockComponent, id: 'comp3', x: 200, y: 100 }, // Same y, different x
       ];
-      
+
       const guideIds = uiLayer.addAlignmentGuides(mockComponent, components);
-      
+
       expect(guideIds.length).toBeGreaterThan(0);
       expect(guideIds.every(id => id.match(/^guide_\d+_\d+$/))).toBe(true);
     });
@@ -203,9 +208,9 @@ describe('UILayer', () => {
         width: 200,
         height: 50,
         content: 'Test tooltip',
-        visible: true
+        visible: true,
       });
-      
+
       expect(overlayId).toMatch(/^overlay_\d+_\d+$/);
     });
 
@@ -217,14 +222,14 @@ describe('UILayer', () => {
         width: 200,
         height: 50,
         content: 'Test tooltip',
-        visible: true
+        visible: true,
       });
-      
+
       uiLayer.updateUIOverlay(overlayId, {
         content: 'Updated tooltip',
-        visible: false
+        visible: false,
       });
-      
+
       // Should not throw
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -237,9 +242,9 @@ describe('UILayer', () => {
         width: 150,
         height: 100,
         content: 'Menu item 1\nMenu item 2',
-        visible: true
+        visible: true,
       });
-      
+
       const removed = uiLayer.removeUIOverlay(overlayId);
       expect(removed).toBe(true);
     });
@@ -252,16 +257,21 @@ describe('UILayer', () => {
         width: 200,
         height: 50,
         content: 'Test tooltip',
-        visible: true
+        visible: true,
       });
-      
+
       uiLayer.clearUIOverlays();
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
 
     it('should render different overlay types', () => {
-      const overlayTypes: UIOverlay['type'][] = ['tooltip', 'context-menu', 'datasheet', 'connection-hint'];
-      
+      const overlayTypes: UIOverlay['type'][] = [
+        'tooltip',
+        'context-menu',
+        'datasheet',
+        'connection-hint',
+      ];
+
       overlayTypes.forEach(type => {
         uiLayer.addUIOverlay({
           type,
@@ -270,10 +280,10 @@ describe('UILayer', () => {
           width: 200,
           height: 100,
           content: `Test ${type}`,
-          visible: true
+          visible: true,
         });
       });
-      
+
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
       expect(mockCtx.save).toHaveBeenCalled();
       expect(mockCtx.restore).toHaveBeenCalled();
@@ -287,9 +297,9 @@ describe('UILayer', () => {
         width: 200,
         height: 50,
         content: 'Visible tooltip',
-        visible: true
+        visible: true,
       });
-      
+
       uiLayer.addUIOverlay({
         type: 'tooltip',
         x: 200,
@@ -297,9 +307,9 @@ describe('UILayer', () => {
         width: 200,
         height: 50,
         content: 'Hidden tooltip',
-        visible: false
+        visible: false,
       });
-      
+
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
   });
@@ -309,9 +319,9 @@ describe('UILayer', () => {
       const intentId = uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       expect(intentId).toMatch(/^intent_\d+_\d+$/);
     });
 
@@ -319,15 +329,15 @@ describe('UILayer', () => {
       const intentId = uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       const endPin = { ...mockPinHit, x: 300, y: 200 };
       uiLayer.updateConnectionIntent(intentId, {
         endPin,
-        isValid: false
+        isValid: false,
       });
-      
+
       // Should not throw
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -336,9 +346,9 @@ describe('UILayer', () => {
       const intentId = uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       const removed = uiLayer.removeConnectionIntent(intentId);
       expect(removed).toBe(true);
     });
@@ -347,9 +357,9 @@ describe('UILayer', () => {
       uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       uiLayer.clearConnectionIntents();
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -358,9 +368,9 @@ describe('UILayer', () => {
       uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
       expect(mockCtx.save).toHaveBeenCalled();
       expect(mockCtx.restore).toHaveBeenCalled();
@@ -368,14 +378,14 @@ describe('UILayer', () => {
 
     it('should render connection intents with end pin', () => {
       const endPin = { ...mockPinHit, x: 300, y: 200 };
-      
+
       uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         endPin,
         isValid: false,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
   });
@@ -394,7 +404,7 @@ describe('UILayer', () => {
         endX: 200,
         endY: 100,
         color: '#00ff88',
-        opacity: 0.8
+        opacity: 0.8,
       });
       uiLayer.addUIOverlay({
         type: 'tooltip',
@@ -403,14 +413,14 @@ describe('UILayer', () => {
         width: 200,
         height: 50,
         content: 'Test tooltip',
-        visible: true
+        visible: true,
       });
       uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
       expect(mockCtx.save).toHaveBeenCalled();
       expect(mockCtx.restore).toHaveBeenCalled();
@@ -418,7 +428,7 @@ describe('UILayer', () => {
 
     it('should apply camera transformations', () => {
       mockFrame.camera = { x: 50, y: 50, zoom: 2 };
-      
+
       uiLayer.addSelectionBox(mockComponent, 'single');
       uiLayer.addGuideLine({
         type: 'horizontal',
@@ -427,20 +437,20 @@ describe('UILayer', () => {
         endX: 200,
         endY: 100,
         color: '#00ff88',
-        opacity: 0.8
+        opacity: 0.8,
       });
-      
+
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
 
     it('should handle missing frame properties', () => {
       const incompleteFrame = {
-        timestamp: 1000
+        timestamp: 1000,
         // Missing camera
       };
-      
+
       uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       // Should not throw
       expect(() => uiLayer.render(mockCtx, incompleteFrame as any)).not.toThrow();
     });
@@ -450,12 +460,12 @@ describe('UILayer', () => {
     it('should cleanup old elements', () => {
       uiLayer.addSelectionBox(mockComponent, 'hover'); // Should be cleaned up
       uiLayer.addSelectionBox(mockComponent, 'single'); // Should not be cleaned up
-      
+
       // Simulate time passing
       mockFrame.timestamp = 10000; // 9 seconds later
-      
+
       uiLayer.render(mockCtx, mockFrame);
-      
+
       // Should not throw
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -468,14 +478,14 @@ describe('UILayer', () => {
         endX: 200,
         endY: 100,
         color: '#00ff88',
-        opacity: 0.8
+        opacity: 0.8,
       });
-      
+
       // Simulate time passing
       mockFrame.timestamp = 10000;
-      
+
       uiLayer.render(mockCtx, mockFrame);
-      
+
       // Should not throw
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -488,14 +498,14 @@ describe('UILayer', () => {
         width: 200,
         height: 50,
         content: 'Test tooltip',
-        visible: true
+        visible: true,
       });
-      
+
       // Simulate time passing
       mockFrame.timestamp = 10000;
-      
+
       uiLayer.render(mockCtx, mockFrame);
-      
+
       // Should not throw
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -504,14 +514,14 @@ describe('UILayer', () => {
       uiLayer.addConnectionIntent({
         startPin: mockPinHit,
         isValid: true,
-        category: 'frontend'
+        category: 'frontend',
       });
-      
+
       // Simulate time passing
       mockFrame.timestamp = 10000;
-      
+
       uiLayer.render(mockCtx, mockFrame);
-      
+
       // Should not throw
       expect(() => uiLayer.render(mockCtx, mockFrame)).not.toThrow();
     });
@@ -520,12 +530,14 @@ describe('UILayer', () => {
   describe('Error Handling', () => {
     it('should handle render errors gracefully', () => {
       const errorCtx = {
-        save: vi.fn(() => { throw new Error('Canvas error'); }),
+        save: vi.fn(() => {
+          throw new Error('Canvas error');
+        }),
         restore: vi.fn(),
       } as any;
 
       uiLayer.addSelectionBox(mockComponent, 'single');
-      
+
       // Should not throw even if canvas operations fail
       expect(() => uiLayer.render(errorCtx, mockFrame)).not.toThrow();
     });
@@ -533,21 +545,21 @@ describe('UILayer', () => {
     it('should handle missing selection box during update', () => {
       const nonExistentId = 'selection_999_999';
       const updatedComponent = { ...mockComponent, x: 200, y: 200 };
-      
+
       // Should not throw when trying to update non-existent selection box
       expect(() => uiLayer.updateSelectionBox(nonExistentId, updatedComponent)).not.toThrow();
     });
 
     it('should handle missing UI overlay during update', () => {
       const nonExistentId = 'overlay_999_999';
-      
+
       // Should not throw when trying to update non-existent overlay
       expect(() => uiLayer.updateUIOverlay(nonExistentId, { content: 'Updated' })).not.toThrow();
     });
 
     it('should handle missing connection intent during update', () => {
       const nonExistentId = 'intent_999_999';
-      
+
       // Should not throw when trying to update non-existent intent
       expect(() => uiLayer.updateConnectionIntent(nonExistentId, { isValid: false })).not.toThrow();
     });
@@ -565,7 +577,7 @@ describe('UILayer', () => {
           endX: (i + 1) * 10,
           endY: i * 10,
           color: '#00ff88',
-          opacity: 0.8
+          opacity: 0.8,
         });
         uiLayer.addUIOverlay({
           type: 'tooltip',
@@ -574,7 +586,7 @@ describe('UILayer', () => {
           width: 100,
           height: 30,
           content: `Tooltip ${i}`,
-          visible: true
+          visible: true,
         });
       }
 

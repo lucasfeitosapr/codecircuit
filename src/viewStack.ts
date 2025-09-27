@@ -11,10 +11,22 @@ export type ViewState = {
 };
 
 export class ViewStack {
+  private static instance: ViewStack | null = null;
   private stack: ViewState[];
 
   constructor() {
     this.stack = [];
+  }
+
+  public static getInstance(): ViewStack {
+    if (!ViewStack.instance) {
+      ViewStack.instance = new ViewStack();
+    }
+    return ViewStack.instance;
+  }
+
+  public static resetInstance(): void {
+    ViewStack.instance = null;
   }
 
   push(view: ViewState) {

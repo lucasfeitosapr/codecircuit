@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import { ComponentLifecycleManager, createComponentLifecycleManager } from './ComponentLifecycleManager';
+import {
+  ComponentLifecycleManager,
+  createComponentLifecycleManager,
+} from './ComponentLifecycleManager';
 import { EventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import RuntimeLayer from '../rendering/layers/RuntimeLayer';
@@ -12,7 +15,7 @@ vi.mock('../rendering/layers/RuntimeLayer', () => {
       glowEffect: vi.fn(),
       pulseComponent: vi.fn(),
       sparkEffect: vi.fn(),
-    }))
+    })),
   };
 });
 
@@ -89,7 +92,12 @@ describe('ComponentLifecycleManager', () => {
 
   describe('Component Creation', () => {
     it('should create a valid component successfully', () => {
-      const component = componentLifecycleManager.createComponent('power-core', 100, 50, currentView);
+      const component = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      );
 
       expect(component).toBeDefined();
       expect(component?.type).toBe('power-core');
@@ -106,9 +114,9 @@ describe('ComponentLifecycleManager', () => {
 
     it('should add component to view components array', () => {
       const initialCount = currentView.components.length;
-      
+
       componentLifecycleManager.createComponent('power-core', 100, 50, currentView);
-      
+
       expect(currentView.components.length).toBe(initialCount + 1);
       expect(currentView.components[currentView.components.length - 1].type).toBe('power-core');
     });
@@ -117,26 +125,36 @@ describe('ComponentLifecycleManager', () => {
       const eventSpy = vi.fn();
       eventBus.on(Events.ComponentCreated, eventSpy);
 
-      const component = componentLifecycleManager.createComponent('power-core', 100, 50, currentView);
+      const component = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      );
 
       expect(eventSpy).toHaveBeenCalledWith({
         id: component?.id,
         type: 'power-core',
         model: component,
-        source: 'lifecycle-manager'
+        source: 'lifecycle-manager',
       });
     });
 
     it('should add visual effects for new component', () => {
       componentLifecycleManager.createComponent('power-core', 100, 50, currentView);
-      
+
       expect(mockRuntimeLayer.glowEffect).toHaveBeenCalledWith(140, 70, '#ffaa00', 1000);
       expect(mockRuntimeLayer.pulseComponent).toHaveBeenCalled();
     });
 
     it('should handle invalid component type gracefully', () => {
-      const component = componentLifecycleManager.createComponent('invalid-type', 100, 50, currentView);
-      
+      const component = componentLifecycleManager.createComponent(
+        'invalid-type',
+        100,
+        50,
+        currentView
+      );
+
       expect(component).toBeNull();
       expect(currentView.components.length).toBe(0);
     });
@@ -144,11 +162,16 @@ describe('ComponentLifecycleManager', () => {
     it('should prevent Power Cores in schematic view', () => {
       const schematicView: ViewState = {
         ...currentView,
-        type: 'schematic'
+        type: 'schematic',
       };
 
-      const component = componentLifecycleManager.createComponent('power-core', 100, 50, schematicView);
-      
+      const component = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        schematicView
+      );
+
       expect(component).toBeNull();
       expect(schematicView.components.length).toBe(0);
     });
@@ -156,27 +179,47 @@ describe('ComponentLifecycleManager', () => {
     it('should allow Module IC in schematic view', () => {
       const schematicView: ViewState = {
         ...currentView,
-        type: 'schematic'
+        type: 'schematic',
       };
 
-      const component = componentLifecycleManager.createComponent('module-ic', 100, 50, schematicView);
-      
+      const component = componentLifecycleManager.createComponent(
+        'module-ic',
+        100,
+        50,
+        schematicView
+      );
+
       expect(component).toBeDefined();
       expect(component?.type).toBe('module-ic');
       expect(schematicView.components.length).toBe(1);
     });
 
     it('should initialize Module IC with internal components', () => {
-      const component = componentLifecycleManager.createComponent('module-ic', 100, 50, currentView);
-      
+      const component = componentLifecycleManager.createComponent(
+        'module-ic',
+        100,
+        50,
+        currentView
+      );
+
       expect((component as any)?.internalComponents).toEqual([]);
       expect((component as any)?.internalConnections).toEqual([]);
     });
 
     it('should generate unique component titles', () => {
-      const component1 = componentLifecycleManager.createComponent('power-core', 100, 50, currentView);
-      const component2 = componentLifecycleManager.createComponent('power-core', 200, 50, currentView);
-      
+      const component1 = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      );
+      const component2 = componentLifecycleManager.createComponent(
+        'power-core',
+        200,
+        50,
+        currentView
+      );
+
       expect(component1?.title).toBe('Power Core 1');
       expect(component2?.title).toBe('Power Core 2');
     });
@@ -186,22 +229,27 @@ describe('ComponentLifecycleManager', () => {
     let testComponent: ComponentBase;
 
     beforeEach(() => {
-      testComponent = componentLifecycleManager.createComponent('power-core', 100, 50, currentView)!;
+      testComponent = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      )!;
       vi.clearAllMocks(); // Clear creation effects
     });
 
     it('should cycle through status states correctly', () => {
       expect(testComponent.status).toBe('defined');
-      
+
       componentLifecycleManager.toggleComponentStatus(testComponent);
       expect(testComponent.status).toBe('todo');
-      
+
       componentLifecycleManager.toggleComponentStatus(testComponent);
       expect(testComponent.status).toBe('in-progress');
-      
+
       componentLifecycleManager.toggleComponentStatus(testComponent);
       expect(testComponent.status).toBe('done');
-      
+
       componentLifecycleManager.toggleComponentStatus(testComponent);
       expect(testComponent.status).toBe('defined');
     });
@@ -215,7 +263,7 @@ describe('ComponentLifecycleManager', () => {
       expect(eventSpy).toHaveBeenCalledWith({
         id: testComponent.id,
         changes: { status: 'todo' },
-        source: 'lifecycle-manager'
+        source: 'lifecycle-manager',
       });
     });
 
@@ -223,22 +271,30 @@ describe('ComponentLifecycleManager', () => {
       // Test transition to done
       testComponent.status = 'in-progress';
       componentLifecycleManager.toggleComponentStatus(testComponent);
-      
+
       expect(mockRuntimeLayer.sparkEffect).toHaveBeenCalledWith(140, 70, '#00ff88');
-      expect(mockRuntimeLayer.pulseComponent).toHaveBeenCalledWith(testComponent.id, '#00ff88', 600);
+      expect(mockRuntimeLayer.pulseComponent).toHaveBeenCalledWith(
+        testComponent.id,
+        '#00ff88',
+        600
+      );
     });
 
     it('should add progress effect when starting work', () => {
       testComponent.status = 'todo';
       componentLifecycleManager.toggleComponentStatus(testComponent);
-      
-      expect(mockRuntimeLayer.pulseComponent).toHaveBeenCalledWith(testComponent.id, '#ffaa00', 400);
+
+      expect(mockRuntimeLayer.pulseComponent).toHaveBeenCalledWith(
+        testComponent.id,
+        '#ffaa00',
+        400
+      );
     });
 
     it('should add task effect when marking as todo', () => {
       testComponent.status = 'defined';
       componentLifecycleManager.toggleComponentStatus(testComponent);
-      
+
       expect(mockRuntimeLayer.glowEffect).toHaveBeenCalledWith(140, 70, '#4488ff', 500);
     });
   });
@@ -247,28 +303,43 @@ describe('ComponentLifecycleManager', () => {
     let testComponent: ComponentBase;
 
     beforeEach(() => {
-      testComponent = componentLifecycleManager.createComponent('power-core', 100, 50, currentView)!;
+      testComponent = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      )!;
     });
 
     it('should find component at correct coordinates', () => {
       const foundComponent = componentLifecycleManager.getComponentAt(120, 60, currentView);
-      
+
       expect(foundComponent).toBe(testComponent);
     });
 
     it('should return null for coordinates outside component', () => {
       const foundComponent = componentLifecycleManager.getComponentAt(50, 25, currentView);
-      
+
       expect(foundComponent).toBeNull();
     });
 
     it('should return topmost component when overlapping', () => {
-      const component1 = componentLifecycleManager.createComponent('power-core', 100, 50, currentView)!;
-      const component2 = componentLifecycleManager.createComponent('power-core', 110, 60, currentView)!;
-      
+      const component1 = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      )!;
+      const component2 = componentLifecycleManager.createComponent(
+        'power-core',
+        110,
+        60,
+        currentView
+      )!;
+
       // Test overlapping area - should return the most recently added (topmost)
       const foundComponent = componentLifecycleManager.getComponentAt(120, 65, currentView);
-      
+
       expect(foundComponent).toBe(component2);
     });
 
@@ -283,32 +354,55 @@ describe('ComponentLifecycleManager', () => {
 
   describe('Component Validation', () => {
     it('should validate valid component creation parameters', () => {
-      const isValid = componentLifecycleManager.validateComponentCreation('power-core', 100, 50, currentView);
-      
+      const isValid = componentLifecycleManager.validateComponentCreation(
+        'power-core',
+        100,
+        50,
+        currentView
+      );
+
       expect(isValid).toBe(true);
     });
 
     it('should reject invalid component type', () => {
-      const isValid = componentLifecycleManager.validateComponentCreation('invalid-type', 100, 50, currentView);
-      
+      const isValid = componentLifecycleManager.validateComponentCreation(
+        'invalid-type',
+        100,
+        50,
+        currentView
+      );
+
       expect(isValid).toBe(false);
     });
 
     it('should reject Power Core in schematic view', () => {
       const schematicView: ViewState = { ...currentView, type: 'schematic' };
-      const isValid = componentLifecycleManager.validateComponentCreation('power-core', 100, 50, schematicView);
-      
+      const isValid = componentLifecycleManager.validateComponentCreation(
+        'power-core',
+        100,
+        50,
+        schematicView
+      );
+
       expect(isValid).toBe(false);
     });
 
     it('should reject invalid coordinates', () => {
-      expect(componentLifecycleManager.validateComponentCreation('power-core', NaN, 50, currentView)).toBe(false);
-      expect(componentLifecycleManager.validateComponentCreation('power-core', 100, NaN, currentView)).toBe(false);
+      expect(
+        componentLifecycleManager.validateComponentCreation('power-core', NaN, 50, currentView)
+      ).toBe(false);
+      expect(
+        componentLifecycleManager.validateComponentCreation('power-core', 100, NaN, currentView)
+      ).toBe(false);
     });
 
     it('should check component placement capability', () => {
-      expect(componentLifecycleManager.canPlaceComponent('power-core', 100, 50, currentView)).toBe(true);
-      expect(componentLifecycleManager.canPlaceComponent('invalid-type', 100, 50, currentView)).toBe(false);
+      expect(componentLifecycleManager.canPlaceComponent('power-core', 100, 50, currentView)).toBe(
+        true
+      );
+      expect(
+        componentLifecycleManager.canPlaceComponent('invalid-type', 100, 50, currentView)
+      ).toBe(false);
     });
   });
 
@@ -316,16 +410,21 @@ describe('ComponentLifecycleManager', () => {
     let testComponent: ComponentBase;
 
     beforeEach(() => {
-      testComponent = componentLifecycleManager.createComponent('power-core', 100, 50, currentView)!;
+      testComponent = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      )!;
       vi.clearAllMocks();
     });
 
     it('should update component properties', () => {
-      componentLifecycleManager.updateComponent(testComponent, { 
+      componentLifecycleManager.updateComponent(testComponent, {
         title: 'Updated Power Core',
-        description: 'Updated description' 
+        description: 'Updated description',
       });
-      
+
       expect(testComponent.title).toBe('Updated Power Core');
       expect(testComponent.description).toBe('Updated description');
     });
@@ -339,13 +438,13 @@ describe('ComponentLifecycleManager', () => {
       expect(eventSpy).toHaveBeenCalledWith({
         id: testComponent.id,
         changes: { title: 'Updated' },
-        source: 'lifecycle-manager'
+        source: 'lifecycle-manager',
       });
     });
 
     it('should add visual effects for status updates', () => {
       componentLifecycleManager.updateComponent(testComponent, { status: 'done' });
-      
+
       expect(mockRuntimeLayer.sparkEffect).toHaveBeenCalled();
     });
 
@@ -363,18 +462,29 @@ describe('ComponentLifecycleManager', () => {
     let testComponent: ComponentBase;
 
     beforeEach(() => {
-      testComponent = componentLifecycleManager.createComponent('power-core', 100, 50, currentView)!;
+      testComponent = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      )!;
     });
 
     it('should find component by ID', () => {
-      const foundComponent = componentLifecycleManager.getComponentById(testComponent.id, currentView);
-      
+      const foundComponent = componentLifecycleManager.getComponentById(
+        testComponent.id,
+        currentView
+      );
+
       expect(foundComponent).toBe(testComponent);
     });
 
     it('should return null for non-existent ID', () => {
-      const foundComponent = componentLifecycleManager.getComponentById('non-existent-id', currentView);
-      
+      const foundComponent = componentLifecycleManager.getComponentById(
+        'non-existent-id',
+        currentView
+      );
+
       expect(foundComponent).toBeNull();
     });
   });
@@ -382,14 +492,14 @@ describe('ComponentLifecycleManager', () => {
   describe('Configuration Access', () => {
     it('should provide access to component types', () => {
       const types = componentLifecycleManager.getComponentTypes();
-      
+
       expect(types).toEqual(componentTypes);
       expect(types).not.toBe(componentTypes); // Should be a copy
     });
 
     it('should provide access to categories', () => {
       const cats = componentLifecycleManager.getCategories();
-      
+
       expect(cats).toEqual(categories);
       expect(cats).not.toBe(categories); // Should be a copy
     });
@@ -398,23 +508,28 @@ describe('ComponentLifecycleManager', () => {
   describe('Event Handling', () => {
     it('should handle component create request event', () => {
       const createSpy = vi.spyOn(componentLifecycleManager, 'createComponent');
-      
+
       eventBus.emit(Events.COMPONENT_CREATE_REQUESTED, {
         type: 'power-core',
         x: 100,
         y: 50,
-        currentView
+        currentView,
       });
 
       expect(createSpy).toHaveBeenCalledWith('power-core', 100, 50, currentView);
     });
 
     it('should handle status toggle request event', () => {
-      const testComponent = componentLifecycleManager.createComponent('power-core', 100, 50, currentView)!;
+      const testComponent = componentLifecycleManager.createComponent(
+        'power-core',
+        100,
+        50,
+        currentView
+      )!;
       const toggleSpy = vi.spyOn(componentLifecycleManager, 'toggleComponentStatus');
-      
+
       eventBus.emit(Events.COMPONENT_STATUS_TOGGLE_REQUESTED, {
-        component: testComponent
+        component: testComponent,
       });
 
       expect(toggleSpy).toHaveBeenCalledWith(testComponent);
@@ -422,7 +537,7 @@ describe('ComponentLifecycleManager', () => {
 
     it('should ignore invalid event payloads', () => {
       const createSpy = vi.spyOn(componentLifecycleManager, 'createComponent');
-      
+
       // Missing required parameters
       eventBus.emit(Events.COMPONENT_CREATE_REQUESTED, {
         type: 'power-core',
@@ -441,7 +556,7 @@ describe('ComponentLifecycleManager', () => {
         componentTypes,
         categories
       );
-      
+
       expect(manager).toBeInstanceOf(ComponentLifecycleManager);
     });
   });
@@ -453,7 +568,7 @@ describe('ComponentLifecycleManager', () => {
         on: vi.fn(),
         emit: vi.fn().mockImplementation(() => {
           throw new Error('Event emission failed');
-        })
+        }),
       } as any;
 
       const manager = new ComponentLifecycleManager(
@@ -465,7 +580,7 @@ describe('ComponentLifecycleManager', () => {
 
       // Should not throw, should log error
       const component = manager.createComponent('power-core', 100, 50, currentView);
-      
+
       expect(component).toBeDefined();
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('Failed to emit ComponentCreated'),

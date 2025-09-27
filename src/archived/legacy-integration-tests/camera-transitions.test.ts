@@ -11,7 +11,7 @@ class MockMotherboardApp {
     duration: 800,
     zoomOutFactor: 0.3,
     focusZoom: 1.2,
-    easingFunction: (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+    easingFunction: (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
   };
 
   // Easing functions
@@ -64,7 +64,7 @@ class MockMotherboardApp {
     const baseDuration = this.transitionConfig.duration;
     const maxDuration = baseDuration * 1.5;
     const minDuration = baseDuration * 0.5;
-    
+
     const scaleFactor = Math.min(distance / 500, 2);
     return Math.max(minDuration, Math.min(maxDuration, baseDuration * scaleFactor));
   }
@@ -105,9 +105,9 @@ describe('Camera Transitions', () => {
     it('should interpolate between cameras correctly', () => {
       const start = { x: 0, y: 0, zoom: 1 };
       const end = { x: 100, y: 200, zoom: 2 };
-      
+
       const result = app['interpolateCamera'](start, end, 0.5);
-      
+
       expect(result.x).toBe(50);
       expect(result.y).toBe(100);
       expect(result.zoom).toBe(1.5);
@@ -116,26 +116,26 @@ describe('Camera Transitions', () => {
     it('should calculate camera distance correctly', () => {
       const cam1 = { x: 0, y: 0, zoom: 1 };
       const cam2 = { x: 100, y: 0, zoom: 1 };
-      
+
       const distance = app['getCameraDistance'](cam1, cam2);
-      
+
       expect(distance).toBe(100);
     });
 
     it('should get component center correctly', () => {
       const component = { x: 10, y: 20, width: 100, height: 60 };
-      
+
       const center = app['getComponentCenter'](component);
-      
+
       expect(center.x).toBe(60);
       expect(center.y).toBe(50);
     });
 
     it('should calculate focus camera position correctly', () => {
       const component = { x: 100, y: 100, width: 200, height: 100 };
-      
+
       const focusCamera = app['getFocusCameraPosition'](component, 1.2);
-      
+
       expect(focusCamera.zoom).toBe(1.2);
       // Camera should center on component
       expect(focusCamera.x).toBe(app.canvas.width / 2 - 200 * 1.2); // center.x * zoom
@@ -146,9 +146,9 @@ describe('Camera Transitions', () => {
   describe('Transition Configuration', () => {
     it('should allow setting transition config', () => {
       const newConfig = { duration: 1000, zoomOutFactor: 0.5 };
-      
+
       app.setTransitionConfig(newConfig);
-      
+
       const config = app.getTransitionConfig();
       expect(config.duration).toBe(1000);
       expect(config.zoomOutFactor).toBe(0.5);
@@ -158,10 +158,14 @@ describe('Camera Transitions', () => {
     it('should calculate dynamic transition duration', () => {
       const shortDistance = { x: 0, y: 0, zoom: 1 };
       const longDistance = { x: 1000, y: 1000, zoom: 3 };
-      
-      const shortDuration = app['calculateTransitionDuration'](shortDistance, { x: 10, y: 10, zoom: 1 });
+
+      const shortDuration = app['calculateTransitionDuration'](shortDistance, {
+        x: 10,
+        y: 10,
+        zoom: 1,
+      });
       const longDuration = app['calculateTransitionDuration'](shortDistance, longDistance);
-      
+
       expect(longDuration).toBeGreaterThan(shortDuration);
       expect(shortDuration).toBeGreaterThanOrEqual(app.transitionConfig.duration * 0.5);
       expect(longDuration).toBeLessThanOrEqual(app.transitionConfig.duration * 1.5);

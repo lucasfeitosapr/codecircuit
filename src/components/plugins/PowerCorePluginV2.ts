@@ -14,10 +14,10 @@ export interface PowerCoreComponent extends ComponentBase {
 
 /**
  * PowerCorePluginV2 - Phase 2A migration success #2!
- * 
+ *
  * Energy source component - the foundation of circuit power flow.
  * 95% code salvage achieved from original PowerCorePlugin.
- * 
+ *
  * Key characteristics:
  * - Output-only pins (energy source)
  * - Yellow/orange color scheme
@@ -35,13 +35,15 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
     height: 40,
     pins: {
       input: [], // Power cores are energy sources - no inputs
-      output: [{
-        x: 80,
-        y: 20,
-        type: 'energy',
-        label: 'power'
-      }]
-    }
+      output: [
+        {
+          x: 80,
+          y: 20,
+          type: 'energy',
+          label: 'power',
+        },
+      ],
+    },
   };
 
   /**
@@ -66,15 +68,17 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
       color: '#ffaa00',
       status: 'defined',
       energyOutput: config.energyOutput || 100, // Default energy capacity
-      
+
       // Pin configuration - output only (energy source)
       pins: {
-        output: [{
-          x: 80,
-          y: 20,
-          type: 'energy'
-        }]
-      }
+        output: [
+          {
+            x: 80,
+            y: 20,
+            type: 'energy',
+          },
+        ],
+      },
     };
   }
 
@@ -174,8 +178,15 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
       ctx.globalAlpha = 1;
 
       // Draw pins
-      this.drawPins(ctx, component, screenX, screenY, camera, (frame as any).categories ?? {}, (frame as any).payload?.connections ?? []);
-
+      this.drawPins(
+        ctx,
+        component,
+        screenX,
+        screenY,
+        camera,
+        (frame as any).categories ?? {},
+        (frame as any).payload?.connections ?? []
+      );
     } catch (e) {
       console.error('PowerCorePluginV2.render failed', e);
     }
@@ -212,7 +223,10 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
         const pinY = screenY + pin.y * camera.zoom;
 
         const hasActiveInput = connections.some(
-          (conn: any) => conn.to.component === component && conn.to.pinIndex === index && (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
+          (conn: any) =>
+            conn.to.component === component &&
+            conn.to.pinIndex === index &&
+            (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
         );
 
         if (hasActiveInput) {
@@ -230,12 +244,14 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
         const pinX = screenX + pin.x * camera.zoom;
         const pinY = screenY + pin.y * camera.zoom;
 
-        const hasActiveOutput = connections.some(
-          (conn: any) => conn.from.component === component && conn.from.pinIndex === index
-        ) && isActive;
+        const hasActiveOutput =
+          connections.some(
+            (conn: any) => conn.from.component === component && conn.from.pinIndex === index
+          ) && isActive;
 
         if (hasActiveOutput) {
-          const pulseIntensity = component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
+          const pulseIntensity =
+            component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
           ctx.shadowBlur = 12 * camera.zoom * pulseIntensity;
           const size = pinSize * (1.1 + 0.05 * Math.sin(Date.now() * 0.005));
           ctx.fillRect(pinX - size / 2, pinY - size / 2, size, size);
@@ -257,7 +273,7 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
     return {
       ...component,
       // Preserve energy state for serialization
-      energyOutput: component.energyOutput
+      energyOutput: component.energyOutput,
     };
   }
 
@@ -270,7 +286,7 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
     return {
       ...data,
       type: 'power-core', // Ensure type consistency
-      energyOutput: data.energyOutput || 100 // Default if missing
+      energyOutput: data.energyOutput || 100, // Default if missing
     };
   }
 
@@ -290,7 +306,7 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
  */
 export const PowerCorePluginLegacy = {
   id: 'power-core',
-  displayName: 'Power Core', 
+  displayName: 'Power Core',
   render: (ctx: any, frame: any, model: any) => {
     const plugin = new PowerCorePluginV2();
     plugin.renderComponent(ctx, frame, model);

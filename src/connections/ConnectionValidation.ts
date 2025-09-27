@@ -70,10 +70,7 @@ export class ConnectionValidator {
   /**
    * Validate a connection against all applicable rules
    */
-  validateConnection(
-    connection: ConnectionV2,
-    components?: ComponentBase[]
-  ): ValidationResult[] {
+  validateConnection(connection: ConnectionV2, components?: ComponentBase[]): ValidationResult[] {
     const results: ValidationResult[] = [];
 
     // Run all applicable rules
@@ -167,8 +164,8 @@ export class ConnectionValidator {
 
     if (!sourceComponent || !targetComponent) return null;
 
-    const compatibility = this.compatibilityMatrix.find(c =>
-      c.sourceType === sourceComponent.type && c.targetType === targetComponent.type
+    const compatibility = this.compatibilityMatrix.find(
+      c => c.sourceType === sourceComponent.type && c.targetType === targetComponent.type
     );
 
     if (!compatibility) {
@@ -177,7 +174,7 @@ export class ConnectionValidator {
         severity: 'info',
         message: `No specific compatibility rules for ${sourceComponent.type} → ${targetComponent.type}`,
         ruleId: 'compatibility-matrix',
-        suggestions: ['Consider adding specific validation rules for this component combination']
+        suggestions: ['Consider adding specific validation rules for this component combination'],
       };
     }
 
@@ -188,7 +185,7 @@ export class ConnectionValidator {
         severity: 'warning',
         message: `Protocol ${connection.protocol} not recommended for ${sourceComponent.type} → ${targetComponent.type}`,
         ruleId: 'protocol-compatibility',
-        suggestions: compatibility.supportedProtocols.map(p => `Consider using ${p} protocol`)
+        suggestions: compatibility.supportedProtocols.map(p => `Consider using ${p} protocol`),
       };
     }
 
@@ -199,7 +196,9 @@ export class ConnectionValidator {
         severity: 'info',
         message: `Connection type ${connection.connectionType} not typical for ${sourceComponent.type} → ${targetComponent.type}`,
         ruleId: 'connection-type-compatibility',
-        suggestions: compatibility.recommendedConnectionTypes.map(t => `Consider using ${t} connection type`)
+        suggestions: compatibility.recommendedConnectionTypes.map(
+          t => `Consider using ${t} connection type`
+        ),
       };
     }
 
@@ -218,18 +217,18 @@ export class ConnectionValidator {
       severity: 'warning',
       appliesTo: {
         sourceTypes: ['gateway'],
-        targetTypes: ['power-core', 'task-resistor', 'module-ic']
+        targetTypes: ['power-core', 'task-resistor', 'module-ic'],
       },
-      validate: (connection) => ({
+      validate: connection => ({
         valid: false,
         severity: 'warning',
         message: 'Gateways typically connect to external systems, not internal components',
         ruleId: 'gateway-external-connection',
         suggestions: [
           'Consider if this connection represents an external integration',
-          'Gateway → Gateway connections are more typical for external systems'
-        ]
-      })
+          'Gateway → Gateway connections are more typical for external systems',
+        ],
+      }),
     });
 
     // Synchronous high-latency warning
@@ -239,9 +238,9 @@ export class ConnectionValidator {
       description: 'Synchronous connections with high latency may cause performance issues',
       severity: 'warning',
       appliesTo: {
-        connectionTypes: ['sync']
+        connectionTypes: ['sync'],
       },
-      validate: (connection) => {
+      validate: connection => {
         if (connection.designConfig.expectedLatency === 'HIGH') {
           return {
             valid: false,
@@ -251,12 +250,12 @@ export class ConnectionValidator {
             suggestions: [
               'Consider using async connection type for high-latency operations',
               'Implement timeout and retry mechanisms',
-              'Consider circuit breaker pattern'
-            ]
+              'Consider circuit breaker pattern',
+            ],
           };
         }
         return { valid: true, severity: 'info', message: '', ruleId: 'sync-high-latency' };
-      }
+      },
     });
 
     // Heavy data volume stream recommendation
@@ -265,9 +264,11 @@ export class ConnectionValidator {
       name: 'Heavy Data Volume Stream',
       description: 'Heavy data volumes should use streaming connections',
       severity: 'info',
-      validate: (connection) => {
-        if (connection.designConfig.dataVolume === 'HEAVY' &&
-            connection.connectionType !== 'stream') {
+      validate: connection => {
+        if (
+          connection.designConfig.dataVolume === 'HEAVY' &&
+          connection.connectionType !== 'stream'
+        ) {
           return {
             valid: false,
             severity: 'info',
@@ -275,12 +276,12 @@ export class ConnectionValidator {
             ruleId: 'heavy-data-stream',
             suggestions: [
               'Consider using stream connection type for heavy data',
-              'Evaluate if data can be paginated or chunked'
-            ]
+              'Evaluate if data can be paginated or chunked',
+            ],
           };
         }
         return { valid: true, severity: 'info', message: '', ruleId: 'heavy-data-stream' };
-      }
+      },
     });
 
     // Critical reliability validation
@@ -289,7 +290,7 @@ export class ConnectionValidator {
       name: 'Critical Reliability Protocol',
       description: 'Critical reliability connections should use appropriate protocols',
       severity: 'warning',
-      validate: (connection) => {
+      validate: connection => {
         if (connection.designConfig.reliability === 'CRITICAL') {
           const unreliableProtocols: ConnectionProtocol[] = ['Custom'];
           if (unreliableProtocols.includes(connection.protocol)) {
@@ -300,13 +301,18 @@ export class ConnectionValidator {
               ruleId: 'critical-reliability-protocol',
               suggestions: [
                 'Consider using HTTP, TCP, or Database protocols for critical connections',
-                'Ensure proper error handling and retry mechanisms'
-              ]
+                'Ensure proper error handling and retry mechanisms',
+              ],
             };
           }
         }
-        return { valid: true, severity: 'info', message: '', ruleId: 'critical-reliability-protocol' };
-      }
+        return {
+          valid: true,
+          severity: 'info',
+          message: '',
+          ruleId: 'critical-reliability-protocol',
+        };
+      },
     });
 
     // Security level protocol alignment
@@ -315,7 +321,7 @@ export class ConnectionValidator {
       name: 'Security Protocol Alignment',
       description: 'Security requirements should align with protocol capabilities',
       severity: 'error',
-      validate: (connection) => {
+      validate: connection => {
         if (connection.designConfig.security === 'ENCRYPTED') {
           const insecureProtocols: ConnectionProtocol[] = ['TCP', 'Custom'];
           if (insecureProtocols.includes(connection.protocol)) {
@@ -327,13 +333,18 @@ export class ConnectionValidator {
               suggestions: [
                 'Use HTTPS instead of HTTP for encrypted connections',
                 'Consider gRPC with TLS for high-performance encrypted connections',
-                'Ensure WebSocket connections use WSS (secure WebSockets)'
-              ]
+                'Ensure WebSocket connections use WSS (secure WebSockets)',
+              ],
             };
           }
         }
-        return { valid: true, severity: 'info', message: '', ruleId: 'security-protocol-alignment' };
-      }
+        return {
+          valid: true,
+          severity: 'info',
+          message: '',
+          ruleId: 'security-protocol-alignment',
+        };
+      },
     });
 
     // Decision point output connections
@@ -343,7 +354,7 @@ export class ConnectionValidator {
       description: 'Decision points should have multiple output connections',
       severity: 'info',
       appliesTo: {
-        sourceTypes: ['decision-point']
+        sourceTypes: ['decision-point'],
       },
       validate: (connection, components) => {
         // This rule would need component connection analysis
@@ -355,10 +366,10 @@ export class ConnectionValidator {
           ruleId: 'decision-point-outputs',
           suggestions: [
             'Ensure decision point has connections for all possible outcomes',
-            'Consider using event connection types for conditional branching'
-          ]
+            'Consider using event connection types for conditional branching',
+          ],
         };
-      }
+      },
     });
 
     // Module IC internal connections
@@ -369,18 +380,18 @@ export class ConnectionValidator {
       severity: 'info',
       appliesTo: {
         sourceTypes: ['module-ic'],
-        targetTypes: ['module-ic']
+        targetTypes: ['module-ic'],
       },
-      validate: (connection) => ({
+      validate: connection => ({
         valid: true,
         severity: 'info',
         message: 'Module IC to Module IC connections represent service-to-service communication',
         ruleId: 'module-ic-internal',
         suggestions: [
           'Consider if this connection should be internal to one module',
-          'Evaluate service boundaries and API contracts'
-        ]
-      })
+          'Evaluate service boundaries and API contracts',
+        ],
+      }),
     });
   }
 
@@ -396,7 +407,7 @@ export class ConnectionValidator {
       recommendedConnectionTypes: ['async', 'stream'],
       validationRules: ['heavy-data-stream'],
       designNotes: 'Power cores provide energy/resources to processing components',
-      commonPatterns: ['Resource allocation', 'Load distribution']
+      commonPatterns: ['Resource allocation', 'Load distribution'],
     });
 
     this.addCompatibilityRule({
@@ -406,7 +417,7 @@ export class ConnectionValidator {
       recommendedConnectionTypes: ['sync', 'async'],
       validationRules: [],
       designNotes: 'Power cores initialize and configure modules',
-      commonPatterns: ['Service startup', 'Configuration management']
+      commonPatterns: ['Service startup', 'Configuration management'],
     });
 
     // Gateway → External Systems
@@ -417,7 +428,7 @@ export class ConnectionValidator {
       recommendedConnectionTypes: ['sync', 'async', 'stream'],
       validationRules: ['critical-reliability-protocol', 'security-protocol-alignment'],
       designNotes: 'Gateway-to-gateway connections represent external integrations',
-      commonPatterns: ['API proxying', 'Data synchronization', 'Event forwarding']
+      commonPatterns: ['API proxying', 'Data synchronization', 'Event forwarding'],
     });
 
     // Decision Point → Multiple Targets (Branching Logic)
@@ -428,7 +439,7 @@ export class ConnectionValidator {
       recommendedConnectionTypes: ['event', 'async'],
       validationRules: ['decision-point-outputs'],
       designNotes: 'Decision points route to processing components based on conditions',
-      commonPatterns: ['Conditional processing', 'Workflow branching']
+      commonPatterns: ['Conditional processing', 'Workflow branching'],
     });
 
     this.addCompatibilityRule({
@@ -438,7 +449,7 @@ export class ConnectionValidator {
       recommendedConnectionTypes: ['event', 'async', 'sync'],
       validationRules: ['decision-point-outputs'],
       designNotes: 'Decision points can trigger different service modules',
-      commonPatterns: ['Service orchestration', 'Business rule routing']
+      commonPatterns: ['Service orchestration', 'Business rule routing'],
     });
 
     // Task Resistor → Module IC (Processing to Services)
@@ -449,7 +460,7 @@ export class ConnectionValidator {
       recommendedConnectionTypes: ['sync', 'async'],
       validationRules: ['sync-high-latency'],
       designNotes: 'Processing components calling service modules',
-      commonPatterns: ['Data processing pipelines', 'Batch job execution']
+      commonPatterns: ['Data processing pipelines', 'Batch job execution'],
     });
 
     // Module IC internal communication
@@ -460,7 +471,7 @@ export class ConnectionValidator {
       recommendedConnectionTypes: ['sync', 'async'],
       validationRules: ['module-ic-internal', 'critical-reliability-protocol'],
       designNotes: 'Inter-service communication between modules',
-      commonPatterns: ['Microservice communication', 'Service mesh connections']
+      commonPatterns: ['Microservice communication', 'Service mesh connections'],
     });
   }
 }
@@ -474,9 +485,9 @@ export class ValidationUtils {
    */
   static getSeverityColor(severity: 'error' | 'warning' | 'info'): string {
     const colors = {
-      error: '#E74C3C',    // Red
-      warning: '#F39C12',  // Orange
-      info: '#3498DB'      // Blue
+      error: '#E74C3C', // Red
+      warning: '#F39C12', // Orange
+      info: '#3498DB', // Blue
     };
     return colors[severity];
   }
@@ -488,7 +499,7 @@ export class ValidationUtils {
     const icons = {
       error: '❌',
       warning: '⚠️',
-      info: 'ℹ️'
+      info: 'ℹ️',
     };
     return icons[severity];
   }

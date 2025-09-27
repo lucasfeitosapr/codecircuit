@@ -28,7 +28,11 @@ describe('ImplementationLayer', () => {
 
     const ctx = { fillRect: vi.fn() } as any;
     const model = { id: 'm1', type: pluginId, x: 5, y: 6, width: 10, height: 12, color: '#abc' };
-    const frame = { timestamp: Date.now(), camera: { x: 0, y: 0, zoom: 1 }, payload: { models: [model] } } as any;
+    const frame = {
+      timestamp: Date.now(),
+      camera: { x: 0, y: 0, zoom: 1 },
+      payload: { models: [model] },
+    } as any;
 
     ImplementationLayer.render(ctx, frame);
 
