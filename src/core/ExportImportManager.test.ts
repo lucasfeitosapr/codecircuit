@@ -260,17 +260,37 @@ describe('ExportImportManager', () => {
     });
 
     it('should handle export errors gracefully', () => {
-      const invalidComponents = [null as any];
+      // Test with invalid components array type (not an array)
+      const invalidComponents = 'not-an-array' as any;
 
       expect(() => {
         manager.exportProjectData(invalidComponents, []);
-      }).toThrow();
+      }).toThrow('Components must be an array');
 
       expect(mockEventEmit).toHaveBeenCalledWith(Events.SystemError, {
         error: expect.any(Error),
         context: 'ExportImportManager.exportProjectData',
         timestamp: expect.any(Number),
       });
+    });
+
+    it('should filter out null/invalid components gracefully', () => {
+      // This tests the robust behavior of filtering null components
+      const componentsWithNulls = [
+        mockComponents[0], // valid component
+        null as any,      // null component
+        undefined as any, // undefined component
+        { name: 'missing-id' } as any, // component without id
+        mockComponents[1], // another valid component
+      ];
+
+      const projectData = manager.exportProjectData(componentsWithNulls, []);
+
+      // Should only export the 2 valid components
+      expect(projectData.components).toHaveLength(2);
+      expect(projectData.components[0]).toHaveProperty('id', 'comp1');
+      expect(projectData.components[1]).toHaveProperty('id', 'comp2');
+      expect(projectData.metadata.totalComponents).toBe(2);
     });
   });
 
