@@ -40,6 +40,7 @@ import {
 // Legacy imports (to be gradually reduced)
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
+import { RenderScheduler } from './rendering/RenderScheduler';
 // import { layeredRenderer } from './rendering/LayeredRenderer'; // Unused import
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
@@ -82,6 +83,9 @@ export class MotherboardApp {
   // Legacy runtime layers (to be gradually migrated to LayeredRenderer)
   private runtimeLayer!: RuntimeLayer;
   private uiLayer!: UILayer;
+
+  // Performance optimization modules (Phase 2B)
+  private renderScheduler!: RenderScheduler;
 
   // Configuration data
   private componentTypes!: Record<string, Partial<ComponentBase>>;
@@ -442,18 +446,64 @@ export class MotherboardApp {
     // Run application initialization
     this.applicationInitializer.initialize();
 
-    // Setup event handlers
+    // Phase 2B: Initialize RenderScheduler BEFORE setting up event handlers
+    this.renderScheduler = new RenderScheduler(
+      (timestamp: number) => {
+        this.appStateManager.updateFPS(timestamp);
+        this.render();
+      },
+      () => this.runtimeLayer.hasActiveAnimations()
+    );
+
+    // Setup event handlers (will now be able to call markDirty)
     this.setupEventHandlers();
 
-    // Start animation loop
-    this.animate();
-
+    // Start smart rendering (initial render will happen)
+    this.renderScheduler.start();
+    
     console.log('🚀 MotherboardApp started successfully');
+    console.log('⚡ Performance optimizations enabled - render on demand');
+    
+    // Force an initial render to show the board
+    this.renderScheduler.markDirty();
+    console.log('🎨 Initial render triggered');
   }
 
   private setupEventHandlers() {
     this.setupExportImportEventHandlers();
     this.setupConnectionManagerEventHandlers();
+    this.setupRenderSchedulerEventHandlers(); // Phase 2B: Mark dirty on changes
+  }
+
+  /**
+   * Phase 2B: Setup event handlers for RenderScheduler
+   * Mark dirty when things change to trigger re-render
+   * 
+   * Note: VIEWPORT_CAMERA_UPDATED fires on every mouse move during pan,
+   * so the scheduler will render continuously during panning (expected behavior)
+   */
+  private setupRenderSchedulerEventHandlers() {
+    // Component changes
+    eventBus.on(Events.COMPONENT_CREATED, () => this.renderScheduler.markDirty());
+    eventBus.on(Events.COMPONENT_UPDATED, () => this.renderScheduler.markDirty());
+    eventBus.on(Events.COMPONENT_DELETED, () => this.renderScheduler.markDirty());
+    eventBus.on(Events.COMPONENT_STATUS_CHANGED, () => this.renderScheduler.markDirty());
+    eventBus.on(Events.COMPONENT_MOVED, () => this.renderScheduler.markDirty());
+    
+    // Connection changes
+    eventBus.on(Events.CONNECTION_CREATED, () => this.renderScheduler.markDirty());
+    eventBus.on(Events.CONNECTION_DELETED, () => this.renderScheduler.markDirty());
+    
+    // Camera/Viewport changes (fires on every mousemove during pan - this is expected!)
+    eventBus.on(Events.VIEWPORT_CAMERA_UPDATED, () => this.renderScheduler.markDirty());
+    eventBus.on(Events.VIEWPORT_ZOOM_REQUESTED, () => this.renderScheduler.markDirty());
+    eventBus.on(Events.VIEWPORT_PAN_REQUESTED, () => this.renderScheduler.markDirty());
+    
+    // View changes
+    eventBus.on(Events.VIEW_CHANGED, () => this.renderScheduler.markDirty());
+    eventBus.on(Events.SELECTION_CHANGED, () => this.renderScheduler.markDirty());
+    
+    console.log('⚡ RenderScheduler event handlers configured - rendering on demand');
   }
 
   private initializeMainView() {
@@ -608,11 +658,8 @@ export class MotherboardApp {
     }
   }
 
-  animate(currentTime?: number): void {
-    this.appStateManager.updateFPS(currentTime || performance.now());
-    this.render();
-    requestAnimationFrame(this.animate.bind(this));
-  }
+  // Phase 2B: Removed old animate() method - now using RenderScheduler
+  // The RenderScheduler handles animation loop and only renders when needed
 
   // Project management methods (delegated to managers)
   exportProject(): void {

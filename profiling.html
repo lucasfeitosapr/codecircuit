@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Performance Profiling - CodeCircuit 2D</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #00ff88;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #00ff88;
+      text-shadow: 0 0 10px #00ff88;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: #00aaff;
+      margin-bottom: 30px;
+    }
+    
+    .controls {
+      background: #1a1a1a;
+      border: 1px solid #00ff88;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: inline-block;
+      width: 200px;
+      color: #00aaff;
+    }
+    
+    select, button {
+      padding: 8px 15px;
+      background: #0a0a0a;
+      color: #00ff88;
+      border: 1px solid #00ff88;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    
+    button {
+      margin-right: 10px;
+    }
+    
+    button:hover {
+      background: #00ff88;
+      color: #0a0a0a;
+      box-shadow: 0 0 10px #00ff88;
+    }
+    
+    button.recording {
+      background: #ff0000;
+      border-color: #ff0000;
+      color: white;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    .status {
+      background: #1a1a1a;
+      border: 1px solid #00aaff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    
+    .status-item {
+      display: inline-block;
+      margin-right: 30px;
+      color: #00aaff;
+    }
+    
+    .status-value {
+      color: #00ff88;
+      font-weight: bold;
+    }
+    
+    .report {
+      background: #1a1a1a;
+      border: 1px solid #ffaa00;
+      padding: 20px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+      font-size: 12px;
+      max-height: 500px;
+      overflow-y: auto;
+      display: none;
+    }
+    
+    .report.visible {
+      display: block;
+    }
+    
+    .instructions {
+      background: #1a1a1a;
+      border: 1px solid #aa88ff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      color: #aa88ff;
+    }
+    
+    .instructions h3 {
+      color: #aa88ff;
+      margin-top: 0;
+    }
+    
+    .instructions ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    
+    .instructions li {
+      margin-bottom: 10px;
+    }
+    
+    #circuit-board {
+      border: 2px solid #00ff88;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+      cursor: crosshair;
+    }
+    
+    .warning {
+      color: #ffaa00;
+      font-weight: bold;
+    }
+    
+    .good {
+      color: #00ff88;
+      font-weight: bold;
+    }
+    
+    .bad {
+      color: #ff4444;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ Performance Profiling Tool</h1>
+    <p class="subtitle">Phase 2B - Baseline Performance Measurement</p>
+    
+    <div class="instructions">
+      <h3>📋 Profiling Instructions</h3>
+      <ol>
+        <li>Select a test board preset (start with "medium")</li>
+        <li>Click "Generate Test Board" to create components</li>
+        <li>Click "Start Profiling" to begin recording</li>
+        <li>Interact with the board (pan, zoom, drag components) for 5-10 seconds</li>
+        <li>Click "Stop Profiling" to see results</li>
+        <li>Try different presets to test various scenarios</li>
+        <li>Export CSV for detailed analysis in Excel/Google Sheets</li>
+      </ol>
+    </div>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label>Test Board Preset:</label>
+        <select id="preset-select">
+          <option value="small">Small (25 components)</option>
+          <option value="medium" selected>Medium (100 components)</option>
+          <option value="large">Large (200 components)</option>
+          <option value="xlarge">X-Large (500 components)</option>
+          <option value="stress">Stress Test (500 dense)</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <button id="generate-board">Generate Test Board</button>
+        <button id="clear-board">Clear Board</button>
+      </div>
+      
+      <div class="control-group">
+        <button id="start-profiling">Start Profiling</button>
+        <button id="stop-profiling" disabled>Stop Profiling</button>
+        <button id="export-csv" disabled>Export CSV</button>
+      </div>
+    </div>
+    
+    <div class="status">
+      <div class="status-item">
+        <span>Components:</span>
+        <span class="status-value" id="component-count">0</span>
+      </div>
+      <div class="status-item">
+        <span>Connections:</span>
+        <span class="status-value" id="connection-count">0</span>
+      </div>
+      <div class="status-item">
+        <span>FPS:</span>
+        <span class="status-value" id="current-fps">60</span>
+      </div>
+      <div class="status-item">
+        <span>Frame Time:</span>
+        <span class="status-value" id="frame-time">0ms</span>
+      </div>
+      <div class="status-item">
+        <span>Status:</span>
+        <span class="status-value" id="profiling-status">Idle</span>
+      </div>
+    </div>
+    
+    <canvas id="circuit-board" width="1200" height="600"></canvas>
+    
+    <div id="report" class="report"></div>
+  </div>
+  
+  <script type="module">
+    // This will be populated with the actual profiling logic
+    // For now, it's a placeholder that shows the UI structure
+    
+    console.log('🔧 Performance Profiling Tool Loaded');
+    console.log('📊 Open browser DevTools > Performance tab for detailed profiling');
+    console.log('💡 Available in console: window.renderProfiler');
+    
+    // UI Elements
+    const presetSelect = document.getElementById('preset-select');
+    const generateBtn = document.getElementById('generate-board');
+    const clearBtn = document.getElementById('clear-board');
+    const startBtn = document.getElementById('start-profiling');
+    const stopBtn = document.getElementById('stop-profiling');
+    const exportBtn = document.getElementById('export-csv');
+    const reportDiv = document.getElementById('report');
+    const statusElements = {
+      components: document.getElementById('component-count'),
+      connections: document.getElementById('connection-count'),
+      fps: document.getElementById('current-fps'),
+      frameTime: document.getElementById('frame-time'),
+      status: document.getElementById('profiling-status'),
+    };
+    
+    let isRecording = false;
+    let lastReport = null;
+    
+    // Event Handlers
+    generateBtn.addEventListener('click', () => {
+      const preset = presetSelect.value;
+      console.log(`Generating ${preset} test board...`);
+      alert(`Test board generation will be implemented after integration.\n\nFor now, use the main application with manually created components.`);
+    });
+    
+    clearBtn.addEventListener('click', () => {
+      console.log('Clearing board...');
+      reportDiv.classList.remove('visible');
+    });
+    
+    startBtn.addEventListener('click', () => {
+      isRecording = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      startBtn.classList.add('recording');
+      statusElements.status.textContent = 'Recording...';
+      statusElements.status.className = 'status-value warning';
+      
+      if (window.renderProfiler) {
+        window.renderProfiler.startRecording();
+        console.log('✅ Profiling started via renderProfiler');
+      } else {
+        console.log('⚠️  renderProfiler not available - integration needed');
+        console.log('💡 Manually profile using Chrome DevTools > Performance');
+      }
+    });
+    
+    stopBtn.addEventListener('click', () => {
+      isRecording = false;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      exportBtn.disabled = false;
+      startBtn.classList.remove('recording');
+      statusElements.status.textContent = 'Complete';
+      statusElements.status.className = 'status-value good';
+      
+      if (window.renderProfiler) {
+        lastReport = window.renderProfiler.stopRecording();
+        reportDiv.textContent = lastReport.summary;
+        reportDiv.classList.add('visible');
+        
+        // Add breakdown details
+        const breakdown = lastReport.breakdownPercentages;
+        reportDiv.textContent += `\n🔍 Render Breakdown:\n`;
+        reportDiv.textContent += `   • Grid: ${breakdown.grid.toFixed(1)}% (${lastReport.breakdown.grid.toFixed(2)}ms)\n`;
+        reportDiv.textContent += `   • Components: ${breakdown.components.toFixed(1)}% (${lastReport.breakdown.components.toFixed(2)}ms)\n`;
+        reportDiv.textContent += `   • Connections: ${breakdown.connections.toFixed(1)}% (${lastReport.breakdown.connections.toFixed(2)}ms)\n`;
+        reportDiv.textContent += `   • UI: ${breakdown.ui.toFixed(1)}% (${lastReport.breakdown.ui.toFixed(2)}ms)\n`;
+        
+        // Add recommendations
+        reportDiv.textContent += `\n💡 Optimization Priorities:\n`;
+        const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+        sorted.forEach(([key, pct], i) => {
+          if (pct > 25) {
+            reportDiv.textContent += `   ${i + 1}. Optimize ${key} (${pct.toFixed(1)}% of frame time)\n`;
+          }
+        });
+        
+        console.log('✅ Profiling complete');
+        console.log('📊 Report:', lastReport);
+      } else {
+        reportDiv.textContent = 'Profiler not integrated yet.\n\nPlease use Chrome DevTools > Performance tab for detailed profiling.';
+        reportDiv.classList.add('visible');
+      }
+    });
+    
+    exportBtn.addEventListener('click', () => {
+      if (window.renderProfiler && lastReport) {
+        const csv = window.renderProfiler.exportToCSV();
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `performance-profile-${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        console.log('✅ CSV exported');
+      }
+    });
+    
+    // Instructions
+    console.log(`
+╔════════════════════════════════════════════════════════════╗
+║  Performance Profiling Tool - Quick Start                 ║
+╚════════════════════════════════════════════════════════════╝
+
+📊 Manual Profiling (Works Now):
+   1. Open main application (npm run dev)
+   2. Create/load a board with many components
+   3. Open Chrome DevTools > Performance tab
+   4. Click Record
+   5. Interact with board for 5-10 seconds
+   6. Stop recording and analyze
+
+🔧 Automated Profiling (After Integration):
+   1. Generate test board using presets
+   2. Click "Start Profiling"
+   3. Interact with board
+   4. Click "Stop Profiling" to see report
+   5. Export CSV for detailed analysis
+
+💡 In Console:
+   window.renderProfiler.startRecording()
+   // ... interact with board ...
+   const report = window.renderProfiler.stopRecording()
+   console.log(report)
+    `);
+  </script>
+</body>
+</html>

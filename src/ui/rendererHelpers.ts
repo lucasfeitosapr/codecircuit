@@ -1,6 +1,8 @@
 import { drawOrthogonalTrace as rendererDrawOrthogonalTrace } from '../renderer';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from '../utils';
 import type { Camera, Connection, ComponentBase, PinRef } from '../types';
+import { ConnectionRenderer } from '../rendering/ConnectionRenderer';
+import { PerformanceConfig } from '../config/performanceConfig';
 
 // Minimal app context used by these helpers. Keep it intentionally small so
 // we don't accidentally couple to the entire application surface while
@@ -15,8 +17,56 @@ interface AppContext {
   inputEventCoordinator?: { getMousePosition: () => { x: number; y: number } };
 }
 
+// Optimized connection renderer instance (Phase 2B Performance)
+const connectionRenderer = new ConnectionRenderer();
+
+// Performance monitoring - log culling stats periodically
+let frameCount = 0;
+const STATS_LOG_INTERVAL = 300; // Log every 5 seconds at 60fps
+
 export function drawConnections(app: AppContext, connections: Connection[] | undefined) {
   if (!connections) return;
+  
+  // Phase 2B: Use optimized ConnectionRenderer with viewport culling
+  console.log('🔍 drawConnections called, ENABLE_CONNECTION_CULLING:', PerformanceConfig.ENABLE_CONNECTION_CULLING, 'connections:', connections.length);
+  
+  if (PerformanceConfig.ENABLE_CONNECTION_CULLING) {
+    try {
+      // Get canvas for viewport calculations
+      const canvas = app.ctx.canvas;
+      
+      console.log('🎯 Using ConnectionRenderer (optimized path)');
+      
+      connectionRenderer.renderConnections(
+        app.ctx,
+        connections,
+        app.camera,
+        canvas,
+        app.categories
+      );
+      
+      // Periodic performance logging
+      frameCount++;
+      if (frameCount >= STATS_LOG_INTERVAL) {
+        const stats = connectionRenderer.getStats();
+        console.log(
+          `🎯 Connection culling: ${stats.culled}/${stats.total} ` +
+          `(${stats.total > 0 ? ((stats.culled / stats.total) * 100).toFixed(1) : '0'}%) - ` +
+          `Zoom: ${app.camera.zoom.toFixed(2)}x`
+        );
+        frameCount = 0;
+      }
+      
+      return; // Early return - optimized path complete
+    } catch (error) {
+      console.error('❌ ConnectionRenderer failed, falling back to legacy:', error);
+      // Fall through to legacy rendering
+    }
+  }
+  
+  console.log('⚠️ Using LEGACY connection rendering (not optimized)');
+  
+  // Legacy rendering path (fallback if optimization disabled)
   connections.forEach(connection => {
     if (!connection || !connection.from || !connection.to) {
       // Keep same warning behaviour

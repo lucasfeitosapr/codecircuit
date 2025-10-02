@@ -141,8 +141,32 @@ export class LegacyRenderer {
 
     // Draw components from current view
     const components = context.getCurrentViewComponents();
+    
+    // Phase 2B: Add component viewport culling (similar to connection culling)
+    const camera = context.camera;
+    const canvas = context.canvas;
+    const viewportX = -camera.x / camera.zoom;
+    const viewportY = -camera.y / camera.zoom;
+    const viewportWidth = canvas.width / camera.zoom;
+    const viewportHeight = canvas.height / camera.zoom;
+    const margin = 100 / camera.zoom; // 100px margin in world space
+    
+    let culledComponents = 0;
+    
     components.forEach((component: ComponentBase) => {
-      LegacyRenderer.drawComponent(context, component);
+      // Check if component is in viewport
+      const isVisible = !(
+        component.x + component.width < viewportX - margin ||
+        component.x > viewportX + viewportWidth + margin ||
+        component.y + component.height < viewportY - margin ||
+        component.y > viewportY + viewportHeight + margin
+      );
+      
+      if (isVisible) {
+        LegacyRenderer.drawComponent(context, component);
+      } else {
+        culledComponents++;
+      }
     });
 
     // Draw transition overlay if transitioning

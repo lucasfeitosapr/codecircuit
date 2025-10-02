@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test</title></head>
+<body>
+<script>
+console.log('Testing RenderScheduler logic...');
+
+let dirty = true;
+let animating = false;
+let rafId = 0;
+let renderCount = 0;
+
+function markDirty() {
+  console.log('markDirty called, dirty:', dirty, 'animating:', animating);
+  dirty = true;
+  if (!animating) {
+    scheduleRender();
+  }
+}
+
+function scheduleRender() {
+  if (rafId) {
+    console.log('Already scheduled, skipping');
+    return;
+  }
+  
+  console.log('Scheduling render...');
+  rafId = requestAnimationFrame((timestamp) => {
+    rafId = 0;
+    console.log('Render frame', renderCount++, 'dirty:', dirty);
+    
+    if (dirty) {
+      console.log('RENDERING!');
+      dirty = false;
+      // render logic here
+    }
+    
+    // Check if should continue
+    const hasAnimations = false; // simulate
+    if (dirty || hasAnimations) {
+      scheduleRender();
+    } else {
+      console.log('Stopping - nothing dirty');
+    }
+  });
+}
+
+function start() {
+  if (animating) return;
+  animating = true;
+  console.log('Starting with dirty:', dirty);
+  scheduleRender();
+}
+
+// Test
+start();
+setTimeout(() => {
+  console.log('\n--- After 1 second, marking dirty ---');
+  markDirty();
+}, 1000);
+</script>
+</body>
+</html>

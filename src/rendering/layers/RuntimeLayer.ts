@@ -487,4 +487,12 @@ export default class RuntimeLayer {
       return 7.5625 * (t -= 2.625 / 2.75) * t + 0.984375;
     }
   }
+  
+  /**
+   * Check if there are any active animations or particles
+   * Used by RenderScheduler to determine if continuous rendering is needed
+   */
+  hasActiveAnimations(): boolean {
+    return this.animations.size > 0 || this.particles.size > 0;
+  }
 }

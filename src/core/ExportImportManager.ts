@@ -1,5 +1,6 @@
 import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
+import { ExportConfig } from '../config/exportConfig';
 import type { ComponentBase, Connection, ModuleComponent } from '../types';
 
 /**
@@ -18,10 +19,13 @@ import type { ComponentBase, Connection, ModuleComponent } from '../types';
  *
  * Event-driven: Emits import/export events through the global EventBus
  * instead of directly manipulating application state.
+ * 
+ * Phase 2B: Added circular reference detection and depth limiting
  */
 export class ExportImportManager {
   private projectName: string = 'Motherboard Project';
   private projectVersion: string = '1.0.0';
+  private visitedComponents: Set<string> = new Set();
 
   constructor() {
     this.setupEventListeners();
@@ -91,6 +95,9 @@ export class ExportImportManager {
    * Create project data object from components and connections
    */
   public exportProjectData(components: ComponentBase[], connections: Connection[]): any {
+    // Reset visited set before each export (Phase 2B)
+    this.visitedComponents.clear();
+    
     try {
       // Validate input parameters
       if (!Array.isArray(components)) {
@@ -138,11 +145,34 @@ export class ExportImportManager {
 
   /**
    * Serialize components including internal structures
+   * Phase 2B: Added circular reference detection and depth limiting
    */
-  private serializeComponents(components: ComponentBase[]): any[] {
+  private serializeComponents(components: ComponentBase[], depth = 0): any[] {
+    // Prevent infinite recursion on deep nesting (Phase 2B)
+    if (depth > ExportConfig.MAX_NESTING_DEPTH) {
+      if (ExportConfig.VERBOSE_LOGGING) {
+        console.warn(`⚠️ Maximum nesting depth (${ExportConfig.MAX_NESTING_DEPTH}) reached, truncating deeper levels`);
+      }
+      return [];
+    }
+
     return components
-      .filter(component => component && component.id) // Filter out null/undefined components
+      .filter(component => {
+        // Filter out null/undefined components
+        if (!component || !component.id) return false;
+        
+        // Check for circular references (Phase 2B)
+        if (ExportConfig.DETECT_CIRCULAR_REFS && this.visitedComponents.has(component.id)) {
+          console.warn(`⚠️ Circular reference detected for component: ${component.id}, skipping to prevent stack overflow`);
+          return false;
+        }
+        
+        return true;
+      })
       .map(component => {
+        // Mark as visited (Phase 2B)
+        this.visitedComponents.add(component.id);
+        
         const serialized: any = {
           id: component.id,
           type: component.type,
@@ -166,8 +196,10 @@ export class ExportImportManager {
           const moduleComponent = component as ModuleComponent;
 
           if (moduleComponent.internalComponents) {
+            // Recursively serialize with depth tracking (Phase 2B)
             serialized.internalComponents = this.serializeComponents(
-              moduleComponent.internalComponents
+              moduleComponent.internalComponents,
+              depth + 1
             );
           }
 
@@ -188,16 +220,40 @@ export class ExportImportManager {
 
   /**
    * Serialize connections with component references
+   * Phase 2B: Added validation for component references
    */
   private serializeConnections(connections: Connection[]): any[] {
-    return connections.map(connection => ({
-      id: connection.id,
-      from: {
-        componentId: connection.from.component.id,
-        pinType: connection.from.pinType,
-        pinIndex: connection.from.pinIndex,
-        x: connection.from.x,
-        y: connection.from.y,
+    return connections
+      .filter(connection => {
+        // Validate connection structure (Phase 2B)
+        if (!connection || !connection.from || !connection.to) {
+          if (ExportConfig.VERBOSE_LOGGING) {
+            console.warn('⚠️ Skipping malformed connection:', connection);
+          }
+          return false;
+        }
+        
+        // Validate component references exist (Phase 2B)
+        if (!connection.from.component || !connection.from.component.id) {
+          console.warn('⚠️ Skipping connection with invalid from component');
+          return false;
+        }
+        
+        if (!connection.to.component || !connection.to.component.id) {
+          console.warn('⚠️ Skipping connection with invalid to component');
+          return false;
+        }
+        
+        return true;
+      })
+      .map(connection => ({
+        id: connection.id,
+        from: {
+          componentId: connection.from.component.id,
+          pinType: connection.from.pinType,
+          pinIndex: connection.from.pinIndex,
+          x: connection.from.x,
+          y: connection.from.y,
         category: connection.from.category,
       },
       to: {

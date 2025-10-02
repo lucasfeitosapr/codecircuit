@@ -298,10 +298,17 @@ describe('Import/Export Deep Testing', () => {
         moduleA.internalComponents = [moduleB];
         moduleB.internalComponents = [moduleA];
 
-        // This should throw an error due to infinite recursion
-        expect(() => {
-          exportImportManager.exportProjectData([moduleA], []);
-        }).toThrow(); // Should throw RangeError: Maximum call stack size exceeded
+        // Phase 2B: Now detects and handles gracefully instead of throwing
+        // Should not throw, but should skip the circular reference
+        const exportedData = exportImportManager.exportProjectData([moduleA], []);
+        
+        // Verify it exported something (moduleA) but skipped the circular reference
+        expect(exportedData).toBeDefined();
+        expect(exportedData.components).toBeDefined();
+        expect(exportedData.components.length).toBeGreaterThan(0);
+        
+        // The circular reference should be detected and logged (check console for warning)
+        // "⚠️ Circular reference detected for component: module-ic-1000, skipping to prevent stack overflow"
       }
     });
 

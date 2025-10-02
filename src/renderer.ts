@@ -1,7 +1,14 @@
 // src/renderer.ts
 // Canvas drawing helpers extracted for future refactor
+// Phase 2B: Integrated optimized GridRenderer
+
+import { GridRenderer } from './rendering/GridRenderer';
+import { PerformanceConfig } from './config/performanceConfig';
 
 export { hexToRgb, getPointOnPath } from './utils';
+
+// Optimized grid renderer instance (Phase 2B Performance)
+const gridRenderer = new GridRenderer();
 
 export function drawOrthogonalTrace(
   ctx: any,
@@ -20,6 +27,18 @@ export function drawOrthogonalTrace(
 }
 
 export function drawGrid(ctx: any, camera: any, canvas: any) {
+  // Phase 2B: Use optimized GridRenderer with caching
+  if (PerformanceConfig.ENABLE_GRID_CACHING) {
+    try {
+      gridRenderer.renderGrid(ctx, camera, canvas);
+      return; // Early return - optimized path complete
+    } catch (error) {
+      console.error('GridRenderer failed, falling back to legacy:', error);
+      // Fall through to legacy rendering
+    }
+  }
+  
+  // Legacy grid rendering (fallback if optimization disabled)
   const gridSize = 50 * camera.zoom;
   const startX = -camera.x % gridSize;
   const startY = -camera.y % gridSize;
@@ -42,6 +61,18 @@ export function drawGrid(ctx: any, camera: any, canvas: any) {
 }
 
 export function drawSchematicBackground(ctx: any, camera: any, canvas: any) {
+  // Phase 2B: Use optimized GridRenderer for schematic background
+  if (PerformanceConfig.ENABLE_GRID_CACHING) {
+    try {
+      gridRenderer.renderSchematicBackground(ctx, camera, canvas);
+      return; // Early return - optimized path complete
+    } catch (error) {
+      console.error('GridRenderer (schematic) failed, falling back to legacy:', error);
+      // Fall through to legacy rendering
+    }
+  }
+  
+  // Legacy schematic background rendering
   const gridSize = 40 * camera.zoom;
   const startX = -camera.x % gridSize;
   const startY = -camera.y % gridSize;
