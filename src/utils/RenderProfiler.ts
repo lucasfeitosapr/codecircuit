@@ -16,6 +16,8 @@ export interface FrameTiming {
     components?: number;
     connections?: number;
     ui?: number;
+    spatialIndex?: number;
+    connectionCache?: number;
     total: number;
   };
 }
@@ -128,14 +130,18 @@ export class RenderProfiler {
       components: this.averageBreakdown('components'),
       connections: this.averageBreakdown('connections'),
       ui: this.averageBreakdown('ui'),
+      spatialIndex: this.averageBreakdown('spatialIndex'),
+      connectionCache: this.averageBreakdown('connectionCache'),
     };
-    
+
     // Calculate percentages
     const breakdownPercentages = {
       grid: (breakdown.grid / avgFrameTime) * 100,
       components: (breakdown.components / avgFrameTime) * 100,
       connections: (breakdown.connections / avgFrameTime) * 100,
       ui: (breakdown.ui / avgFrameTime) * 100,
+      spatialIndex: (breakdown.spatialIndex / avgFrameTime) * 100,
+      connectionCache: (breakdown.connectionCache / avgFrameTime) * 100,
     };
     
     return {
@@ -208,8 +214,8 @@ export class RenderProfiler {
     return {
       summary: 'No performance data recorded',
       timings: { avgFrameTime: 0, minFrameTime: 0, maxFrameTime: 0, avgFPS: 0, minFPS: 0 },
-      breakdown: { grid: 0, components: 0, connections: 0, ui: 0 },
-      breakdownPercentages: { grid: 0, components: 0, connections: 0, ui: 0 },
+      breakdown: { grid: 0, components: 0, connections: 0, ui: 0, spatialIndex: 0, connectionCache: 0 },
+      breakdownPercentages: { grid: 0, components: 0, connections: 0, ui: 0, spatialIndex: 0, connectionCache: 0 },
       slowFrames: { count: 0, percentage: 0 },
       frames: [],
     };
@@ -219,13 +225,13 @@ export class RenderProfiler {
    * Export frames to CSV for external analysis
    */
   exportToCSV(): string {
-    const headers = 'timestamp,frameTime,fps,components,connections,grid,componentsTime,connectionsTime,ui,total';
-    const rows = this.frames.map(f => 
+    const headers = 'timestamp,frameTime,fps,components,connections,grid,componentsTime,connectionsTime,ui,spatialIndex,connectionCache,total';
+    const rows = this.frames.map(f =>
       `${f.timestamp},${f.frameTime},${f.fps},${f.components},${f.connections},` +
       `${f.breakdown.grid || 0},${f.breakdown.components || 0},${f.breakdown.connections || 0},` +
-      `${f.breakdown.ui || 0},${f.breakdown.total}`
+      `${f.breakdown.ui || 0},${f.breakdown.spatialIndex || 0},${f.breakdown.connectionCache || 0},${f.breakdown.total}`
     );
-    
+
     return [headers, ...rows].join('\n');
   }
 }
@@ -244,12 +250,16 @@ export interface PerformanceReport {
     components: number;
     connections: number;
     ui: number;
+    spatialIndex: number;
+    connectionCache: number;
   };
   breakdownPercentages: {
     grid: number;
     components: number;
     connections: number;
     ui: number;
+    spatialIndex: number;
+    connectionCache: number;
   };
   slowFrames: {
     count: number;

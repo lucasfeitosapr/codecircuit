@@ -38,6 +38,8 @@ export class SpatialIndex {
    * Insert component into spatial index
    */
   insert(component: ComponentBase): void {
+    // Auto-expand bounds if component is outside current bounds
+    this.expandBoundsIfNeeded(component);
     this.insertNode(this.root, component);
   }
 
@@ -263,6 +265,66 @@ export class SpatialIndex {
     if (node.children) {
       for (const child of node.children) {
         this.collectStats(child, stats);
+      }
+    }
+  }
+
+  /**
+   * Expand bounds if component is outside current bounds
+   */
+  private expandBoundsIfNeeded(component: ComponentBase): void {
+    const compMinX = component.x;
+    const compMinY = component.y;
+    const compMaxX = component.x + component.width;
+    const compMaxY = component.y + component.height;
+
+    let needsExpansion = false;
+    let newBounds = { ...this.root.bounds };
+
+    // Check if component extends beyond current bounds
+    if (compMinX < this.root.bounds.x) {
+      newBounds.width += this.root.bounds.x - compMinX;
+      newBounds.x = compMinX;
+      needsExpansion = true;
+    }
+    if (compMinY < this.root.bounds.y) {
+      newBounds.height += this.root.bounds.y - compMinY;
+      newBounds.y = compMinY;
+      needsExpansion = true;
+    }
+    if (compMaxX > this.root.bounds.x + this.root.bounds.width) {
+      newBounds.width = compMaxX - newBounds.x;
+      needsExpansion = true;
+    }
+    if (compMaxY > this.root.bounds.y + this.root.bounds.height) {
+      newBounds.height = compMaxY - newBounds.y;
+      needsExpansion = true;
+    }
+
+    if (needsExpansion) {
+      // Collect all existing components
+      const allComponents: ComponentBase[] = [];
+      this.collectAllComponents(this.root, allComponents);
+
+      // Rebuild with new bounds
+      this.root = this.createNode(newBounds, 0);
+      for (const existingComponent of allComponents) {
+        this.insertNode(this.root, existingComponent);
+      }
+
+      console.log(`🗂️ Spatial index bounds expanded to: ${JSON.stringify(newBounds)}`);
+    }
+  }
+
+  /**
+   * Collect all components from the tree
+   */
+  private collectAllComponents(node: QuadTreeNode, components: ComponentBase[]): void {
+    components.push(...node.components);
+
+    if (node.children) {
+      for (const child of node.children) {
+        this.collectAllComponents(child, components);
       }
     }
   }

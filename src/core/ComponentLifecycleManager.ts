@@ -2,6 +2,9 @@ import { EventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import type { ComponentBase, ViewState, ModuleComponent } from '../types';
 import RuntimeLayer from '../rendering/layers/RuntimeLayer';
+import { SpatialIndex } from '../utils/SpatialIndex';
+import { PerformanceConfig } from '../config/performanceConfig';
+import { connectionRenderer } from '../ui/rendererHelpers';
 
 /**
  * ComponentLifecycleManager - Phase 6C Component Extraction
@@ -17,6 +20,7 @@ export class ComponentLifecycleManager {
   private runtimeLayer: RuntimeLayer;
   private componentTypes: Record<string, any>;
   private categories: Record<string, any>;
+  private spatialIndex: SpatialIndex | null = null;
 
   constructor(
     private eventBus: EventBus,
@@ -27,6 +31,11 @@ export class ComponentLifecycleManager {
     this.runtimeLayer = runtimeLayer;
     this.componentTypes = componentTypes;
     this.categories = categories;
+
+    // Initialize spatial index if enabled
+    if (PerformanceConfig.ENABLE_SPATIAL_INDEXING) {
+      this.initializeSpatialIndex();
+    }
 
     this.setupEventHandlers();
   }
@@ -134,6 +143,11 @@ export class ComponentLifecycleManager {
     // Add component to view
     components.push(component);
 
+    // Add to spatial index if enabled
+    if (PerformanceConfig.ENABLE_SPATIAL_INDEXING && this.spatialIndex) {
+      this.spatialIndex.insert(component);
+    }
+
     // Add runtime effects for new component
     this.addComponentCreationEffects(component);
 
@@ -161,9 +175,36 @@ export class ComponentLifecycleManager {
   }
 
   /**
-   * Find component at specified coordinates
+   * Find component at specified coordinates (optimized with spatial indexing)
    */
   getComponentAt(x: number, y: number, currentView: ViewState): ComponentBase | null {
+    // Use spatial index if available and enabled
+    if (PerformanceConfig.ENABLE_SPATIAL_INDEXING && this.spatialIndex) {
+      const candidates = this.spatialIndex.queryPoint(x, y);
+
+      // Filter to current view and check precise hit testing
+      const viewComponents = this.getCurrentViewComponents(currentView);
+      const viewComponentSet = new Set(viewComponents);
+
+      // Iterate from top to bottom (last drawn = topmost)
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        const comp = candidates[i];
+        if (viewComponentSet.has(comp) && this.isPointInComponent(x, y, comp)) {
+          return comp;
+        }
+      }
+
+      return null;
+    }
+
+    // Fallback to linear search
+    return this.getComponentAtLinear(x, y, currentView);
+  }
+
+  /**
+   * Legacy linear search (fallback when spatial indexing disabled)
+   */
+  private getComponentAtLinear(x: number, y: number, currentView: ViewState): ComponentBase | null {
     const components = this.getCurrentViewComponents(currentView);
 
     // Iterate from top to bottom (last drawn = topmost)
@@ -277,6 +318,13 @@ export class ComponentLifecycleManager {
         changes,
         source: 'lifecycle-manager',
       });
+
+      // Update spatial index if component moved
+      if (PerformanceConfig.ENABLE_SPATIAL_INDEXING && this.spatialIndex &&
+          (changes.x !== undefined || changes.y !== undefined || changes.width !== undefined || changes.height !== undefined)) {
+        this.spatialIndex.remove(component);
+        this.spatialIndex.insert(component);
+      }
     } catch (err) {
       console.error('Failed to emit ComponentUpdated from ComponentLifecycleManager', err);
     }
@@ -320,6 +368,13 @@ export class ComponentLifecycleManager {
         if (key === 'status' && oldValue !== updates[key]) {
           this.addStatusChangeEffects(component, oldValue);
         }
+
+        // Invalidate connection cache if position changed (Performance optimization)
+        if ((key === 'x' || key === 'y') && oldValue !== updates[key]) {
+          if (PerformanceConfig.ENABLE_CONNECTION_CACHING) {
+            connectionRenderer.markComponentMoved(component.id);
+          }
+        }
       }
     });
 
@@ -342,6 +397,51 @@ export class ComponentLifecycleManager {
   getComponentById(id: string, currentView: ViewState): ComponentBase | null {
     const components = this.getCurrentViewComponents(currentView);
     return components.find(comp => comp.id === id) || null;
+  }
+
+  /**
+   * Initialize spatial index for fast hit testing
+   */
+  private initializeSpatialIndex(): void {
+    // Create spatial index with generous bounds (will auto-expand as needed)
+    const bounds = { x: -5000, y: -5000, width: 10000, height: 10000 };
+    this.spatialIndex = new SpatialIndex(bounds);
+    console.log('🗂️ Spatial index initialized for fast hit testing');
+  }
+
+  /**
+   * Rebuild spatial index with all current components
+   */
+  rebuildSpatialIndex(allComponents: ComponentBase[]): void {
+    if (!PerformanceConfig.ENABLE_SPATIAL_INDEXING || !this.spatialIndex) {
+      return;
+    }
+
+    this.spatialIndex.rebuild(allComponents);
+    console.log(`🗂️ Spatial index rebuilt with ${allComponents.length} components`);
+  }
+
+  /**
+   * Remove component from spatial index
+   */
+  removeFromSpatialIndex(component: ComponentBase): void {
+    if (PerformanceConfig.ENABLE_SPATIAL_INDEXING && this.spatialIndex) {
+      this.spatialIndex.remove(component);
+    }
+  }
+
+  /**
+   * Get spatial index statistics
+   */
+  getSpatialIndexStats(): any {
+    if (!PerformanceConfig.ENABLE_SPATIAL_INDEXING || !this.spatialIndex) {
+      return { enabled: false };
+    }
+
+    return {
+      enabled: true,
+      ...this.spatialIndex.getStats(),
+    };
   }
 }
 

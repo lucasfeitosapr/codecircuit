@@ -41,6 +41,8 @@ import {
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
 import { RenderScheduler } from './rendering/RenderScheduler';
+import { PerformanceConfig } from './config/performanceConfig';
+import './core/RealWorldMovementTest'; // Browser console testing utilities
 // import { layeredRenderer } from './rendering/LayeredRenderer'; // Unused import
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
@@ -801,6 +803,13 @@ export class MotherboardApp {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
   const app = new MotherboardApp();
+
+  // Phase 2B+: Enable EventBus batching for performance
+  if (PerformanceConfig.ENABLE_EVENT_BATCHING) {
+    eventBus.setBatching(true);
+    console.log('🔄 EventBus batching enabled for high-frequency events');
+  }
+
   // Make app globally accessible for debugging
   (window as any).app = app;
 });

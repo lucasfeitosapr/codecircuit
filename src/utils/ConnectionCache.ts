@@ -22,6 +22,8 @@ export class ConnectionCache {
   private cache = new Map<string, CachedConnection>();
   private componentVersions = new Map<string, number>();
   private enabled = true;
+  private hitCount = 0;
+  private missCount = 0;
 
   /**
    * Get cached path for connection, or create and cache if needed
@@ -34,10 +36,12 @@ export class ConnectionCache {
 
     // Check if cache is valid
     if (cached && this.isCacheValid(cached, connection)) {
+      this.hitCount++;
       return cached.path;
     }
 
     // Generate new path and cache it
+    this.missCount++;
     const path = this.generateConnectionPath(connection);
     if (path) {
       this.cacheConnection(connection, path);
@@ -64,6 +68,8 @@ export class ConnectionCache {
   clear(): void {
     this.cache.clear();
     this.componentVersions.clear();
+    this.hitCount = 0;
+    this.missCount = 0;
   }
 
   /**
@@ -79,11 +85,16 @@ export class ConnectionCache {
   /**
    * Get cache statistics
    */
-  getStats(): { size: number; hitRate: number } {
-    // Simple stats - could be enhanced with hit/miss counters
+  getStats(): { size: number; hitRate: number; hits: number; misses: number; total: number } {
+    const total = this.hitCount + this.missCount;
+    const hitRate = total > 0 ? this.hitCount / total : 0;
+
     return {
       size: this.cache.size,
-      hitRate: 0.85, // Placeholder - would need actual tracking
+      hitRate,
+      hits: this.hitCount,
+      misses: this.missCount,
+      total,
     };
   }
 

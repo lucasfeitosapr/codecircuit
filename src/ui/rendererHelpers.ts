@@ -20,6 +20,9 @@ interface AppContext {
 // Optimized connection renderer instance (Phase 2B Performance)
 const connectionRenderer = new ConnectionRenderer();
 
+// Export for integration with component lifecycle
+export { connectionRenderer };
+
 // Performance monitoring - log culling stats periodically
 let frameCount = 0;
 const STATS_LOG_INTERVAL = 300; // Log every 5 seconds at 60fps

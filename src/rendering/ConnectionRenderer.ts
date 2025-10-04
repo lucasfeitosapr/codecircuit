@@ -13,6 +13,8 @@
 
 import type { Connection, Camera, ComponentBase } from '../types';
 import { drawOrthogonalTrace } from '../renderer';
+import { ConnectionCache } from '../utils/ConnectionCache';
+import { PerformanceConfig } from '../config/performanceConfig';
 
 interface Viewport {
   x: number;
@@ -30,6 +32,12 @@ interface CullingStats {
 export class ConnectionRenderer {
   private stats: CullingStats = { total: 0, visible: 0, culled: 0 };
   private enableCulling: boolean = true;
+  private connectionCache: ConnectionCache;
+
+  constructor() {
+    this.connectionCache = new ConnectionCache();
+    this.connectionCache.setEnabled(PerformanceConfig.ENABLE_CONNECTION_CACHING);
+  }
   
   /**
    * Render connections with visibility culling
@@ -160,22 +168,31 @@ export class ConnectionRenderer {
     categoryColor: string
   ): void {
     if (!connection.from?.component || !connection.to?.component) return;
-    
+
     const fromComponent = connection.from.component as ComponentBase;
     const toComponent = connection.to.component as ComponentBase;
-    
+
     if (!fromComponent.pins?.output || !toComponent.pins?.input) return;
-    
+
     const fromPinDef = fromComponent.pins.output[connection.from.pinIndex];
     const toPinDef = toComponent.pins.input[connection.to.pinIndex];
-    
+
     if (!fromPinDef || !toPinDef) return;
-    
+
     // Calculate screen positions
     const fromX = (fromComponent.x + fromPinDef.x) * camera.zoom + camera.x;
     const fromY = (fromComponent.y + fromPinDef.y) * camera.zoom + camera.y;
     const toX = (toComponent.x + toPinDef.x) * camera.zoom + camera.x;
     const toY = (toComponent.y + toPinDef.y) * camera.zoom + camera.y;
+
+    // Try to use cached path for improved performance
+    if (PerformanceConfig.ENABLE_CONNECTION_CACHING) {
+      const cachedPath = this.connectionCache.getConnectionPath(connection);
+      if (cachedPath) {
+        this.renderConnectionWithPath(ctx, cachedPath, connection, categoryColor, camera);
+        return;
+      }
+    }
     
     // Status-based rendering
     const fromStatus = fromComponent.status;
@@ -269,5 +286,105 @@ export class ConnectionRenderer {
    */
   setCullingEnabled(enabled: boolean): void {
     this.enableCulling = enabled;
+  }
+
+  /**
+   * Render connection using cached path (faster)
+   */
+  private renderConnectionWithPath(
+    ctx: CanvasRenderingContext2D,
+    path: Path2D,
+    connection: Connection,
+    categoryColor: string,
+    camera: Camera
+  ): void {
+    const fromComponent = connection.from.component as ComponentBase;
+    const toComponent = connection.to.component as ComponentBase;
+
+    // Status-based rendering
+    const fromStatus = fromComponent.status;
+    const toStatus = toComponent.status;
+    const isActive = fromStatus === 'in-progress' || fromStatus === 'done';
+    const isPowered = fromStatus === 'done';
+
+    // Save context for path rendering
+    ctx.save();
+
+    // Apply camera transformation to cached path
+    ctx.setTransform(camera.zoom, 0, 0, camera.zoom, camera.x, camera.y);
+
+    // Intention traces for defined components
+    if (fromStatus === 'defined' && (toStatus === 'defined' || !isActive)) {
+      ctx.strokeStyle = '#00ffff66';
+      ctx.lineWidth = 2 / camera.zoom;
+      ctx.setLineDash([6 / camera.zoom, 6 / camera.zoom]);
+      ctx.stroke(path);
+      ctx.setLineDash([]);
+    } else {
+      // Active traces
+      this.renderActiveConnectionPath(ctx, path, categoryColor, isActive, isPowered, camera);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Render active connection with cached path
+   */
+  private renderActiveConnectionPath(
+    ctx: CanvasRenderingContext2D,
+    path: Path2D,
+    color: string,
+    isActive: boolean,
+    isPowered: boolean,
+    camera: Camera
+  ): void {
+    // Background trace
+    ctx.strokeStyle = color + (isActive ? '40' : '20');
+    ctx.lineWidth = (isActive ? 6 : 4) / camera.zoom;
+    ctx.shadowBlur = 0;
+    ctx.stroke(path);
+
+    // Active trace with glow
+    if (isActive) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = (isPowered ? 3 : 2) / camera.zoom;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = (isPowered ? 15 : 8) / camera.zoom;
+      ctx.stroke(path);
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  /**
+   * Mark component as moved (invalidate cached connections)
+   */
+  markComponentMoved(componentId: string): void {
+    if (PerformanceConfig.ENABLE_CONNECTION_CACHING) {
+      this.connectionCache.markComponentDirty(componentId);
+    }
+  }
+
+  /**
+   * Get connection cache statistics
+   */
+  getCacheStats(): any {
+    if (!PerformanceConfig.ENABLE_CONNECTION_CACHING) {
+      return { enabled: false };
+    }
+
+    return {
+      enabled: true,
+      ...this.connectionCache.getStats(),
+    };
+  }
+
+  /**
+   * Clear connection cache
+   */
+  clearCache(): void {
+    if (PerformanceConfig.ENABLE_CONNECTION_CACHING) {
+      this.connectionCache.clear();
+    }
   }
 }

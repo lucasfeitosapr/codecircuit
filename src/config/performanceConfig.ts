@@ -16,10 +16,11 @@ export const PerformanceConfig = {
   ENABLE_GRID_CACHING: true,           // Cache grid as offscreen canvas (70-90% faster)
   GRID_CACHE_ZOOM_THRESHOLD: 0.1,      // Regenerate cache if zoom changes > 10%
   
-  // Future Optimizations (Phase 2B Part 2)
-  ENABLE_SPATIAL_INDEXING: false,       // Quadtree for hit testing (10-100x faster)
-  ENABLE_CONNECTION_CACHING: false,     // Cache connection paths with dirty tracking
-  ENABLE_BATCH_RENDERING: false,        // Batch components by type (reduce state changes)
+  // Advanced Optimizations (Phase 2B+)
+  ENABLE_SPATIAL_INDEXING: true,        // Quadtree for hit testing (10-100x faster)
+  ENABLE_CONNECTION_CACHING: true,      // Cache connection paths with dirty tracking
+  ENABLE_EVENT_BATCHING: true,          // Batch high-frequency events (reduce GC)
+  ENABLE_BATCH_RENDERING: true,         // Batch components by type (reduce state changes)
   
   // Debugging
   SHOW_PERFORMANCE_OVERLAY: false,      // Show FPS and render stats
@@ -34,6 +35,14 @@ export const PerformanceConfig = {
   // Component Limits (warnings)
   WARN_COMPONENT_COUNT: 200,            // Warn if > 200 components
   WARN_CONNECTION_COUNT: 500,           // Warn if > 500 connections
+
+  // Spatial Indexing
+  SPATIAL_INDEX_MAX_COMPONENTS: 10,     // Max components per quadtree node
+  SPATIAL_INDEX_MAX_DEPTH: 6,          // Max quadtree depth
+
+  // Connection Caching
+  CONNECTION_CACHE_SIZE: 1000,          // Max cached connections
+  CONNECTION_CACHE_TTL: 60000,          // Cache TTL in ms (1 minute)
 };
 
 /**

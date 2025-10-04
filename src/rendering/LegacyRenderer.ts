@@ -22,6 +22,8 @@ import * as rendererHelpers from '../ui/rendererHelpers';
 import { renderComponentWrapper } from '../ui/componentRenderer';
 import { layeredRenderer } from './LayeredRenderer';
 import { isNewRendererEnabled } from '../config/featureFlags';
+import { BatchedComponentRenderer } from './BatchedComponentRenderer';
+import { PerformanceConfig } from '../config/performanceConfig';
 import type { ComponentBase, Connection, Camera, ModuleComponent } from '../types';
 
 export interface LegacyRendererContext {
@@ -50,6 +52,8 @@ export interface LegacyRendererContext {
 }
 
 export class LegacyRenderer {
+  // Shared batched renderer instance for optimal performance
+  private static batchedRenderer = new BatchedComponentRenderer();
   /**
    * Main legacy render method - handles the complete render cycle
    * when LayeredRenderer is disabled or fails
@@ -141,8 +145,8 @@ export class LegacyRenderer {
 
     // Draw components from current view
     const components = context.getCurrentViewComponents();
-    
-    // Phase 2B: Add component viewport culling (similar to connection culling)
+
+    // Phase 2C: Batched component rendering with viewport culling
     const camera = context.camera;
     const canvas = context.canvas;
     const viewportX = -camera.x / camera.zoom;
@@ -150,24 +154,33 @@ export class LegacyRenderer {
     const viewportWidth = canvas.width / camera.zoom;
     const viewportHeight = canvas.height / camera.zoom;
     const margin = 100 / camera.zoom; // 100px margin in world space
-    
-    let culledComponents = 0;
-    
-    components.forEach((component: ComponentBase) => {
-      // Check if component is in viewport
-      const isVisible = !(
+
+    // Filter visible components first (viewport culling)
+    const visibleComponents = components.filter((component: ComponentBase) => {
+      return !(
         component.x + component.width < viewportX - margin ||
         component.x > viewportX + viewportWidth + margin ||
         component.y + component.height < viewportY - margin ||
         component.y > viewportY + viewportHeight + margin
       );
-      
-      if (isVisible) {
-        LegacyRenderer.drawComponent(context, component);
-      } else {
-        culledComponents++;
-      }
     });
+
+    const culledComponents = components.length - visibleComponents.length;
+
+    // Use batched rendering for better performance
+    if (PerformanceConfig.ENABLE_BATCH_RENDERING && visibleComponents.length > 0) {
+      LegacyRenderer.drawComponentsBatched(context, visibleComponents);
+    } else {
+      // Fallback to individual rendering
+      visibleComponents.forEach((component: ComponentBase) => {
+        LegacyRenderer.drawComponent(context, component);
+      });
+    }
+
+    // Log culling stats occasionally for performance monitoring
+    if (components.length > 10 && Math.random() < 0.01) { // 1% of frames
+      console.log(`🎯 Viewport culling: ${culledComponents}/${components.length} components culled (${((culledComponents/components.length)*100).toFixed(1)}%)`);
+    }
 
     // Draw transition overlay if transitioning
     if (context.isTransitioning) {
@@ -204,7 +217,24 @@ export class LegacyRenderer {
   }
 
   /**
-   * Draw a single component
+   * Draw components using batched rendering for optimal performance
+   */
+  static drawComponentsBatched(context: LegacyRendererContext, components: ComponentBase[]): void {
+    // Prepare connections once for all components (major optimization)
+    const connections = context.getCurrentViewConnections();
+
+    // Use the batched renderer with optimized context
+    LegacyRenderer.batchedRenderer.renderComponents(context.ctx, components, {
+      camera: context.camera,
+      timestamp: performance.now(),
+      categories: context.categories,
+      selectedComponentId: context.selectedComponent?.id ?? null,
+      connections,
+    });
+  }
+
+  /**
+   * Draw a single component (legacy method, kept for fallback)
    */
   static drawComponent(context: LegacyRendererContext, component: ComponentBase): void {
     // Create minimal app context for component renderer
@@ -336,5 +366,23 @@ export class LegacyRenderer {
       categories: context.categories,
     };
     rendererHelpers.drawDataFlow(appContext, connection, fromX, fromY, toX, toY, color, isPowered);
+  }
+
+  /**
+   * Get batched rendering performance statistics
+   */
+  static getBatchingStats(): any {
+    return {
+      enabled: PerformanceConfig.ENABLE_BATCH_RENDERING,
+      ...LegacyRenderer.batchedRenderer.getStats(),
+      performanceGain: LegacyRenderer.batchedRenderer.getPerformanceGain(),
+    };
+  }
+
+  /**
+   * Reset batching statistics
+   */
+  static resetBatchingStats(): void {
+    LegacyRenderer.batchedRenderer.resetStats();
   }
 }
