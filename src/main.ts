@@ -780,6 +780,9 @@ export class MotherboardApp {
       this.appStateManager.setSelectedComponent(null);
       this.initializeMainView();
       this.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
+
+      // Rebuild spatial index so imported components can be selected/moved
+      this.componentLifecycleManager.rebuildSpatialIndex(payload.components);
     });
 
     // Handle import errors

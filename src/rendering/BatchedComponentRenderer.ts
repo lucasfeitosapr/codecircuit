@@ -11,6 +11,7 @@
 import type { ComponentBase, Camera, Connection } from '../types';
 import { renderComponent } from './ImplementationHelpers';
 import { PerformanceConfig } from '../config/performanceConfig';
+import { logger } from '../utils/Logger';
 
 interface BatchRenderContext {
   ctx: CanvasRenderingContext2D;
@@ -80,16 +81,24 @@ export class BatchedComponentRenderer {
 
     this.stats.renderTime = performance.now() - startTime;
 
-    // Log performance stats occasionally
-    if (this.frameCount % 60 === 0 && components.length > 10) {
-      console.log('🎨 Batched rendering stats:', {
-        components: this.stats.totalComponents,
-        batches: this.stats.batchCount,
-        stateChanges: this.stats.stateChanges,
-        renderTime: `${this.stats.renderTime.toFixed(2)}ms`,
-        avgBatchSize: (this.stats.totalComponents / this.stats.batchCount).toFixed(1),
-        batchSizes: this.stats.batchSizes,
-      });
+    // Log performance stats occasionally (gated by config)
+    if (
+      PerformanceConfig.LOGGING?.LOG_RENDER_FRAMES &&
+      this.frameCount % 60 === 0 &&
+      components.length > 10
+    ) {
+      logger.debug(
+        'performance',
+        'Batched rendering stats',
+        {
+          components: this.stats.totalComponents,
+          batches: this.stats.batchCount,
+          stateChanges: this.stats.stateChanges,
+          renderTime: `${this.stats.renderTime.toFixed(2)}ms`,
+          avgBatchSize: (this.stats.totalComponents / this.stats.batchCount).toFixed(1),
+          batchSizes: this.stats.batchSizes,
+        }
+      );
     }
   }
 
@@ -213,11 +222,6 @@ export class BatchedComponentRenderer {
     renderContext: Omit<BatchRenderContext, 'ctx'>
   ): void {
     // Use the existing renderComponent but with pre-configured context
-    const fullContext: BatchRenderContext = {
-      ...renderContext,
-      ctx,
-    };
-
     // Call the existing component renderer
     // The renderer will benefit from the pre-configured canvas state
     renderComponent(
@@ -236,7 +240,7 @@ export class BatchedComponentRenderer {
   /**
    * Clean up batch rendering context
    */
-  private cleanupBatchRenderingContext(ctx: CanvasRenderingContext2D, componentType: string): void {
+  private cleanupBatchRenderingContext(ctx: CanvasRenderingContext2D, _componentType: string): void {
     // Restore context state
     ctx.restore();
   }

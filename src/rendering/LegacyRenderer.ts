@@ -24,7 +24,8 @@ import { layeredRenderer } from './LayeredRenderer';
 import { isNewRendererEnabled } from '../config/featureFlags';
 import { BatchedComponentRenderer } from './BatchedComponentRenderer';
 import { PerformanceConfig } from '../config/performanceConfig';
-import type { ComponentBase, Connection, Camera, ModuleComponent } from '../types';
+import { logger } from '../utils/Logger';
+import type { ComponentBase, Connection, Camera } from '../types';
 
 export interface LegacyRendererContext {
   ctx: CanvasRenderingContext2D;
@@ -61,7 +62,9 @@ export class LegacyRenderer {
   static render(context: LegacyRendererContext): void {
     // Debug: Check if render is being called during component drag
     if (context.inputEventCoordinator.getInteractionState().isDragging) {
-      console.log('🖼️ Legacy render() called during drag');
+      if (PerformanceConfig.LOGGING?.LOG_RENDER_FRAMES) {
+        logger.debug('render', 'Legacy render() called during drag');
+      }
     }
 
     // Try LayeredRenderer first (feature-flagged)
@@ -177,9 +180,18 @@ export class LegacyRenderer {
       });
     }
 
-    // Log culling stats occasionally for performance monitoring
-    if (components.length > 10 && Math.random() < 0.01) { // 1% of frames
-      console.log(`🎯 Viewport culling: ${culledComponents}/${components.length} components culled (${((culledComponents/components.length)*100).toFixed(1)}%)`);
+    // Log culling stats occasionally for performance monitoring (gated)
+    if (
+      PerformanceConfig.LOGGING?.LOG_RENDER_FRAMES &&
+      components.length > 10 &&
+      Math.random() < 0.01 // ~1% of frames
+    ) {
+      logger.debug(
+        'performance',
+        `Viewport culling: ${culledComponents}/${components.length} components culled (${(
+          (culledComponents / components.length) * 100
+        ).toFixed(1)}%)`
+      );
     }
 
     // Draw transition overlay if transitioning
