@@ -1,18 +1,21 @@
 /**
  * RenderScheduler - Smart rendering system with dirty flag optimization
- * 
+ *
  * Phase 2B: Reduces CPU usage by only rendering when something changes
- * 
+ *
  * Performance Impact:
  * - ~90% CPU reduction during idle (no animations)
  * - Maintains 60fps during interactions
  * - Automatically handles animation loops
- * 
+ *
  * Usage:
  *   const scheduler = new RenderScheduler(renderFn);
  *   scheduler.markDirty(); // Call when something changes
  *   scheduler.start();     // Begin render loop
  */
+
+import { logger } from '../utils/Logger';
+import { PerformanceConfig } from '../config/performanceConfig';
 
 export class RenderScheduler {
   private dirty: boolean = true;
@@ -38,13 +41,9 @@ export class RenderScheduler {
   markDirty(): void {
     const wasDirty = this.dirty;
     this.dirty = true;
-    
+
     // Always schedule a render when marking dirty, even if not currently animating
     if (!wasDirty) {
-      // Reduced logging - only log occasionally
-      if (this.frameCount % 60 === 0) {
-        console.log('🔄 RenderScheduler: Marking dirty (frame', this.frameCount, ')');
-      }
       this.scheduleRender();
     }
   }
@@ -55,7 +54,7 @@ export class RenderScheduler {
   start(): void {
     if (this.animating) return;
     this.animating = true;
-    console.log('🚀 RenderScheduler: Started');
+    logger.info('render', 'RenderScheduler started');
     this.scheduleRender();
   }
   
@@ -99,12 +98,12 @@ export class RenderScheduler {
       // Check if we need to render
       const hasAnimations = this.hasAnimationsFn();
       const shouldRender = this.dirty || hasAnimations;
-      
-      // Reduced logging - only log every 60 frames or on state changes
-      if (this.frameCount % 60 === 0 || (this.frameCount < 5)) {
-        console.log('🎬 Frame:', this.frameCount, 'dirty:', this.dirty, 'hasAnims:', hasAnimations);
+
+      // Optional frame logging (disabled by default for performance)
+      if (PerformanceConfig.LOGGING.LOG_RENDER_FRAMES && this.frameCount % 300 === 0) {
+        logger.debug('render', `Frame: ${this.frameCount}, dirty: ${this.dirty}, hasAnims: ${hasAnimations}`);
       }
-      
+
       if (shouldRender) {
         this.renderFn(timestamp);
         this.dirty = false;

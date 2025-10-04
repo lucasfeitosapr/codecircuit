@@ -3,6 +3,7 @@ import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from '../uti
 import type { Camera, Connection, ComponentBase, PinRef } from '../types';
 import { ConnectionRenderer } from '../rendering/ConnectionRenderer';
 import { PerformanceConfig } from '../config/performanceConfig';
+import { logger } from '../utils/Logger';
 
 // Minimal app context used by these helpers. Keep it intentionally small so
 // we don't accidentally couple to the entire application surface while
@@ -29,17 +30,12 @@ const STATS_LOG_INTERVAL = 300; // Log every 5 seconds at 60fps
 
 export function drawConnections(app: AppContext, connections: Connection[] | undefined) {
   if (!connections) return;
-  
-  // Phase 2B: Use optimized ConnectionRenderer with viewport culling
-  console.log('🔍 drawConnections called, ENABLE_CONNECTION_CULLING:', PerformanceConfig.ENABLE_CONNECTION_CULLING, 'connections:', connections.length);
-  
+
   if (PerformanceConfig.ENABLE_CONNECTION_CULLING) {
     try {
       // Get canvas for viewport calculations
       const canvas = app.ctx.canvas;
-      
-      console.log('🎯 Using ConnectionRenderer (optimized path)');
-      
+
       connectionRenderer.renderConnections(
         app.ctx,
         connections,
@@ -47,27 +43,27 @@ export function drawConnections(app: AppContext, connections: Connection[] | und
         canvas,
         app.categories
       );
-      
+
       // Periodic performance logging
       frameCount++;
       if (frameCount >= STATS_LOG_INTERVAL) {
         const stats = connectionRenderer.getStats();
-        console.log(
-          `🎯 Connection culling: ${stats.culled}/${stats.total} ` +
+        logger.debug('render',
+          `Connection culling: ${stats.culled}/${stats.total} ` +
           `(${stats.total > 0 ? ((stats.culled / stats.total) * 100).toFixed(1) : '0'}%) - ` +
           `Zoom: ${app.camera.zoom.toFixed(2)}x`
         );
         frameCount = 0;
       }
-      
+
       return; // Early return - optimized path complete
     } catch (error) {
-      console.error('❌ ConnectionRenderer failed, falling back to legacy:', error);
+      logger.error('error', 'ConnectionRenderer failed, falling back to legacy', error);
       // Fall through to legacy rendering
     }
   }
-  
-  console.log('⚠️ Using LEGACY connection rendering (not optimized)');
+
+  logger.once('render', 'Using LEGACY connection rendering (not optimized)');
   
   // Legacy rendering path (fallback if optimization disabled)
   connections.forEach(connection => {

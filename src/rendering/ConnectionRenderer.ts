@@ -1,11 +1,11 @@
 /**
  * ConnectionRenderer - Optimized connection rendering with visibility culling
- * 
+ *
  * Phase 2B: Performance improvements
  * - Visibility culling (don't draw off-screen connections)
  * - Batch rendering by category (reduce state changes)
  * - Future: Path caching with dirty tracking
- * 
+ *
  * Performance Impact:
  * - 50-70% faster connection rendering on large boards
  * - Maintains visual quality
@@ -15,6 +15,7 @@ import type { Connection, Camera, ComponentBase } from '../types';
 import { drawOrthogonalTrace } from '../renderer';
 import { ConnectionCache } from '../utils/ConnectionCache';
 import { PerformanceConfig } from '../config/performanceConfig';
+import { logger } from '../utils/Logger';
 
 interface Viewport {
   x: number;
@@ -49,28 +50,27 @@ export class ConnectionRenderer {
     canvas: HTMLCanvasElement,
     categories: Record<string, { name: string; color: string }>
   ): void {
-    console.log('🎨 ConnectionRenderer.renderConnections:', connections?.length || 0, 'connections');
-    
     if (!connections || connections.length === 0) return;
-    
+
     this.stats.total = connections.length;
     this.stats.visible = 0;
     this.stats.culled = 0;
-    
+
     // Calculate viewport bounds in world coordinates
     const viewport = this.getViewport(camera, canvas);
-    
-    console.log('🔍 Viewport:', viewport, 'Zoom:', camera.zoom.toFixed(2));
-    
+
     // Filter to visible connections if culling enabled
     const visibleConnections = this.enableCulling
       ? connections.filter(conn => this.isConnectionVisible(conn, viewport, camera))
       : connections;
-    
+
     this.stats.visible = visibleConnections.length;
     this.stats.culled = this.stats.total - this.stats.visible;
-    
-    console.log('📊 Culling results:', this.stats);
+
+    // Log culling performance occasionally
+    if (this.stats.culled > 10) {
+      logger.debug('render', `Connection culling: ${this.stats.culled}/${this.stats.total} culled`);
+    }
     
     // Group connections by category for batch rendering
     const byCategory = this.groupByCategory(visibleConnections);

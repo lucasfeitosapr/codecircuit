@@ -43,6 +43,9 @@ import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRe
 import { RenderScheduler } from './rendering/RenderScheduler';
 import { PerformanceConfig } from './config/performanceConfig';
 import './core/RealWorldMovementTest'; // Browser console testing utilities
+import { createRoot } from 'react-dom/client';
+import React from 'react';
+import { MotherboardReactUI } from './ui/react/App';
 // import { layeredRenderer } from './rendering/LayeredRenderer'; // Unused import
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
@@ -403,7 +406,7 @@ export class MotherboardApp {
         onMouseMove: this.onMouseMove.bind(this),
         onMouseUp: this.onMouseUp.bind(this),
         onWheel: this.onWheel.bind(this),
-        setMousePos: this.setMousePos.bind(this),
+  // setMousePos is not part of UIControllerContext; mouse position updates are handled via InputEventCoordinator
       });
 
       // Initialize ApplicationInitializer
@@ -469,11 +472,15 @@ export class MotherboardApp {
     // Force an initial render to show the board
     this.renderScheduler.markDirty();
     console.log('🎨 Initial render triggered');
+
+    // Initialize React UI overlay
+    this.initializeReactUI();
   }
 
   private setupEventHandlers() {
     this.setupExportImportEventHandlers();
     this.setupConnectionManagerEventHandlers();
+    this.setupComponentDeletionEventHandlers();
     this.setupRenderSchedulerEventHandlers(); // Phase 2B: Mark dirty on changes
   }
 
@@ -486,15 +493,14 @@ export class MotherboardApp {
    */
   private setupRenderSchedulerEventHandlers() {
     // Component changes
-    eventBus.on(Events.COMPONENT_CREATED, () => this.renderScheduler.markDirty());
-    eventBus.on(Events.COMPONENT_UPDATED, () => this.renderScheduler.markDirty());
-    eventBus.on(Events.COMPONENT_DELETED, () => this.renderScheduler.markDirty());
-    eventBus.on(Events.COMPONENT_STATUS_CHANGED, () => this.renderScheduler.markDirty());
-    eventBus.on(Events.COMPONENT_MOVED, () => this.renderScheduler.markDirty());
+  eventBus.on(Events.ComponentCreated, () => this.renderScheduler.markDirty());
+  eventBus.on(Events.ComponentUpdated, () => this.renderScheduler.markDirty());
+  eventBus.on(Events.ComponentDeleted, () => this.renderScheduler.markDirty());
+  // No explicit constant for status changed/moved in Events; these are emitted via ComponentUpdated
     
     // Connection changes
-    eventBus.on(Events.CONNECTION_CREATED, () => this.renderScheduler.markDirty());
-    eventBus.on(Events.CONNECTION_DELETED, () => this.renderScheduler.markDirty());
+  eventBus.on(Events.ConnectionCreated, () => this.renderScheduler.markDirty());
+  eventBus.on(Events.ConnectionDeleted, () => this.renderScheduler.markDirty());
     
     // Camera/Viewport changes (fires on every mousemove during pan - this is expected!)
     eventBus.on(Events.VIEWPORT_CAMERA_UPDATED, () => this.renderScheduler.markDirty());
@@ -502,10 +508,53 @@ export class MotherboardApp {
     eventBus.on(Events.VIEWPORT_PAN_REQUESTED, () => this.renderScheduler.markDirty());
     
     // View changes
-    eventBus.on(Events.VIEW_CHANGED, () => this.renderScheduler.markDirty());
-    eventBus.on(Events.SELECTION_CHANGED, () => this.renderScheduler.markDirty());
+  // For view/selection changes, use existing events if defined; otherwise rely on ComponentUpdated triggering renders
     
     console.log('⚡ RenderScheduler event handlers configured - rendering on demand');
+  }
+
+  /**
+   * Handle component deletion requests and cascade-delete related connections
+   * Keeps AppStateManager and ConnectionManager in sync and updates Module IC internals when needed
+   */
+  private setupComponentDeletionEventHandlers(): void {
+    eventBus.on(Events.COMPONENT_DELETE_REQUESTED, (payload: { componentId: string }) => {
+      const componentId = payload.componentId;
+      const currentView = this.appStateManager.getCurrentView();
+
+      // Build list of connections to remove (view-aware)
+      const connectionsToRemove = (currentView.type === 'main'
+        ? this.appStateManager.getConnections()
+        : currentView.connections
+      ).filter(
+        conn =>
+          conn.from.component.id === componentId || conn.to.component.id === componentId
+      );
+
+      // Remove connections from both AppState and ConnectionManager
+      for (const conn of connectionsToRemove) {
+        this.appStateManager.removeConnectionFromCurrentView(conn.id);
+        // Keep ConnectionManager's internal store in sync
+        this.connectionManager.removeConnection(conn.id);
+      }
+
+      // Remove the component (view-aware)
+      this.appStateManager.removeComponentFromCurrentView(componentId);
+
+      // Clear selection and hide datasheet if it was the selected component
+      const selected = this.appStateManager.getSelectedComponent();
+      if (selected && selected.id === componentId) {
+        this.appStateManager.setSelectedComponent(null);
+        this.hideDatasheet();
+      }
+
+      // If we're inside a Module IC schematic, mirror current view arrays to the module internals
+      if (currentView.type === 'schematic' && currentView.component?.type === 'module-ic') {
+        const moduleComponent = currentView.component as ModuleComponent;
+        moduleComponent.internalComponents = [...currentView.components];
+        moduleComponent.internalConnections = [...currentView.connections];
+      }
+    });
   }
 
   private initializeMainView() {
@@ -519,6 +568,22 @@ export class MotherboardApp {
 
     this.appStateManager.setCurrentView(mainView);
     this.uiController.updateBreadcrumbs();
+  }
+
+  // Initialize React UI and mount into index.html
+  private initializeReactUI() {
+    const rootEl = document.getElementById('react-ui-root');
+    if (!rootEl) {
+      console.warn('React UI root element not found');
+      return;
+    }
+    try {
+  const root = createRoot(rootEl);
+  root.render(React.createElement(MotherboardReactUI));
+      console.log('⚛️ React UI initialized');
+    } catch (e) {
+      console.error('Failed to initialize React UI', e);
+    }
   }
 
   // Delegated methods - these now primarily delegate to appropriate managers

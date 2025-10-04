@@ -130,6 +130,15 @@ export class EventBus {
       batchedEvents: this.batchedEvents.length,
     };
   }
+
+  /**
+   * Clear all handlers (useful for testing)
+   */
+  clearAll(): void {
+    this.handlers.clear();
+    this.batchedEvents = [];
+    this.batchFlushScheduled = false;
+  }
 }
 
 export const eventBus = new EventBus();

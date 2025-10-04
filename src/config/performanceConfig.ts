@@ -26,6 +26,14 @@ export const PerformanceConfig = {
   SHOW_PERFORMANCE_OVERLAY: false,      // Show FPS and render stats
   LOG_SLOW_FRAMES: true,                // Log frames > 16ms (below 60fps)
   SLOW_FRAME_THRESHOLD: 16,             // Milliseconds
+
+  // Logging Configuration (Phase 2B+)
+  LOGGING: {
+    LOG_LEVEL: 'INFO',                  // DEBUG, INFO, WARN, ERROR, NONE
+    ENABLED_CATEGORIES: ['init', 'error', 'warn', 'performance', 'import-export'],
+    THROTTLE_RATE_LIMIT: 1,             // Max logs per second for throttled messages
+    LOG_RENDER_FRAMES: false,           // Enable frame-by-frame render logging
+  },
   
   // Performance Targets
   TARGET_FPS_INTERACTIVE: 60,           // FPS during interactions

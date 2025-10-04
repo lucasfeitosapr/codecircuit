@@ -241,36 +241,9 @@ export class InputEventCoordinator {
       }
     );
 
-    // Handle project import completion
-    eventBus.on(
-      Events.PROJECT_IMPORTED,
-      (payload: {
-        components: any[];
-        connections: any[];
-        projectData: any;
-        componentCount: number;
-        connectionCount: number;
-        timestamp: number;
-      }) => {
-        // Replace current project state with imported data
-        this.dependencies.components.length = 0;
-        this.dependencies.components.push(...payload.components);
-        this.dependencies.connections.length = 0;
-        this.dependencies.connections.push(...payload.connections);
-
-        // Update current view to reflect new components
-        this.dependencies.currentView.components = this.dependencies.components;
-        this.dependencies.currentView.connections = this.dependencies.connections;
-
-        // Reset camera and selection
-        this.dependencies.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
-        this.dependencies.setSelectedComponent(null);
-
-        console.log(
-          `✅ Project imported: ${payload.componentCount} components, ${payload.connectionCount} connections`
-        );
-      }
-    );
+    // Note: PROJECT_IMPORTED event handling moved to main.ts setupExportImportEventHandlers()
+    // which properly uses AppStateManager.setComponents() and setConnections()
+    // Duplicate handler removed to avoid state management conflicts
 
     // Handle import errors
     eventBus.on(

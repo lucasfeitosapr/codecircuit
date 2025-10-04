@@ -290,24 +290,10 @@ describe('InputEventCoordinator', () => {
       );
     });
 
-    it('should handle PROJECT_IMPORTED event', () => {
-      const importData = {
-        components: [{ id: '1', type: 'power-core' }],
-        connections: [{ id: 'conn1' }],
-        projectData: {},
-        componentCount: 1,
-        connectionCount: 1,
-        timestamp: Date.now(),
-      };
-
-      eventBus.emit(Events.PROJECT_IMPORTED, importData);
-
-      expect(mockDependencies.viewportManager.setCamera).toHaveBeenCalledWith({
-        x: 0,
-        y: 0,
-        zoom: 1,
-      });
-      expect(mockDependencies.setSelectedComponent).toHaveBeenCalledWith(null);
+    it.skip('PROJECT_IMPORTED handling moved to main.ts', () => {
+      // PROJECT_IMPORTED event handling has been moved to main.ts setupExportImportEventHandlers()
+      // which properly uses AppStateManager.setComponents() and setConnections()
+      // This test is skipped because InputEventCoordinator no longer handles this event
     });
 
     it('should handle PROJECT_IMPORT_ERROR event', () => {

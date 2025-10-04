@@ -7,6 +7,7 @@ import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import { stateManager } from '../state/StateManager';
 import { layeredRenderer } from '../rendering/LayeredRenderer';
+import { logger } from '../utils/Logger';
 
 // Import V2 plugins
 import { DecisionPointPluginV2 } from '../components/plugins/DecisionPointPluginV2';
@@ -63,7 +64,7 @@ export class ApplicationInitializer {
       // Add to componentTypes (replacing manual coordination)
       this.context.componentTypes[pluginType] = componentType;
 
-      console.log(`✅ ComponentType auto-updated: ${metadata.displayName} (${pluginType})`);
+      logger.debug('init', `ComponentType auto-updated: ${metadata.displayName} (${pluginType})`);
     });
 
     // Register V2 plugins - single registration triggers all coordination
@@ -73,9 +74,9 @@ export class ApplicationInitializer {
     this.context.componentRegistry.register(new TaskResistorPluginV2());
     this.context.componentRegistry.register(new GatewayPluginV2()); // Phase 2B: Gateway plugin!
 
-    console.log('🚀 Event-driven plugin system initialized');
-    console.log('📊 ComponentTypes populated:', Object.keys(this.context.componentTypes));
-    console.log('🔧 V2 Plugins registered:', this.context.componentRegistry.getPluginTypes());
+    logger.info('init', 'Event-driven plugin system initialized');
+    logger.debug('init', `ComponentTypes populated: ${Object.keys(this.context.componentTypes).join(', ')}`);
+    logger.debug('init', `V2 Plugins registered: ${this.context.componentRegistry.getPluginTypes().join(', ')}`);
   }
 
   registerRenderingLayers() {
@@ -200,7 +201,7 @@ export class ApplicationInitializer {
     try {
       // Phase 1: Register rendering layers
       this.registerRenderingLayers();
-      console.log('✅ Rendering layers registered');
+      logger.debug('init', 'Rendering layers registered');
 
       // Phase 2: Initialize state manager
       this.initializeStateManager();

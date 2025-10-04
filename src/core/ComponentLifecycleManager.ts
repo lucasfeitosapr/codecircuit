@@ -5,6 +5,7 @@ import RuntimeLayer from '../rendering/layers/RuntimeLayer';
 import { SpatialIndex } from '../utils/SpatialIndex';
 import { PerformanceConfig } from '../config/performanceConfig';
 import { connectionRenderer } from '../ui/rendererHelpers';
+import { logger } from '../utils/Logger';
 
 /**
  * ComponentLifecycleManager - Phase 6C Component Extraction
@@ -406,7 +407,7 @@ export class ComponentLifecycleManager {
     // Create spatial index with generous bounds (will auto-expand as needed)
     const bounds = { x: -5000, y: -5000, width: 10000, height: 10000 };
     this.spatialIndex = new SpatialIndex(bounds);
-    console.log('🗂️ Spatial index initialized for fast hit testing');
+    logger.info('spatial', 'Spatial index initialized for fast hit testing');
   }
 
   /**
@@ -418,7 +419,7 @@ export class ComponentLifecycleManager {
     }
 
     this.spatialIndex.rebuild(allComponents);
-    console.log(`🗂️ Spatial index rebuilt with ${allComponents.length} components`);
+    logger.throttle('spatial', `Spatial index rebuilt with ${allComponents.length} components`);
   }
 
   /**

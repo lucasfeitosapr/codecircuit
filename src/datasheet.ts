@@ -1,4 +1,6 @@
 import type { ComponentBase } from './types';
+import { eventBus } from './events/EventBus';
+import { Events } from './events/eventTypes';
 
 /**
  * Datasheet UI module
@@ -271,27 +273,12 @@ export function showDatasheet(app: any, component: ComponentBase) {
     deleteBtn.addEventListener('click', () => {
       if (!confirm('Delete this component? This will also remove all connected traces.')) return;
 
-      // Remove connections involving this component
-      app.connections = (app.connections || []).filter(
-        (conn: any) => conn.from.component !== component && conn.to.component !== component
-      );
-
-      // Remove component from top-level list(s)
-      app.components = (app.components || []).filter((c: any) => c.id !== component.id);
-
-      // If we are inside a schematic view, also remove from current view arrays
-      if (app.currentView?.components) {
-        app.currentView.components = app.currentView.components.filter(
-          (c: any) => c.id !== component.id
-        );
-      }
-      if (app.currentView?.connections) {
-        app.currentView.connections = app.currentView.connections.filter(
-          (conn: any) => conn.from.component !== component && conn.to.component !== component
-        );
-      }
-
-      app.selectedComponent = null;
+      // Use event-driven architecture to delete component
+      // This will automatically handle connection cleanup via the event system
+      eventBus.emit(Events.COMPONENT_DELETE_REQUESTED, {
+        componentId: component.id,
+        timestamp: Date.now(),
+      });
 
       // Use app.hideDatasheet() which delegates to this module's hideDatasheet
       if (typeof app.hideDatasheet === 'function') {

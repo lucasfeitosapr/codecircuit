@@ -375,8 +375,8 @@ export class ConnectionManager {
     const connection = this.connections[index];
     this.connections.splice(index, 1);
 
-    this.eventBus.emit('connection.deleted', {
-      connectionId,
+    this.eventBus.emit(Events.ConnectionDeleted, {
+      id: connectionId,
       connection,
       timestamp: Date.now(),
     });

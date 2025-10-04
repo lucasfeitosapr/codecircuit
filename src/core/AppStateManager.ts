@@ -92,8 +92,28 @@ export class AppStateManager {
   }
 
   // State setters
-  setComponents(components: ComponentBase[]) {
-    this.state.components = [...components];
+  setComponents(components: ComponentBase[], emitEvents: boolean = true) {
+    // Clear existing components
+    this.state.components = [];
+
+    // Add each component (optionally emitting events for proper registration)
+    if (emitEvents) {
+      // Emit ComponentCreated for each component to ensure proper registration
+      // with hit-testing, visual effects, and other event-driven systems
+      components.forEach(component => {
+        this.state.components.push(component);
+        eventBus.emit(Events.ComponentCreated, {
+          id: component.id,
+          type: component.type,
+          model: component,
+          source: 'import',
+        });
+      });
+    } else {
+      // Bulk set without events (for performance-critical operations)
+      this.state.components = [...components];
+    }
+
     this.notifyListeners('components', this.state.components);
   }
 
@@ -140,6 +160,29 @@ export class AppStateManager {
     });
   }
 
+  /**
+   * Remove component from current view (view-aware removal)
+   * Mirrors the logic of addComponentToCurrentView()
+   */
+  removeComponentFromCurrentView(componentId: string) {
+    if (this.state.currentView.type === 'main') {
+      // Main view: remove from BOTH global components AND current view array
+      this.state.components = this.state.components.filter(c => c.id !== componentId);
+      this.state.currentView.components = this.state.currentView.components.filter(c => c.id !== componentId);
+      this.notifyListeners('components', this.state.components);
+      this.notifyListeners('currentView', this.state.currentView);
+    } else if (this.state.currentView.type === 'schematic') {
+      // Schematic view: remove ONLY from current view's components array (module internal)
+      this.state.currentView.components = this.state.currentView.components.filter(c => c.id !== componentId);
+      this.notifyListeners('currentView', this.state.currentView);
+    }
+
+    eventBus.emit(Events.ComponentDeleted, {
+      id: componentId,
+      timestamp: Date.now(),
+    });
+  }
+
   setConnections(connections: Connection[]) {
     this.state.connections = [...connections];
     this.notifyListeners('connections', this.state.connections);
@@ -163,7 +206,7 @@ export class AppStateManager {
       this.notifyListeners('currentView', this.state.currentView);
     }
 
-    eventBus.emit(Events.CONNECTION_CREATED, {
+    eventBus.emit(Events.ConnectionCreated, {
       id: connection.id,
       connection: connection,
       source: 'view-aware',
@@ -173,6 +216,26 @@ export class AppStateManager {
   removeConnection(connectionId: string) {
     this.state.connections = this.state.connections.filter(c => c.id !== connectionId);
     this.notifyListeners('connections', this.state.connections);
+  }
+
+  /**
+   * Remove connection from current view (view-aware removal)
+   * Mirrors the logic of addConnectionToCurrentView()
+   */
+  removeConnectionFromCurrentView(connectionId: string) {
+    if (this.state.currentView.type === 'main') {
+      // Main view: remove from BOTH global connections AND current view array
+      this.state.connections = this.state.connections.filter(c => c.id !== connectionId);
+      this.state.currentView.connections = this.state.currentView.connections.filter(c => c.id !== connectionId);
+      this.notifyListeners('connections', this.state.connections);
+      this.notifyListeners('currentView', this.state.currentView);
+    } else if (this.state.currentView.type === 'schematic') {
+      // Schematic view: remove ONLY from current view's connections array (module internal)
+      this.state.currentView.connections = this.state.currentView.connections.filter(c => c.id !== connectionId);
+      this.notifyListeners('currentView', this.state.currentView);
+    }
+
+    eventBus.emit(Events.ConnectionDeleted, { id: connectionId, timestamp: Date.now() });
   }
 
   setSelectedComponent(component: ComponentBase | null) {
