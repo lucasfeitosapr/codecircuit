@@ -1,5 +1,6 @@
 import { isNewRendererEnabled } from '../config/featureFlags';
 import * as legacyRenderer from '../renderer';
+import { RenderProfiler } from './RenderProfiler';
 
 // Cache bust: 2024-01-20 - Removed all console logs
 
@@ -58,7 +59,20 @@ export class LayeredRenderer {
       try {
         // Prevent state leakage between layers (dash, shadow, transforms)
         (ctx as CanvasRenderingContext2D).save?.();
-        layer.render(ctx, enrichedFrame);
+        // Map known layer names to profiler sections; default to 'ui' for unknowns
+        const name = (layer as any).name ?? 'unknown';
+        const section =
+          name === 'background'
+            ? 'grid'
+            : name === 'implementation'
+            ? 'components'
+            : name === 'connections'
+            ? 'connections'
+            : 'ui';
+
+        RenderProfiler.measureSection(section as any, () => {
+          layer.render(ctx, enrichedFrame);
+        });
         (ctx as CanvasRenderingContext2D).restore?.();
       } catch (e) {
         // eslint-disable-next-line no-console

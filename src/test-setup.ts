@@ -4,11 +4,10 @@
  */
 
 import { vi } from 'vitest';
+import { DEFAULT_FEATURE_FLAGS } from './config/featureFlags';
 
 // Mock FeatureFlagManager for all tests
 vi.mock('./core/FeatureFlagManager', () => {
-  const { DEFAULT_FEATURE_FLAGS } = require('./config/featureFlags');
-
   // Enable all features for tests by default
   const mockFlags = {
     ...DEFAULT_FEATURE_FLAGS,
@@ -18,13 +17,13 @@ vi.mock('./core/FeatureFlagManager', () => {
     ENABLE_ENERGY_FLOW_PARTICLES: true,
     ENABLE_CONNECTION_INTENTS: true,
     ENABLE_COMPONENT_TOOLTIPS: true,
-  };
+  } as const;
 
   return {
-    isFeatureEnabled: vi.fn((flag: string) => mockFlags[flag as keyof typeof mockFlags]),
+    isFeatureEnabled: vi.fn((flag: string) => (mockFlags as any)[flag]),
     getFeatureFlagManager: vi.fn(() => ({
       getFlags: () => mockFlags,
-      getFlag: (key: string) => mockFlags[key as keyof typeof mockFlags],
+      getFlag: (key: string) => (mockFlags as any)[key],
       setFlag: vi.fn(),
       toggleFlag: vi.fn(),
       resetToDefaults: vi.fn(),

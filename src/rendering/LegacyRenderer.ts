@@ -24,6 +24,7 @@ import { layeredRenderer } from './LayeredRenderer';
 import { isNewRendererEnabled } from '../config/featureFlags';
 import { BatchedComponentRenderer } from './BatchedComponentRenderer';
 import { PerformanceConfig } from '../config/performanceConfig';
+import { RenderProfiler } from './RenderProfiler';
 import { logger } from '../utils/Logger';
 import type { ComponentBase, Connection, Camera } from '../types';
 
@@ -60,6 +61,8 @@ export class LegacyRenderer {
    * when LayeredRenderer is disabled or fails
    */
   static render(context: LegacyRendererContext): void {
+    // Start frame profiling if enabled
+    RenderProfiler.beginFrame();
     // Debug: Check if render is being called during component drag
     if (context.inputEventCoordinator.getInteractionState().isDragging) {
       if (PerformanceConfig.LOGGING?.LOG_RENDER_FRAMES) {
@@ -93,6 +96,8 @@ export class LegacyRenderer {
             };
           });
 
+        // Begin frame when using layered path as well
+        RenderProfiler.beginFrame();
         layeredRenderer.render(context.ctx, {
           timestamp: performance.now(),
           camera: context.camera,
@@ -107,6 +112,11 @@ export class LegacyRenderer {
             mousePos: context.inputEventCoordinator.getMousePosition(),
           },
         });
+        // End frame with counts when layered path succeeds
+        RenderProfiler.endFrame({
+          componentsRendered: visibleModels?.length ?? 0,
+          connectionsRendered: visibleConnections?.length ?? 0,
+        });
         return;
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -116,6 +126,15 @@ export class LegacyRenderer {
 
     // Legacy render path (unchanged behaviour)
     LegacyRenderer.renderLegacyPath(context);
+
+    // End frame profiling with rough counts
+    try {
+      const componentsRendered = context.getCurrentViewComponents()?.length ?? 0;
+      const connectionsRendered = context.getCurrentViewConnections()?.length ?? 0;
+      RenderProfiler.endFrame({ componentsRendered, connectionsRendered });
+    } catch (_) {
+      RenderProfiler.endFrame({ componentsRendered: 0, connectionsRendered: 0 });
+    }
   }
 
   /**
@@ -132,13 +151,13 @@ export class LegacyRenderer {
 
     // Draw different background for schematic view
     if (context.currentView.type === 'schematic') {
-      LegacyRenderer.drawSchematicBackground(context);
+      RenderProfiler.measureSection('grid', () => LegacyRenderer.drawSchematicBackground(context));
     } else {
-      LegacyRenderer.drawGrid(context);
+      RenderProfiler.measureSection('grid', () => LegacyRenderer.drawGrid(context));
     }
 
     // Draw connections
-    LegacyRenderer.drawConnections(context);
+  RenderProfiler.measureSection('connections', () => LegacyRenderer.drawConnections(context));
 
     // Draw temporary connection line
     const connectionState = context.connectionManager.getConnectionState();
@@ -172,11 +191,15 @@ export class LegacyRenderer {
 
     // Use batched rendering for better performance
     if (PerformanceConfig.ENABLE_BATCH_RENDERING && visibleComponents.length > 0) {
-      LegacyRenderer.drawComponentsBatched(context, visibleComponents);
+      RenderProfiler.measureSection('components', () =>
+        LegacyRenderer.drawComponentsBatched(context, visibleComponents)
+      );
     } else {
       // Fallback to individual rendering
-      visibleComponents.forEach((component: ComponentBase) => {
-        LegacyRenderer.drawComponent(context, component);
+      RenderProfiler.measureSection('components', () => {
+        visibleComponents.forEach((component: ComponentBase) => {
+          LegacyRenderer.drawComponent(context, component);
+        });
       });
     }
 
@@ -196,7 +219,7 @@ export class LegacyRenderer {
 
     // Draw transition overlay if transitioning
     if (context.isTransitioning) {
-      LegacyRenderer.drawTransitionOverlay(context);
+      RenderProfiler.measureSection('ui', () => LegacyRenderer.drawTransitionOverlay(context));
     }
   }
 

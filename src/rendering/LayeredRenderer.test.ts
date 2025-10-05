@@ -96,8 +96,10 @@ describe('LayeredRenderer', () => {
 
       renderer.render(mockContext, mockFrame);
 
-      expect(layer1.render).toHaveBeenCalledWith(mockContext, mockFrame);
-      expect(layer2.render).toHaveBeenCalledWith(mockContext, mockFrame);
+      // LayeredRenderer enriches frame with canvas property
+      const enrichedFrame = { ...mockFrame, canvas: mockContext.canvas };
+      expect(layer1.render).toHaveBeenCalledWith(mockContext, enrichedFrame);
+      expect(layer2.render).toHaveBeenCalledWith(mockContext, enrichedFrame);
     });
 
     it('should render layers in registration order', () => {
@@ -130,7 +132,9 @@ describe('LayeredRenderer', () => {
       renderer.registerLayer('test', layer);
       renderer.render(mockContext, mockFrame);
 
-      expect(layer.render).toHaveBeenCalledWith(mockContext, mockFrame);
+      // LayeredRenderer enriches frame with canvas property
+      const enrichedFrame = { ...mockFrame, canvas: mockContext.canvas };
+      expect(layer.render).toHaveBeenCalledWith(mockContext, enrichedFrame);
     });
 
     it('should handle rendering with no layers', () => {
@@ -267,7 +271,11 @@ describe('LayeredRenderer', () => {
       renderer.registerLayer('webgl-layer', layer);
       renderer.render(webglContext as any, mockFrame);
 
-      expect(layer.render).toHaveBeenCalledWith(webglContext, mockFrame);
+      // LayeredRenderer enriches the frame with the canvas property from context
+      expect(layer.render).toHaveBeenCalledWith(webglContext, {
+        ...mockFrame,
+        canvas: webglContext.canvas,
+      });
     });
   });
 

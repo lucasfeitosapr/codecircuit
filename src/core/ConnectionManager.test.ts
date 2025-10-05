@@ -468,8 +468,9 @@ describe('ConnectionManager', () => {
       expect(eventSpy).toHaveBeenCalledWith(
         'connection.deleted',
         expect.objectContaining({
-          connectionId: connection.id,
+          id: connection.id,
           connection: connection,
+          timestamp: expect.any(Number),
         })
       );
     });

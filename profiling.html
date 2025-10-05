@@ -141,6 +141,8 @@
       border: 2px solid #00ff88;
       box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
       cursor: crosshair;
+      /* Ensure width/height include border to avoid ResizeObserver growth loop */
+      box-sizing: border-box;
     }
     
     .warning {
@@ -229,14 +231,18 @@
     <div id="report" class="report"></div>
   </div>
   
+  <!-- Boot the real app so we can place actual components and connections -->
+  <script type="module" src="/src/main.ts"></script>
   <script type="module">
-    // This will be populated with the actual profiling logic
-    // For now, it's a placeholder that shows the UI structure
-    
+    import { RenderProfiler } from '/src/rendering/RenderProfiler.ts';
+    import { getViewportManager } from '/src/core/ViewportManager.ts';
+    // Ensure profiling API exists (main.ts also sets it)
+    window.renderProfiler = window.renderProfiler || RenderProfiler.publicAPI();
+
     console.log('🔧 Performance Profiling Tool Loaded');
-    console.log('📊 Open browser DevTools > Performance tab for detailed profiling');
-    console.log('💡 Available in console: window.renderProfiler');
-    
+    console.log('📊 Open DevTools > Performance for detailed traces');
+    console.log('💡 Using real app rendering with Layered/Legacy paths');
+
     // UI Elements
     const presetSelect = document.getElementById('preset-select');
     const generateBtn = document.getElementById('generate-board');
@@ -252,39 +258,208 @@
       frameTime: document.getElementById('frame-time'),
       status: document.getElementById('profiling-status'),
     };
-    
+
+    // Canvas
+    const canvas = document.getElementById('circuit-board');
+
+    // Live panel state
     let isRecording = false;
     let lastReport = null;
-    
-    // Event Handlers
+    let lastFrameTs = 0;
+    let smoothedFPS = 60;
+    let smoothedFrame = 16.7;
+    function getCanvasSize() {
+      const rect = canvas.getBoundingClientRect();
+      return { w: rect.width, h: rect.height };
+    }
+
+    // Live status panel helper (based on app state)
+    function hasActiveAnimations() {
+      try {
+        const app = window.app;
+        if (!app) return false;
+        const conns = app.getCurrentViewConnections();
+        return conns.some(c => c?.from?.component?.status === 'in-progress' || c?.from?.component?.status === 'done');
+      } catch { return false; }
+    }
+
+    async function waitForApp(timeoutMs = 5000) {
+      const start = performance.now();
+      while (!window.app) {
+        await new Promise(r => setTimeout(r, 20));
+        if (performance.now() - start > timeoutMs) throw new Error('App not initialized');
+      }
+      return window.app;
+    }
+
+    async function generateTestBoard(preset) {
+      const app = await waitForApp();
+      const sizes = { small: 25, medium: 100, large: 200, xlarge: 500, stress: 500 };
+      const count = sizes[preset] || 100;
+      const dense = preset === 'stress';
+
+      // Clear existing
+      app.importProjectData({ components: [], connections: [] });
+
+      const { w: W, h: H } = getCanvasSize();
+      const pad = 60;
+      const minDist = dense ? 16 : 36;
+      const types = ['module-ic', 'task-resistor', 'decision-point', 'gateway'];
+
+  const comps = [];
+      let attempts = 0;
+      const maxAttempts = 8000;
+      while (comps.length < count && attempts < maxAttempts) {
+        attempts++;
+        const cluster = dense ? { x: W * 0.5, y: H * 0.5, r: Math.min(W, H) * 0.33 } : null;
+        const x = cluster ? (cluster.x + (Math.random() - 0.5) * 2 * cluster.r) : (pad + Math.random() * (W - 2 * pad));
+        const y = cluster ? (cluster.y + (Math.random() - 0.5) * 2 * cluster.r) : (pad + Math.random() * (H - 2 * pad));
+        const pick = Math.random();
+        const t = pick < 0.45 ? 'module-ic' : pick < 0.85 ? 'task-resistor' : types[Math.floor(Math.random() * types.length)];
+        // Only place if far enough from already placed components
+        const ok = comps.every(n => (n.x - x) ** 2 + (n.y - y) ** 2 > minDist ** 2);
+        if (!ok) continue;
+        const c = app.addComponent(t, x, y);
+        if (c) comps.push(c);
+      }
+
+      for (const c of comps) {
+        const r = Math.random();
+        if (r < 0.3) {
+          app.toggleComponentStatus(c);
+        } else if (r < 0.55) {
+          app.toggleComponentStatus(c);
+          app.toggleComponentStatus(c);
+        }
+      }
+
+      const K = dense ? 6 : 3;
+      const maxDist = dense ? 280 : 320;
+      const getPin = (comp, type, idx) => {
+        const def = (comp.pins?.[type] && comp.pins[type][idx]) || { x: 0, y: 0 };
+        return {
+          component: comp,
+          pinType: type,
+          pinIndex: idx,
+          x: comp.x + (def.x || 0),
+          y: comp.y + (def.y || 0),
+          category: comp.category || 'frontend',
+        };
+      };
+
+      for (let i = 0; i < comps.length; i++) {
+        const a = comps[i];
+        const neighbors = comps
+          .map((b, j) => ({ j, d: (a.x - b.x) ** 2 + (a.y - b.y) ** 2 }))
+          .filter(o => o.j !== i)
+          .sort((p, q) => p.d - q.d)
+          .slice(0, K);
+        for (const n of neighbors) {
+          if (n.d <= maxDist * maxDist) {
+            const b = comps[n.j];
+            const outPin = getPin(a, 'output', 0);
+            const inPin = getPin(b, 'input', 0);
+            try { app.createConnection(outPin, inPin); } catch {}
+          }
+        }
+      }
+
+      // Update UI counts
+      try {
+        statusElements.components.textContent = String(app.getCurrentViewComponents().length);
+        statusElements.connections.textContent = String(app.getCurrentViewConnections().length);
+      } catch {}
+      reportDiv.classList.remove('visible');
+
+      // Auto-fit camera to generated board for a better initial view
+      if (comps.length > 0) {
+        const minX = Math.min(...comps.map(c => c.x));
+        const minY = Math.min(...comps.map(c => c.y));
+        const maxX = Math.max(...comps.map(c => c.x + (c.width || 0)));
+        const maxY = Math.max(...comps.map(c => c.y + (c.height || 0)));
+        const bounds = { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+        try { getViewportManager().fitToViewport(bounds); } catch {}
+      }
+    }
+
+  function frame(ts) {
+      if (!lastFrameTs) lastFrameTs = ts;
+      const dt = ts - lastFrameTs;
+      lastFrameTs = ts;
+
+      // Local FPS smoothing (fallback if no external profiler)
+      const alpha = 0.15;
+      smoothedFrame = smoothedFrame * (1 - alpha) + dt * alpha;
+      smoothedFPS = 1000 / smoothedFrame;
+
+      // Live status update: use renderProfiler only while recording; otherwise show local smoothed metrics
+      try {
+        const rp = window.renderProfiler;
+        const rpActive = rp && typeof rp.isRecording === 'function' && rp.isRecording();
+        if (rpActive && typeof rp.getCurrentFPS === 'function' && typeof rp.getCurrentFrameTime === 'function') {
+          const fps = rp.getCurrentFPS();
+          const ft = rp.getCurrentFrameTime();
+          statusElements.fps.textContent = fps ? fps.toFixed(0) : smoothedFPS.toFixed(0);
+          statusElements.frameTime.textContent = ft ? `${ft.toFixed(1)}ms` : `${smoothedFrame.toFixed(1)}ms`;
+        } else {
+          statusElements.fps.textContent = smoothedFPS.toFixed(0);
+          statusElements.frameTime.textContent = `${smoothedFrame.toFixed(1)}ms`;
+        }
+      } catch (_) {
+        statusElements.fps.textContent = smoothedFPS.toFixed(0);
+        statusElements.frameTime.textContent = `${smoothedFrame.toFixed(1)}ms`;
+      }
+
+      // Periodically update counts from the live app
+      try {
+        const app = window.app;
+        if (app && (ts % 250 < 16)) {
+          statusElements.components.textContent = String(app.getCurrentViewComponents().length);
+          statusElements.connections.textContent = String(app.getCurrentViewConnections().length);
+        }
+      } catch {}
+
+      requestAnimationFrame(frame);
+    }
+
+    // Pan/Zoom and input are handled by the real app
+
+    // Hook up controls
     generateBtn.addEventListener('click', () => {
       const preset = presetSelect.value;
       console.log(`Generating ${preset} test board...`);
-      alert(`Test board generation will be implemented after integration.\n\nFor now, use the main application with manually created components.`);
+      generateTestBoard(preset);
     });
-    
+
     clearBtn.addEventListener('click', () => {
       console.log('Clearing board...');
+      try {
+        if (window.app) {
+          window.app.importProjectData({ components: [], connections: [] });
+          statusElements.components.textContent = '0';
+          statusElements.connections.textContent = '0';
+        }
+      } catch {}
       reportDiv.classList.remove('visible');
     });
-    
+
     startBtn.addEventListener('click', () => {
       isRecording = true;
       startBtn.disabled = true;
       stopBtn.disabled = false;
+      exportBtn.disabled = true;
       startBtn.classList.add('recording');
       statusElements.status.textContent = 'Recording...';
       statusElements.status.className = 'status-value warning';
-      
-      if (window.renderProfiler) {
+
+      if (window.renderProfiler && typeof window.renderProfiler.startRecording === 'function') {
         window.renderProfiler.startRecording();
         console.log('✅ Profiling started via renderProfiler');
       } else {
-        console.log('⚠️  renderProfiler not available - integration needed');
-        console.log('💡 Manually profile using Chrome DevTools > Performance');
+        console.log('⚠️  renderProfiler not available - using local FPS only');
       }
     });
-    
+
     stopBtn.addEventListener('click', () => {
       isRecording = false;
       startBtn.disabled = false;
@@ -293,12 +468,12 @@
       startBtn.classList.remove('recording');
       statusElements.status.textContent = 'Complete';
       statusElements.status.className = 'status-value good';
-      
-      if (window.renderProfiler) {
+
+      if (window.renderProfiler && typeof window.renderProfiler.stopRecording === 'function') {
         lastReport = window.renderProfiler.stopRecording();
         reportDiv.textContent = lastReport.summary;
         reportDiv.classList.add('visible');
-        
+
         // Add breakdown details
         const breakdown = lastReport.breakdownPercentages;
         reportDiv.textContent += `\n🔍 Render Breakdown:\n`;
@@ -306,7 +481,7 @@
         reportDiv.textContent += `   • Components: ${breakdown.components.toFixed(1)}% (${lastReport.breakdown.components.toFixed(2)}ms)\n`;
         reportDiv.textContent += `   • Connections: ${breakdown.connections.toFixed(1)}% (${lastReport.breakdown.connections.toFixed(2)}ms)\n`;
         reportDiv.textContent += `   • UI: ${breakdown.ui.toFixed(1)}% (${lastReport.breakdown.ui.toFixed(2)}ms)\n`;
-        
+
         // Add recommendations
         reportDiv.textContent += `\n💡 Optimization Priorities:\n`;
         const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
@@ -315,17 +490,17 @@
             reportDiv.textContent += `   ${i + 1}. Optimize ${key} (${pct.toFixed(1)}% of frame time)\n`;
           }
         });
-        
+
         console.log('✅ Profiling complete');
         console.log('📊 Report:', lastReport);
       } else {
-        reportDiv.textContent = 'Profiler not integrated yet.\n\nPlease use Chrome DevTools > Performance tab for detailed profiling.';
+        reportDiv.textContent = `Local profiling complete.\n\nAverage FPS (approx): ${smoothedFPS.toFixed(0)}\nAvg Frame Time (approx): ${smoothedFrame.toFixed(1)}ms`;
         reportDiv.classList.add('visible');
       }
     });
-    
+
     exportBtn.addEventListener('click', () => {
-      if (window.renderProfiler && lastReport) {
+      if (window.renderProfiler && lastReport && typeof window.renderProfiler.exportToCSV === 'function') {
         const csv = window.renderProfiler.exportToCSV();
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -337,33 +512,20 @@
         console.log('✅ CSV exported');
       }
     });
-    
-    // Instructions
+
+  // Kick off live updates and initial board when the app is ready
+  requestAnimationFrame(frame);
+  waitForApp().then(() => generateTestBoard('medium')).catch(() => console.warn('App init timeout'));
+
+    // Instructions in console
     console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║  Performance Profiling Tool - Quick Start                 ║
 ╚════════════════════════════════════════════════════════════╝
 
-📊 Manual Profiling (Works Now):
-   1. Open main application (npm run dev)
-   2. Create/load a board with many components
-   3. Open Chrome DevTools > Performance tab
-   4. Click Record
-   5. Interact with board for 5-10 seconds
-   6. Stop recording and analyze
-
-🔧 Automated Profiling (After Integration):
-   1. Generate test board using presets
-   2. Click "Start Profiling"
-   3. Interact with board
-   4. Click "Stop Profiling" to see report
-   5. Export CSV for detailed analysis
-
-💡 In Console:
-   window.renderProfiler.startRecording()
-   // ... interact with board ...
-   const report = window.renderProfiler.stopRecording()
-   console.log(report)
+• Use the preset selector and Generate Test Board to create scenarios
+• Start/Stop Profiling will use window.renderProfiler if available
+• Pan with mouse drag, zoom with mouse wheel
     `);
   </script>
 </body>

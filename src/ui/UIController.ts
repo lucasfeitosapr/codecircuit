@@ -324,9 +324,20 @@ export class UIController {
     const canvas = this.context.getCanvas();
 
     // Canvas mouse interactions
-    canvas.addEventListener('mousedown', this.context.onMouseDown.bind(this.context));
-    canvas.addEventListener('mousemove', this.context.onMouseMove.bind(this.context));
-    canvas.addEventListener('mouseup', this.context.onMouseUp.bind(this.context));
+    canvas.addEventListener('mousedown', (e: MouseEvent) => {
+      this.context.onMouseDown(e);
+      // Hint the render loop that interaction has started
+      try { (window as any).app?.renderScheduler?.markDirty?.(); } catch {}
+    });
+    canvas.addEventListener('mousemove', (e: MouseEvent) => {
+      this.context.onMouseMove(e);
+      // Keep frames flowing during active interactions
+      try { (window as any).app?.renderScheduler?.markDirty?.(); } catch {}
+    });
+    canvas.addEventListener('mouseup', (e: MouseEvent) => {
+      this.context.onMouseUp(e);
+      try { (window as any).app?.renderScheduler?.markDirty?.(); } catch {}
+    });
     canvas.addEventListener('wheel', this.context.onWheel.bind(this.context));
     canvas.addEventListener('contextmenu', (e: any) => e.preventDefault());
 

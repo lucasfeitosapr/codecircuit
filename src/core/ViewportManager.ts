@@ -150,15 +150,18 @@ export class ViewportManagerImpl implements ViewportManager {
       const height = rect.height;
       const pixelRatio = window.devicePixelRatio || 1;
 
+      // Avoid cumulative scaling by resetting the transform each resize
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
       // Set actual canvas size in memory (scaled for high DPI)
-      this.canvas.width = width * pixelRatio;
-      this.canvas.height = height * pixelRatio;
+      this.canvas.width = Math.max(1, Math.floor(width * pixelRatio));
+      this.canvas.height = Math.max(1, Math.floor(height * pixelRatio));
 
       // Set display size (CSS pixels)
       this.canvas.style.width = width + 'px';
       this.canvas.style.height = height + 'px';
 
-      // Scale the drawing context so everything draws at the correct size
+      // Apply device pixel ratio scaling
       this.ctx.scale(pixelRatio, pixelRatio);
 
       // Emit resize event

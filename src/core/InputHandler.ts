@@ -29,6 +29,7 @@ export class InputHandler {
   private connectionStart: PinHit | null = null;
   private mousePos: { x: number; y: number } = { x: 0, y: 0 };
   private selectedComponent: ComponentBase | null = null;
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement, camera: Camera) {
     this.canvas = canvas;
@@ -92,7 +93,7 @@ export class InputHandler {
    * Setup keyboard event listeners
    */
   private setupKeyboardListeners(): void {
-    document.addEventListener('keydown', e => {
+    this.keydownHandler = (e: KeyboardEvent) => {
       // Escape key - cancel current operation
       if (e.key === 'Escape') {
         this.cancelCurrentOperation();
@@ -129,7 +130,8 @@ export class InputHandler {
           timestamp: Date.now(),
         });
       }
-    });
+    };
+    document.addEventListener('keydown', this.keydownHandler);
   }
 
   /**
@@ -314,6 +316,16 @@ export class InputHandler {
    */
   private handlePinInteraction(pinHit: PinHit): void {
     if (this.isConnecting && this.connectionStart) {
+      // Basic validation: must connect output→input or input→output (not same type)
+      const startIsInput = this.connectionStart.isInputPin || this.connectionStart.pinType === 'input';
+      const endIsInput = pinHit.isInputPin || pinHit.pinType === 'input';
+
+      if (startIsInput === endIsInput) {
+        // Invalid: connecting input→input or output→output
+        this.cancelConnectionMode();
+        return;
+      }
+
       // Complete connection
       eventBus.emit(Events.CONNECTION_CREATE_REQUESTED, {
         startPin: this.connectionStart,
@@ -522,8 +534,11 @@ export class InputHandler {
     this.canvas.removeEventListener('mouseup', this.onMouseUp.bind(this));
     this.canvas.removeEventListener('wheel', this.onWheel.bind(this));
 
-    // Remove keyboard listeners
-    document.removeEventListener('keydown', () => {});
+    // Remove keyboard listeners (use stored reference)
+    if (this.keydownHandler) {
+      document.removeEventListener('keydown', this.keydownHandler);
+      this.keydownHandler = null;
+    }
 
     // Clear UI control listeners
     const backBtn = document.getElementById('back-btn');

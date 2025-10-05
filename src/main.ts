@@ -49,6 +49,7 @@ import { MotherboardReactUI } from './ui/react/App';
 // import { layeredRenderer } from './rendering/LayeredRenderer'; // Unused import
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
+import { RenderProfiler } from './rendering/RenderProfiler';
 
 // Types
 import type {
@@ -460,7 +461,10 @@ export class MotherboardApp {
         this.appStateManager.updateFPS(timestamp);
         this.render();
       },
-      () => this.runtimeLayer.hasActiveAnimations()
+      () =>
+        this.runtimeLayer.hasActiveAnimations() ||
+        this.hasActiveConnectionAnimations() ||
+        RenderProfiler.isRecording()
     );
 
     // Setup event handlers (will now be able to call markDirty)
@@ -500,6 +504,12 @@ export class MotherboardApp {
   eventBus.on(Events.ComponentUpdated, () => this.renderScheduler.markDirty());
   eventBus.on(Events.ComponentDeleted, () => this.renderScheduler.markDirty());
   // No explicit constant for status changed/moved in Events; these are emitted via ComponentUpdated
+    
+    // High-frequency interaction updates (dragging, connection preview)
+    // Ensure we render on every drag move so components visually follow the cursor
+    eventBus.on(Events.COMPONENT_DRAG_UPDATED, () => this.renderScheduler.markDirty());
+    // While drawing a connection preview, re-render on mouse move to update the rubber band line
+    eventBus.on('connection.drawing', () => this.renderScheduler.markDirty());
     
     // Connection changes
   eventBus.on(Events.ConnectionCreated, () => this.renderScheduler.markDirty());
@@ -717,6 +727,23 @@ export class MotherboardApp {
     LegacyRenderer.render(this.getRendererContext());
   }
 
+  /**
+   * Determine if there are any time-based connection animations that require continuous rendering.
+   * Connections animate when the source component is in-progress or done (see rendererHelpers.drawDataFlow/drawActiveTrace).
+   */
+  private hasActiveConnectionAnimations(): boolean {
+    try {
+      const conns = this.getCurrentViewConnections();
+      for (const conn of conns) {
+        const fromStatus = conn?.from?.component?.status as any;
+        if (fromStatus === 'in-progress' || fromStatus === 'done') return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
   updateConnectionModeUI(): void {
     const indicator = document.getElementById('connection-mode');
     if (!indicator) return;
@@ -750,7 +777,8 @@ export class MotherboardApp {
   }
 
   importProjectData(projectData: any): void {
-    eventBus.emit(Events.PROJECT_IMPORT_REQUESTED, {
+    // Use data-based import event so no file dialog is triggered
+    eventBus.emit(Events.PROJECT_DATA_IMPORT_REQUESTED, {
       projectData,
       timestamp: Date.now(),
     });
@@ -883,6 +911,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Make app globally accessible for debugging
   (window as any).app = app;
+  // Expose profiling API for profiling.html integration
+  (window as any).renderProfiler = RenderProfiler.publicAPI();
+
+  // While profiling is active, keep the scheduler ticking so FPS updates
+  try {
+    const rp: any = (window as any).renderProfiler;
+    if (rp && !rp.__wrappedForScheduler) {
+      const originalStart = rp.startRecording?.bind(rp);
+      const originalStop = rp.stopRecording?.bind(rp);
+
+      let rafId: number | null = null;
+      const tick = () => {
+        // Mark dirty to force a render frame and profiler sample
+        (app as any).renderScheduler?.markDirty?.();
+        rafId = requestAnimationFrame(tick);
+      };
+
+      rp.startRecording = () => {
+        originalStart?.();
+        // Kick the scheduler once immediately
+        (app as any).renderScheduler?.markDirty?.();
+        if (rafId == null) rafId = requestAnimationFrame(tick);
+      };
+
+      rp.stopRecording = () => {
+        const result = originalStop?.();
+        if (rafId != null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        // One last render to flush final stats
+        (app as any).renderScheduler?.markDirty?.();
+        return result;
+      };
+
+      rp.__wrappedForScheduler = true;
+    }
+  } catch (e) {
+    // non-fatal; profiling wrapper is best-effort
+    console.warn('Profiler scheduler wrapper failed', e);
+  }
 });
 
 export default MotherboardApp;

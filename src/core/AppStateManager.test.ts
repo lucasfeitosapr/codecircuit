@@ -320,17 +320,16 @@ describe('AppStateManager', () => {
       expect(view.connections).toHaveLength(1);
     });
 
-    it('should emit CONNECTION_CREATED event with view-aware source', () => {
+    it('should NOT emit CONNECTION_CREATED event (ConnectionManager already does this)', () => {
+      // addConnectionToCurrentView intentionally does NOT emit CONNECTION_CREATED
+      // to prevent infinite event loop (ConnectionManager already emits it)
       const eventSpy = vi.fn();
       eventBus.on(Events.CONNECTION_CREATED, eventSpy);
 
       stateManager.addConnectionToCurrentView(mockConnection);
 
-      expect(eventSpy).toHaveBeenCalledWith({
-        id: 'test-conn-1',
-        connection: mockConnection,
-        source: 'view-aware',
-      });
+      // Verify event was NOT emitted (prevents infinite loop)
+      expect(eventSpy).not.toHaveBeenCalled();
     });
   });
 
