@@ -421,6 +421,9 @@ export class MotherboardApp {
         componentRegistry: this.componentRegistry,
         componentTypes: this.componentTypes,
         categories: this.categories,
+        // Provide shared layer instances so LayeredRenderer reuses them
+        runtimeLayer: this.runtimeLayer,
+        uiLayer: this.uiLayer,
       });
 
       // Start the application

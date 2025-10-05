@@ -1,5 +1,6 @@
 import type { RenderFrame } from '../LayeredRenderer';
 import type { ComponentBase, Connection, PinHit } from '../../types';
+import { isFeatureEnabled } from '../../core/FeatureFlagManager';
 
 export interface SelectionBox {
   x: number;
@@ -304,6 +305,11 @@ export default class UILayer {
 
   // Rendering Methods
   private renderSelectionBoxes(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
+    // Only render if feature is enabled
+    if (!isFeatureEnabled('ENABLE_SELECTION_HANDLES')) {
+      return;
+    }
+
     for (const selectionBox of this.selectionBoxes.values()) {
       this.renderSelectionBox(ctx, selectionBox, frame);
     }
@@ -384,6 +390,11 @@ export default class UILayer {
   }
 
   private renderGuideLines(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
+    // Only render if feature is enabled
+    if (!isFeatureEnabled('ENABLE_ALIGNMENT_GUIDES')) {
+      return;
+    }
+
     for (const guide of this.guideLines.values()) {
       this.renderGuideLine(ctx, guide, frame);
     }
@@ -403,7 +414,11 @@ export default class UILayer {
     ctx.save();
     ctx.strokeStyle = guide.color;
     ctx.globalAlpha = guide.opacity;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2; // Increased from 1 to 2 for better visibility
+
+    // Add subtle glow for better visibility
+    ctx.shadowColor = guide.color;
+    ctx.shadowBlur = 4;
 
     if (guide.dashed) {
       ctx.setLineDash([5, 5]);
@@ -416,6 +431,7 @@ export default class UILayer {
 
     // Draw label if provided
     if (guide.label) {
+      ctx.shadowBlur = 0; // Remove shadow for text
       ctx.fillStyle = guide.color;
       ctx.font = '12px monospace';
       ctx.fillText(guide.label, startX + 5, startY - 5);
@@ -425,8 +441,15 @@ export default class UILayer {
   }
 
   private renderUIOverlays(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
+    // Only render tooltips if feature is enabled
+    const tooltipsEnabled = isFeatureEnabled('ENABLE_COMPONENT_TOOLTIPS');
+
     for (const overlay of this.uiOverlays.values()) {
       if (overlay.visible) {
+        // Skip tooltips if feature is disabled
+        if (overlay.type === 'tooltip' && !tooltipsEnabled) {
+          continue;
+        }
         this.renderUIOverlay(ctx, overlay, frame);
       }
     }
@@ -560,6 +583,11 @@ export default class UILayer {
   }
 
   private renderConnectionIntents(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
+    // Only render if feature is enabled
+    if (!isFeatureEnabled('ENABLE_CONNECTION_INTENTS')) {
+      return;
+    }
+
     for (const intent of this.connectionIntents.values()) {
       this.renderConnectionIntent(ctx, intent, frame);
     }

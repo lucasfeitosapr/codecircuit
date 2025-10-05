@@ -3,6 +3,7 @@ import { Events } from '../events/eventTypes';
 import type { ComponentBase, ModuleComponent, PinHit, Camera } from '../types';
 // import { setupInputListeners } from '../inputHandler'; // Moved to archived - no longer used
 import { hideDatasheet as hideDatasheetUI, showDatasheet as showDatasheetUI } from '../datasheet';
+import { isFeatureEnabled } from './FeatureFlagManager';
 
 /**
  * Phase 6B: Input Event Coordinator
@@ -343,14 +344,19 @@ export class InputEventCoordinator {
           y: mouseY - clickedComponent.y,
         };
 
-        // Add selection box and alignment guides
-        this.dependencies.uiLayer.clearSelectionBoxes();
-        this.dependencies.uiLayer.clearGuideLines();
-        this.dependencies.uiLayer.addSelectionBox(clickedComponent, 'single');
-        this.dependencies.uiLayer.addAlignmentGuides(
-          clickedComponent,
-          this.dependencies.getCurrentViewComponents()
-        );
+        // Add selection box and alignment guides (if features are enabled)
+        if (isFeatureEnabled('ENABLE_SELECTION_HANDLES')) {
+          this.dependencies.uiLayer.clearSelectionBoxes();
+          this.dependencies.uiLayer.addSelectionBox(clickedComponent, 'single');
+        }
+
+        if (isFeatureEnabled('ENABLE_ALIGNMENT_GUIDES')) {
+          this.dependencies.uiLayer.clearGuideLines();
+          this.dependencies.uiLayer.addAlignmentGuides(
+            clickedComponent,
+            this.dependencies.getCurrentViewComponents()
+          );
+        }
       }
     } else {
       this.dependencies.setSelectedComponent(null);
@@ -407,13 +413,18 @@ export class InputEventCoordinator {
         timestamp: Date.now(),
       });
 
-      // Update selection box position
-      this.dependencies.uiLayer.clearSelectionBoxes();
-      this.dependencies.uiLayer.addSelectionBox(this.draggedComponent, 'single');
-      this.dependencies.uiLayer.addAlignmentGuides(
-        this.draggedComponent,
-        this.dependencies.getCurrentViewComponents()
-      );
+      // Update selection box position (if features are enabled)
+      if (isFeatureEnabled('ENABLE_SELECTION_HANDLES')) {
+        this.dependencies.uiLayer.clearSelectionBoxes();
+        this.dependencies.uiLayer.addSelectionBox(this.draggedComponent, 'single');
+      }
+
+      if (isFeatureEnabled('ENABLE_ALIGNMENT_GUIDES')) {
+        this.dependencies.uiLayer.addAlignmentGuides(
+          this.draggedComponent,
+          this.dependencies.getCurrentViewComponents()
+        );
+      }
     }
 
     // Update connection intent if connecting
@@ -433,6 +444,14 @@ export class InputEventCoordinator {
         endPin: pinHit,
         isValid: isValid || false,
         category: connectionState.connectionStart.category ?? 'frontend',
+      });
+
+      // Emit event to trigger re-render for connection preview
+      eventBus.emit('connection.drawing', {
+        startPin: connectionState.connectionStart,
+        currentPos: { x: mouseX, y: mouseY },
+        isValid: isValid || false,
+        timestamp: Date.now(),
       });
     }
   }

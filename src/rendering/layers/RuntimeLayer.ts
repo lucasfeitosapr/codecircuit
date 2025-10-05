@@ -1,4 +1,5 @@
 import type { RenderFrame } from '../LayeredRenderer';
+import { isFeatureEnabled } from '../../core/FeatureFlagManager';
 
 export interface Animation {
   id: string;
@@ -106,6 +107,11 @@ export default class RuntimeLayer {
 
   // Animation Effects
   pulseComponent(componentId: string, color: string = '#00ff88', duration: number = 1000): string {
+    // Only create animation if feature is enabled
+    if (!isFeatureEnabled('ENABLE_COMPONENT_ANIMATIONS')) {
+      return `disabled_pulse_${Date.now()}`;
+    }
+
     return this.addAnimation({
       type: 'pulse',
       duration,
@@ -116,6 +122,11 @@ export default class RuntimeLayer {
   }
 
   glowEffect(x: number, y: number, color: string = '#00ff88', duration: number = 800): string {
+    // Only create animation if feature is enabled
+    if (!isFeatureEnabled('ENABLE_COMPONENT_ANIMATIONS')) {
+      return `disabled_glow_${Date.now()}`;
+    }
+
     return this.addAnimation({
       type: 'glow',
       duration,
@@ -132,6 +143,11 @@ export default class RuntimeLayer {
     toY: number,
     color: string = '#00ff88'
   ): string {
+    // Only create particles if feature is enabled
+    if (!isFeatureEnabled('ENABLE_ENERGY_FLOW_PARTICLES')) {
+      return `disabled_energy_flow_${Date.now()}`;
+    }
+
     // Create particle flow animation
     const particleCount = 8;
     const flowDuration = 1500;
@@ -158,6 +174,11 @@ export default class RuntimeLayer {
   }
 
   sparkEffect(x: number, y: number, color: string = '#ffff00'): string {
+    // Only create sparks if feature is enabled
+    if (!isFeatureEnabled('ENABLE_COMPONENT_ANIMATIONS')) {
+      return `disabled_spark_${Date.now()}`;
+    }
+
     // Create multiple spark particles
     const sparkCount = 6;
     const sparkId = `spark_${Date.now()}`;

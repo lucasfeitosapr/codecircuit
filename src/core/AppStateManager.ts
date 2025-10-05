@@ -206,11 +206,9 @@ export class AppStateManager {
       this.notifyListeners('currentView', this.state.currentView);
     }
 
-    eventBus.emit(Events.ConnectionCreated, {
-      id: connection.id,
-      connection: connection,
-      source: 'view-aware',
-    });
+    // NOTE: Do NOT emit ConnectionCreated here - ConnectionManager already does this!
+    // Emitting it again creates an infinite event loop causing UI freeze
+    // The event was already emitted by ConnectionManager.endConnection()
   }
 
   removeConnection(connectionId: string) {

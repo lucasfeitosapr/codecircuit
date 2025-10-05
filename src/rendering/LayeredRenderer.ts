@@ -46,9 +46,20 @@ export class LayeredRenderer {
     }
 
     // New layered rendering path
+    // Ensure canvas is available to layers to allow proper clearing
+    const c = ctx as CanvasRenderingContext2D;
+    const enrichedFrame = {
+      ...frame,
+      // @ts-ignore
+      canvas: (c && (c as any).canvas) || (frame as any)?.canvas,
+    } as RenderFrame & { canvas?: HTMLCanvasElement };
+
     for (const layer of this.layers.values()) {
       try {
-        layer.render(ctx, frame);
+        // Prevent state leakage between layers (dash, shadow, transforms)
+        (ctx as CanvasRenderingContext2D).save?.();
+        layer.render(ctx, enrichedFrame);
+        (ctx as CanvasRenderingContext2D).restore?.();
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(`LayeredRenderer: layer ${layer.name} failed`, e);

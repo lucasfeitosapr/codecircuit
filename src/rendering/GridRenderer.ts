@@ -30,7 +30,7 @@ export class GridRenderer {
     canvas: HTMLCanvasElement
   ): void {
     const currentGridSize = this.gridSize * camera.zoom;
-    
+
     // Regenerate grid canvas only when zoom changes significantly
     if (
       !this.gridCanvas ||
@@ -40,67 +40,86 @@ export class GridRenderer {
       this.lastZoom = camera.zoom;
       this.lastGridSize = currentGridSize;
     }
-    
-    // Calculate offset for seamless tiling
-    const offsetX = (-camera.x) % currentGridSize;
-    const offsetY = (-camera.y) % currentGridSize;
-    
+
+    // Calculate offset for seamless tiling - snap to whole pixels
+    const offsetX = Math.floor((-camera.x) % currentGridSize);
+    const offsetY = Math.floor((-camera.y) % currentGridSize);
+
     const dpr = window.devicePixelRatio || 1;
     const canvasWidth = canvas.width / dpr;
     const canvasHeight = canvas.height / dpr;
-    
+
     // Tile the cached grid across the viewport
     // Start one tile before viewport to ensure coverage
     const startX = offsetX - currentGridSize;
     const startY = offsetY - currentGridSize;
-    
-    for (let x = startX; x < canvasWidth; x += this.gridCanvas!.width) {
-      for (let y = startY; y < canvasHeight; y += this.gridCanvas!.height) {
-        ctx.drawImage(this.gridCanvas!, x, y);
+
+    // Disable image smoothing for crisp grid lines
+    ctx.imageSmoothingEnabled = false;
+
+    const tileWidth = this.gridCanvas!.width;
+    const tileHeight = this.gridCanvas!.height;
+
+    for (let x = startX; x < canvasWidth; x += tileWidth) {
+      for (let y = startY; y < canvasHeight; y += tileHeight) {
+        // Snap tile position to whole pixels to prevent sub-pixel rendering
+        ctx.drawImage(this.gridCanvas!, Math.floor(x), Math.floor(y));
       }
     }
+
+    // Restore image smoothing
+    ctx.imageSmoothingEnabled = true;
   }
   
   /**
    * Regenerate the grid canvas (called when zoom changes significantly)
    */
   private regenerateGridCanvas(camera: Camera): void {
-    const gridSize = this.gridSize * camera.zoom;
-    
+    const gridSize = Math.floor(this.gridSize * camera.zoom);
+
     // Create or resize offscreen canvas
     if (!this.gridCanvas) {
       this.gridCanvas = document.createElement('canvas');
     }
-    
+
     // Make the tile big enough to cover multiple grid cells
     const tileSize = gridSize * 10; // 10x10 grid cells per tile
     this.gridCanvas.width = tileSize;
     this.gridCanvas.height = tileSize;
-    
-    const ctx = this.gridCanvas.getContext('2d');
+
+    const ctx = this.gridCanvas.getContext('2d', { alpha: true });
     if (!ctx) return;
-    
+
     // Clear canvas
     ctx.clearRect(0, 0, tileSize, tileSize);
-    
-    // Draw grid pattern
+
+    // Disable anti-aliasing for crisp lines
+    ctx.imageSmoothingEnabled = false;
+
+    // Draw grid pattern with pixel-perfect alignment
     ctx.strokeStyle = this.gridColor;
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    
+
+    // Draw each line separately with proper pixel alignment
+    // For 1px lines, position at 0.5 offset for crisp rendering
+
     // Vertical lines
     for (let x = 0; x <= tileSize; x += gridSize) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, tileSize);
+      const xPos = Math.floor(x) + 0.5; // Snap to pixel center for crisp 1px lines
+      ctx.beginPath();
+      ctx.moveTo(xPos, 0);
+      ctx.lineTo(xPos, tileSize);
+      ctx.stroke();
     }
-    
+
     // Horizontal lines
     for (let y = 0; y <= tileSize; y += gridSize) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(tileSize, y);
+      const yPos = Math.floor(y) + 0.5; // Snap to pixel center for crisp 1px lines
+      ctx.beginPath();
+      ctx.moveTo(0, yPos);
+      ctx.lineTo(tileSize, yPos);
+      ctx.stroke();
     }
-    
-    ctx.stroke();
   }
   
   /**

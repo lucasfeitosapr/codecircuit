@@ -36,6 +36,9 @@ export interface InitializationContext {
   componentRegistry: any;
   componentTypes: Record<string, any>;
   categories: Record<string, any>;
+  // Optional: provide existing layer instances so LayeredRenderer uses the same ones as the app
+  runtimeLayer?: RuntimeLayer;
+  uiLayer?: UILayer;
 }
 
 export class ApplicationInitializer {
@@ -85,8 +88,11 @@ export class ApplicationInitializer {
       layeredRenderer.registerLayer(BackgroundLayer.name, BackgroundLayer as any);
       layeredRenderer.registerLayer(ImplementationLayer.name, ImplementationLayer as any);
       layeredRenderer.registerLayer(ConnectionsLayer.name, ConnectionsLayer as any);
-      layeredRenderer.registerLayer(RuntimeLayer.name, RuntimeLayer as any);
-      layeredRenderer.registerLayer(UILayer.name, UILayer as any);
+      // Class-based layers must be registered as instances — use app instances if provided
+      const runtime = this.context.runtimeLayer ?? new RuntimeLayer();
+      const ui = this.context.uiLayer ?? new UILayer();
+      layeredRenderer.registerLayer(RuntimeLayer.name, runtime as any);
+      layeredRenderer.registerLayer(UILayer.name, ui as any);
     } catch (e) {
       // ignore if already registered
     }
