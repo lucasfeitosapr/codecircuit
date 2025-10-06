@@ -269,7 +269,10 @@ export class AppStateManager {
 
       // Update FPS display if element exists
       const fpsEl = document.getElementById('fps-counter');
-      if (fpsEl) fpsEl.textContent = `FPS: ${this.state.fps}`;
+      if (fpsEl) {
+        const newText = `FPS: ${this.state.fps}`;
+        if (fpsEl.textContent !== newText) fpsEl.textContent = newText;
+      }
     }
     this.state.lastTime = currentTime;
   }

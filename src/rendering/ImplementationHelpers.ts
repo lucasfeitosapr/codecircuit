@@ -1,5 +1,6 @@
 import { hexToRgb } from '../utils';
 import { getComponentRegistry } from '../components/ComponentRegistry';
+import { PerformanceConfig } from '../config/performanceConfig';
 
 export type RenderOptions = {
   camera: any;
@@ -19,8 +20,12 @@ export function renderComponent(
     const componentRegistry = getComponentRegistry();
     const plugin = componentRegistry.get(component.type);
     if (plugin) {
-      plugin.renderComponent(c, frame, component);
-      return;
+      const instructions = plugin.getRenderInstructions(component);
+      if (instructions && instructions.length > 0) {
+        // Execute the primary render instruction (avoids protected access)
+        instructions[0].render(c, frame);
+        return;
+      }
     }
   } catch (error) {
     console.warn(`V2 plugin renderer failed for ${component.type}:`, error);
@@ -68,9 +73,16 @@ export function renderComponent(
 
   c.strokeStyle = borderColor;
   c.lineWidth = 2;
-  if (glowIntensity > 0) {
+  // Adaptive glow: only at sufficient zoom and within density threshold
+  const allowComponentGlow =
+    PerformanceConfig.ENABLE_COMPONENT_GLOW_OPTIMIZED &&
+    (camera.zoom >= (PerformanceConfig.COMPONENT_GLOW_MIN_ZOOM ?? 1.0));
+  if (glowIntensity > 0 && allowComponentGlow) {
     c.shadowColor = borderColor;
-    c.shadowBlur = 15 * glowIntensity;
+    const blurDone = (PerformanceConfig.COMPONENT_BORDER_GLOW_BLUR_DONE ?? 10) * camera.zoom;
+    const blurActive = (PerformanceConfig.COMPONENT_BORDER_GLOW_BLUR_ACTIVE ?? 6) * camera.zoom;
+    const blur = component.status === 'done' ? blurDone : blurActive;
+    c.shadowBlur = blur * (0.6 + 0.4 * glowIntensity);
   }
 
   if (component.status === 'defined') {
@@ -91,38 +103,45 @@ export function renderComponent(
     c.setLineDash([]);
   }
 
-  // Icon and text
-  if (component.status === 'defined') {
-    c.fillStyle = 'rgba(200, 255, 255, 0.85)';
-    c.font = `${16 * camera.zoom}px monospace italic`;
-    c.globalAlpha = 0.85;
-  } else {
-    c.fillStyle = '#ffffff';
-    c.font = `${16 * camera.zoom}px monospace`;
-  }
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-
-  const centerX = screenX + screenWidth / 2;
-  const centerY = screenY + screenHeight / 2;
-  c.fillText(component.icon ?? '', centerX, centerY - 5 * camera.zoom);
-
-  if (screenHeight > 40) {
+  // Icon and text (skip labels/icons at low zoom for perf/clarity)
+  const showLabels = camera.zoom >= (PerformanceConfig.COMPONENT_LABEL_MIN_ZOOM ?? 0.95);
+  if (showLabels) {
     if (component.status === 'defined') {
-      c.font = `${10 * camera.zoom}px monospace italic`;
-      c.fillStyle = 'rgba(200, 255, 255, 0.7)';
+      c.fillStyle = 'rgba(200, 255, 255, 0.85)';
+      c.font = `${16 * camera.zoom}px monospace italic`;
+      c.globalAlpha = 0.85;
     } else {
-      c.font = `${10 * camera.zoom}px monospace`;
       c.fillStyle = '#ffffff';
+      c.font = `${16 * camera.zoom}px monospace`;
     }
-    c.fillText(component.title ?? '', centerX, centerY + 15 * camera.zoom);
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+
+    const centerX = screenX + screenWidth / 2;
+    const centerY = screenY + screenHeight / 2;
+    c.fillText(component.icon ?? '', centerX, centerY - 5 * camera.zoom);
+
+    if (screenHeight > 40) {
+      if (component.status === 'defined') {
+        c.font = `${10 * camera.zoom}px monospace italic`;
+        c.fillStyle = 'rgba(200, 255, 255, 0.7)';
+      } else {
+        c.font = `${10 * camera.zoom}px monospace`;
+        c.fillStyle = '#ffffff';
+      }
+      c.fillText(component.title ?? '', centerX, centerY + 15 * camera.zoom);
+    }
   }
 
   // Draw pins
   drawPins(c, component, screenX, screenY, camera, options.categories, connections);
 
-  // Internal particles
-  if (component.status === 'in-progress') {
+  // Internal particles (guarded for perf)
+  if (
+    component.status === 'in-progress' &&
+    PerformanceConfig.ENABLE_COMPONENT_PARTICLES &&
+    camera.zoom >= (PerformanceConfig.COMPONENT_PARTICLES_MIN_ZOOM ?? 1.1)
+  ) {
     drawEnergyParticles(
       c,
       component,
@@ -150,12 +169,17 @@ function drawPins(
   const isActive = component.status === 'in-progress' || component.status === 'done';
 
   c.fillStyle = categoryColor;
-  if (isActive) {
-    c.shadowColor = categoryColor;
-    c.shadowBlur = component.status === 'done' ? 10 * camera.zoom : 6 * camera.zoom;
+  const allowPinGlow = camera.zoom >= (PerformanceConfig.PIN_GLOW_MIN_ZOOM ?? 1.0);
+  if (allowPinGlow) {
+    if (isActive) {
+      c.shadowColor = categoryColor;
+      c.shadowBlur = component.status === 'done' ? 10 * camera.zoom : 6 * camera.zoom;
+    } else {
+      c.shadowBlur = 3 * camera.zoom;
+      c.shadowColor = categoryColor;
+    }
   } else {
-    c.shadowBlur = 3 * camera.zoom;
-    c.shadowColor = categoryColor;
+    c.shadowBlur = 0;
   }
 
   if (component.pins?.input) {
@@ -170,7 +194,7 @@ function drawPins(
           (conn.from.component.status === 'in-progress' || conn.from.component.status === 'done')
       );
 
-      if (hasActiveInput) {
+      if (hasActiveInput && allowPinGlow) {
         const pulseIntensity = 0.7 + 0.3 * Math.sin(Date.now() * 0.004);
         c.shadowBlur = 10 * camera.zoom * pulseIntensity;
         c.fillRect(pinX - pinSize * 0.6, pinY - pinSize * 0.6, pinSize * 1.2, pinSize * 1.2);
@@ -190,7 +214,7 @@ function drawPins(
           (conn: any) => conn.from.component === component && conn.from.pinIndex === index
         ) && isActive;
 
-      if (hasActiveOutput) {
+      if (hasActiveOutput && allowPinGlow) {
         const pulseIntensity =
           component.status === 'done' ? 1.0 : 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
         c.shadowBlur = 12 * camera.zoom * pulseIntensity;
@@ -216,7 +240,7 @@ function drawEnergyParticles(
   categories: any
 ) {
   const time = Date.now() * 0.0008;
-  const particleCount = 3;
+  const particleCount = Math.min(3, PerformanceConfig.COMPONENT_PARTICLES_MAX_PER_COMPONENT ?? 2);
   const categoryColor = categories[component.category ?? 'frontend']?.color || '#ff00ff';
 
   for (let i = 0; i < particleCount; i++) {

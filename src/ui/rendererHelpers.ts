@@ -56,6 +56,120 @@ export function drawConnections(app: AppContext, connections: Connection[] | und
         frameCount = 0;
       }
 
+      // Overlay animation passes (match profiling visuals)
+      try {
+        const enableDashOverlay = !!PerformanceConfig.ENABLE_CONNECTION_DASH_OVERLAY;
+        const enablePulse = !!PerformanceConfig.ENABLE_CONNECTION_PULSE;
+        const enableMicro = !!PerformanceConfig.ENABLE_CONNECTION_MICRO_PACKETS;
+        const dashOnly = !!PerformanceConfig.ENABLE_CONNECTION_DASH_ONLY;
+
+        const minAnimZoom = (PerformanceConfig.MIN_ANIMATION_ZOOM as number) ?? 0;
+        const pulseMinZoom = (PerformanceConfig.PULSE_MIN_ZOOM as number) ?? minAnimZoom;
+        const microMinZoom = (PerformanceConfig.MICRO_PACKETS_MIN_ZOOM as number) ?? 0.95;
+        const maxAnimated = (PerformanceConfig.MAX_ANIMATED_CONNECTIONS as number) ?? Number.POSITIVE_INFINITY;
+        const maxWithPulse = (PerformanceConfig.MAX_ACTIVE_WITH_PULSE as number) ?? maxAnimated;
+        const pulseRate = (PerformanceConfig.PULSE_RATE as number) ?? 0.006;
+        const pulseAmp = (PerformanceConfig.PULSE_AMPLITUDE as number) ?? 0.2;
+        const microDash = (PerformanceConfig.MICRO_PACKETS_DASH as number[]) ?? [3, 12];
+        const microWidth = (PerformanceConfig.MICRO_PACKETS_LINE_WIDTH as number) ?? 1.4;
+        const microAlpha = (PerformanceConfig.MICRO_PACKETS_ALPHA as number) ?? 0.6;
+        const microSpeed = (PerformanceConfig.MICRO_PACKETS_SPEED as number) ?? 0.06;
+
+        // Active density budget
+        let visibleActiveCount = 0;
+        for (const conn of connections) {
+          const fromComp = conn.from?.component as ComponentBase | undefined;
+          if (!fromComp) continue;
+          const isActive = fromComp.status === 'in-progress' || fromComp.status === 'done';
+          if (isActive) { visibleActiveCount++; if (visibleActiveCount > maxAnimated) break; }
+        }
+
+        const animationsBudgetOK = visibleActiveCount <= maxAnimated;
+        const animationsZoomOK = app.camera.zoom >= minAnimZoom;
+        const pulseOK = enablePulse && app.camera.zoom >= pulseMinZoom && visibleActiveCount <= maxWithPulse;
+        const microOK = enableMicro && app.camera.zoom >= microMinZoom && animationsBudgetOK;
+
+        if ((enableDashOverlay || dashOnly || pulseOK || microOK) && animationsBudgetOK && animationsZoomOK) {
+          const c = app.ctx;
+          const vw = c.canvas.width;
+          const vh = c.canvas.height;
+          const cullMargin = (PerformanceConfig.CONNECTION_CULLING_MARGIN as number) ?? 0;
+
+          for (const conn of connections) {
+            const fromComp = conn.from?.component as ComponentBase | undefined;
+            const toComp = conn.to?.component as ComponentBase | undefined;
+            if (!fromComp || !toComp || !fromComp.pins?.output || !toComp.pins?.input) continue;
+            const fromPinDef = fromComp.pins.output[conn.from!.pinIndex];
+            const toPinDef = toComp.pins.input[conn.to!.pinIndex];
+            if (!fromPinDef || !toPinDef) continue;
+
+            const fromX = (fromComp.x + fromPinDef.x) * app.camera.zoom + app.camera.x;
+            const fromY = (fromComp.y + fromPinDef.y) * app.camera.zoom + app.camera.y;
+            const toX = (toComp.x + toPinDef.x) * app.camera.zoom + app.camera.x;
+            const toY = (toComp.y + toPinDef.y) * app.camera.zoom + app.camera.y;
+
+            // quick screen-space culling like profiling path
+            const midX = fromX + (toX - fromX) * 0.7;
+            const minX = Math.min(fromX, midX, toX) - cullMargin;
+            const maxX = Math.max(fromX, midX, toX) + cullMargin;
+            const minY = Math.min(fromY, toY) - cullMargin;
+            const maxY = Math.max(fromY, toY) + cullMargin;
+            if (maxX < 0 || maxY < 0 || minX > vw || minY > vh) continue;
+
+            const categoryColor = app.categories[conn.category ?? 'frontend']?.color || '#00ff88';
+            const fromStatus = fromComp.status;
+            const isActive = fromStatus === 'in-progress' || fromStatus === 'done';
+            const isPowered = fromStatus === 'done';
+            if (!isActive) continue;
+
+            // Pulse overlay (skip when dash-only)
+            if (!dashOnly && pulseOK) {
+              const baseIntensity = isPowered ? 0.8 : 0.55;
+              const p = 1.0 + pulseAmp * Math.sin(Date.now() * pulseRate);
+              c.save();
+              c.strokeStyle = categoryColor + '66';
+              c.lineWidth = isPowered ? 2.4 : 2.0;
+              c.shadowColor = categoryColor;
+              c.shadowBlur = 7 * baseIntensity * p;
+              rendererDrawOrthogonalTrace(c, fromX, fromY, toX, toY);
+              c.restore();
+            }
+
+            // Animated dash overlay (or dash-only)
+            if ((enableDashOverlay || dashOnly) && animationsZoomOK) {
+              c.save();
+              const dashLen = 14;
+              const gapLen = 10;
+              c.setLineDash([dashLen, gapLen]);
+              const t = Date.now() * (isPowered ? 0.08 : 0.05);
+              c.lineDashOffset = -(t % (dashLen + gapLen));
+              c.lineWidth = isPowered ? 2.0 : 1.8;
+              c.strokeStyle = `rgba(${_hexToRgb(categoryColor)}, ${isPowered ? 0.7 : 0.55})`;
+              c.shadowColor = categoryColor;
+              c.shadowBlur = isPowered ? 4 : 2;
+              rendererDrawOrthogonalTrace(c, fromX, fromY, toX, toY);
+              c.restore();
+            }
+
+            // Micro packets
+            if (microOK) {
+              c.save();
+              c.setLineDash(microDash);
+              const t2 = Date.now() * microSpeed * (isPowered ? 1.2 : 1);
+              const period = microDash.reduce((a, b) => a + b, 0);
+              c.lineDashOffset = -(t2 % period);
+              c.lineWidth = microWidth;
+              c.strokeStyle = `rgba(${_hexToRgb(categoryColor)}, ${microAlpha})`;
+              c.shadowBlur = 0;
+              rendererDrawOrthogonalTrace(c, fromX, fromY, toX, toY);
+              c.restore();
+            }
+          }
+        }
+      } catch (e) {
+        // overlay is best-effort; ignore
+      }
+
       return; // Early return - optimized path complete
     } catch (error) {
       logger.error('error', 'ConnectionRenderer failed, falling back to legacy', error);

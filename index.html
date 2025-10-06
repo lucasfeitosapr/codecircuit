@@ -109,6 +109,37 @@
         box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
       }
 
+      /* FX panel */
+      .fx-panel {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        width: 260px;
+        background: rgba(0, 0, 0, 0.92);
+        border: 2px solid #00ff88;
+        border-radius: 8px;
+        padding: 12px;
+        z-index: 1200;
+        display: none;
+        backdrop-filter: blur(10px);
+      }
+      .fx-panel h4 {
+        margin-bottom: 8px;
+        color: #00ff88;
+      }
+      .fx-panel label {
+        display: block;
+        margin: 6px 0;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .fx-panel .hint {
+        color: #888;
+        font-size: 10px;
+        margin-top: 6px;
+        display: block;
+      }
+
       .parts-tray {
         position: fixed;
         left: 20px;
@@ -406,6 +437,7 @@
         <div class="controls">
           <button class="control-btn" id="back-btn" style="display: none">← Back</button>
           <button class="control-btn" id="help-btn">Help</button>
+          <button class="control-btn" id="fx-btn">FX</button>
           <button class="control-btn" id="reset-btn">Reset Board</button>
           <button class="control-btn" id="import-btn">Import</button>
           <button class="control-btn" id="export-btn">Export</button>
@@ -500,6 +532,19 @@
         <div id="datasheet-content">
           <!-- Dynamic content will be inserted here -->
         </div>
+      </div>
+
+      <!-- FX Toggle Panel (Main Board) -->
+      <div class="fx-panel" id="fx-panel">
+        <h4>FX Controls</h4>
+        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_PULSE"/> Connection Pulse (lightweight)</label>
+        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_MICRO_PACKETS"/> Micro Packets (dashed packets)</label>
+        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_DASH_OVERLAY"/> Animated Dash Overlay (heavier)</label>
+  <label><input type="checkbox" data-flag="ENABLE_CONNECTION_DASH_ONLY"/> Show Only Animated Dash (hide main line)</label>
+        <div style="margin-top:8px; display:flex; gap:8px;">
+          <button id="fx-reset" class="control-btn" style="flex:1;">Reset to Defaults</button>
+        </div>
+        <span class="hint">Changes apply immediately. Packet/Dash are gated by zoom and density.</span>
       </div>
 
       <div class="help-overlay" id="help-overlay">

@@ -81,11 +81,19 @@ export class EventBus {
   }
 
   private shouldBatchEvent(event: string): boolean {
-    // Batch high-frequency events like mouse movement, render updates
+    // Batch high-frequency events like mouse movement, camera updates, and drag/preview updates
+    // Use the actual event names used across the app to ensure batching is effective
     const batchableEvents = [
-      'viewport.pan',
-      'viewport.zoom',
-      'component.drag',
+      // Viewport/camera
+      'viewport.camera.updated',
+      'viewport.zoom.requested',
+      'viewport.pan.requested',
+      // Input + mouse
+      'input.mouse.position.updated',
+      // Drag and interaction previews
+      'input.component.drag.updated',
+      'connection.drawing',
+      // Legacy catch-alls
       'render.frame',
     ];
     return batchableEvents.includes(event);

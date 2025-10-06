@@ -901,6 +901,19 @@ export class MotherboardApp {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
+  // Apply persisted feature flags before app creation
+  try {
+    const raw = localStorage.getItem('mb_performance_flags');
+    if (raw) {
+      const obj = JSON.parse(raw);
+      if (obj && typeof obj === 'object') {
+        for (const [k, v] of Object.entries(obj)) {
+          if (k in PerformanceConfig) (PerformanceConfig as any)[k] = !!v;
+        }
+      }
+    }
+  } catch {}
+
   const app = new MotherboardApp();
 
   // Phase 2B+: Enable EventBus batching for performance
@@ -911,6 +924,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Make app globally accessible for debugging
   (window as any).app = app;
+  // Initialize FX panel and bind toggles
+  try {
+    const panel = document.getElementById('fx-panel');
+    const btn = document.getElementById('fx-btn');
+    if (panel && btn) {
+      btn.addEventListener('click', () => {
+        panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'block' : 'none';
+      });
+
+      // Sync initial checkbox states from PerformanceConfig
+      const inputs = panel.querySelectorAll('input[type="checkbox"][data-flag]');
+      inputs.forEach(input => {
+        const key = (input as HTMLInputElement).dataset.flag as keyof typeof PerformanceConfig;
+        if (key && key in PerformanceConfig) {
+          (input as HTMLInputElement).checked = !!(PerformanceConfig as any)[key];
+        }
+        input.addEventListener('change', () => {
+          const k = (input as HTMLInputElement).dataset.flag as string;
+          const val = (input as HTMLInputElement).checked;
+          if (k in PerformanceConfig) {
+            (PerformanceConfig as any)[k] = val;
+            // Persist a subset of flags
+            try {
+              const raw = localStorage.getItem('mb_performance_flags');
+              const obj = raw ? JSON.parse(raw) : {};
+              obj[k] = val;
+              localStorage.setItem('mb_performance_flags', JSON.stringify(obj));
+            } catch {}
+            // Request a re-render so changes apply immediately
+            (app as any).renderScheduler?.markDirty?.();
+          }
+        });
+      });
+
+      // Reset to defaults button (clears stored overrides and reapplies defaults)
+      const resetBtn = document.getElementById('fx-reset');
+      resetBtn?.addEventListener('click', () => {
+        try {
+          localStorage.removeItem('mb_performance_flags');
+        } catch {}
+        // Re-sync inputs from current PerformanceConfig (which reflects defaults when not overridden)
+        inputs.forEach(input => {
+          const key = (input as HTMLInputElement).dataset.flag as keyof typeof PerformanceConfig;
+          if (key && key in PerformanceConfig) {
+            (input as HTMLInputElement).checked = !!(PerformanceConfig as any)[key];
+          }
+        });
+        // Trigger a render
+        (app as any).renderScheduler?.markDirty?.();
+      });
+    }
+  } catch {}
+  // Invalidate optimized connection cache on relevant events
+  import('./ui/rendererHelpers')
+    .then(({ connectionRenderer }) => {
+      eventBus.on(Events.ConnectionCreated, (payload: any) => {
+        try { if (payload?.connection) connectionRenderer.invalidateConnection(payload.connection); } catch {}
+      });
+      eventBus.on(Events.ConnectionDeleted, (payload: any) => {
+        try { if (payload?.connection) connectionRenderer.invalidateConnection(payload.connection); } catch {}
+      });
+      eventBus.on('connections.component_updated', (payload: any) => {
+        try { if (payload?.componentId) connectionRenderer.markComponentMoved(payload.componentId); } catch {}
+      });
+    })
+    .catch(() => {});
   // Expose profiling API for profiling.html integration
   (window as any).renderProfiler = RenderProfiler.publicAPI();
 

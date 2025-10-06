@@ -52,6 +52,9 @@ export class ConnectionRenderer {
   ): void {
     if (!connections || connections.length === 0) return;
 
+    // Honor runtime-configured culling flag
+    this.enableCulling = !!PerformanceConfig.ENABLE_CONNECTION_CULLING;
+
     this.stats.total = connections.length;
     this.stats.visible = 0;
     this.stats.culled = 0;
@@ -72,13 +75,26 @@ export class ConnectionRenderer {
       logger.debug('render', `Connection culling: ${this.stats.culled}/${this.stats.total} culled`);
     }
     
+    // Determine adaptive glow allowance based on zoom and visible active density
+    const visibleActiveCount = visibleConnections.reduce<number>((acc, conn) => {
+      const fromComponent = conn.from?.component as ComponentBase | undefined;
+      const status = fromComponent?.status;
+      const isActive = status === 'in-progress' || status === 'done';
+      return acc + (isActive ? 1 : 0);
+    }, 0);
+
+    const allowGlow =
+      !!PerformanceConfig.ENABLE_CONNECTION_GLOW_OPTIMIZED &&
+      camera.zoom >= (PerformanceConfig.OPTIMIZED_GLOW_MIN_ZOOM ?? 1.0) &&
+      visibleActiveCount <= (PerformanceConfig.OPTIMIZED_MAX_ACTIVE_CONNECTIONS_WITH_GLOW ?? 50);
+
     // Group connections by category for batch rendering
     const byCategory = this.groupByCategory(visibleConnections);
-    
+
     // Render each category in batch
     for (const [category, conns] of byCategory) {
       const categoryColor = categories[category]?.color || '#00ff88';
-      this.renderCategoryBatch(ctx, conns, camera, categoryColor);
+      this.renderCategoryBatch(ctx, conns, camera, categoryColor, allowGlow);
     }
   }
   
@@ -132,7 +148,7 @@ export class ConnectionRenderer {
    */
   private groupByCategory(connections: Connection[]): Map<string, Connection[]> {
     const groups = new Map<string, Connection[]>();
-    
+
     for (const conn of connections) {
       const category = conn.category || 'frontend';
       if (!groups.has(category)) {
@@ -140,7 +156,7 @@ export class ConnectionRenderer {
       }
       groups.get(category)!.push(conn);
     }
-    
+
     return groups;
   }
   
@@ -151,10 +167,11 @@ export class ConnectionRenderer {
     ctx: CanvasRenderingContext2D,
     connections: Connection[],
     camera: Camera,
-    categoryColor: string
+    categoryColor: string,
+    allowGlow: boolean
   ): void {
     for (const connection of connections) {
-      this.renderSingleConnection(ctx, connection, camera, categoryColor);
+      this.renderSingleConnection(ctx, connection, camera, categoryColor, allowGlow);
     }
   }
   
@@ -165,7 +182,8 @@ export class ConnectionRenderer {
     ctx: CanvasRenderingContext2D,
     connection: Connection,
     camera: Camera,
-    categoryColor: string
+    categoryColor: string,
+    allowGlow: boolean
   ): void {
     if (!connection.from?.component || !connection.to?.component) return;
 
@@ -194,11 +212,12 @@ export class ConnectionRenderer {
       }
     }
     
-    // Status-based rendering
+  // Status-based rendering
     const fromStatus = fromComponent.status;
     const toStatus = toComponent.status;
     const isActive = fromStatus === 'in-progress' || fromStatus === 'done';
     const isPowered = fromStatus === 'done';
+  const dashOnly = !!PerformanceConfig.ENABLE_CONNECTION_DASH_ONLY;
     
     // Intention traces for defined components
     if (fromStatus === 'defined' && toStatus === 'defined') {
@@ -212,10 +231,14 @@ export class ConnectionRenderer {
     }
     
     // Active traces
-    this.drawTraceBackground(ctx, fromX, fromY, toX, toY, categoryColor, isActive);
-    
-    if (isActive) {
-      this.drawActiveTrace(ctx, fromX, fromY, toX, toY, categoryColor, isPowered);
+    if (!dashOnly) {
+      this.drawTraceBackground(ctx, fromX, fromY, toX, toY, categoryColor, isActive);
+      if (isActive) {
+        this.drawActiveTrace(ctx, fromX, fromY, toX, toY, categoryColor, isPowered, allowGlow);
+      }
+    } else {
+      // In dash-only mode, skip background/core strokes for active connections.
+      // Intention traces above already drawn if applicable.
     }
   }
   
@@ -249,7 +272,10 @@ export class ConnectionRenderer {
     isActive: boolean
   ): void {
     ctx.strokeStyle = color + (isActive ? '40' : '20');
-    ctx.lineWidth = isActive ? 6 : 4;
+    // Use tuned widths from config for pixel-constant screen-space rendering
+    const activeW = PerformanceConfig.OPTIMIZED_BACKGROUND_LINE_WIDTH_ACTIVE ?? 6;
+    const inactiveW = PerformanceConfig.OPTIMIZED_BACKGROUND_LINE_WIDTH_INACTIVE ?? 4;
+    ctx.lineWidth = isActive ? activeW : inactiveW;
     ctx.shadowBlur = 0;
     drawOrthogonalTrace(ctx, fromX, fromY, toX, toY);
   }
@@ -264,12 +290,21 @@ export class ConnectionRenderer {
     toX: number,
     toY: number,
     color: string,
-    isPowered: boolean
+    isPowered: boolean,
+    allowGlow: boolean
   ): void {
     ctx.strokeStyle = color;
-    ctx.lineWidth = isPowered ? 3 : 2;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = isPowered ? 15 : 8;
+    const poweredW = PerformanceConfig.OPTIMIZED_ACTIVE_LINE_WIDTH_POWERED ?? 3;
+    const activeW = PerformanceConfig.OPTIMIZED_ACTIVE_LINE_WIDTH ?? 2;
+    const poweredBlur = PerformanceConfig.OPTIMIZED_GLOW_BLUR_POWERED ?? 15;
+    const activeBlur = PerformanceConfig.OPTIMIZED_GLOW_BLUR_ACTIVE ?? 8;
+    ctx.lineWidth = isPowered ? poweredW : activeW;
+    if (allowGlow) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = isPowered ? poweredBlur : activeBlur;
+    } else {
+      ctx.shadowBlur = 0;
+    }
     drawOrthogonalTrace(ctx, fromX, fromY, toX, toY);
     ctx.shadowBlur = 0;
   }
@@ -322,7 +357,11 @@ export class ConnectionRenderer {
       ctx.setLineDash([]);
     } else {
       // Active traces
-      this.renderActiveConnectionPath(ctx, path, categoryColor, isActive, isPowered, camera);
+      // Determine if glow is allowed in this context; reuse camera zoom and global heuristics
+      const allowGlow =
+        !!PerformanceConfig.ENABLE_CONNECTION_GLOW_OPTIMIZED &&
+        camera.zoom >= (PerformanceConfig.OPTIMIZED_GLOW_MIN_ZOOM ?? 1.0);
+      this.renderActiveConnectionPath(ctx, path, categoryColor, isActive, isPowered, camera, allowGlow);
     }
 
     ctx.restore();
@@ -337,20 +376,34 @@ export class ConnectionRenderer {
     color: string,
     isActive: boolean,
     isPowered: boolean,
-    camera: Camera
+    camera: Camera,
+    allowGlow: boolean
   ): void {
+    const dashOnly = !!PerformanceConfig.ENABLE_CONNECTION_DASH_ONLY;
     // Background trace
-    ctx.strokeStyle = color + (isActive ? '40' : '20');
-    ctx.lineWidth = (isActive ? 6 : 4) / camera.zoom;
-    ctx.shadowBlur = 0;
-    ctx.stroke(path);
+    if (!dashOnly) {
+      ctx.strokeStyle = color + (isActive ? '40' : '20');
+      const bgActiveW = (PerformanceConfig.OPTIMIZED_BACKGROUND_LINE_WIDTH_ACTIVE ?? 6) / camera.zoom;
+      const bgInactiveW = (PerformanceConfig.OPTIMIZED_BACKGROUND_LINE_WIDTH_INACTIVE ?? 4) / camera.zoom;
+      ctx.lineWidth = isActive ? bgActiveW : bgInactiveW;
+      ctx.shadowBlur = 0;
+      ctx.stroke(path);
+    }
 
     // Active trace with glow
-    if (isActive) {
+    if (isActive && !dashOnly) {
       ctx.strokeStyle = color;
-      ctx.lineWidth = (isPowered ? 3 : 2) / camera.zoom;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = (isPowered ? 15 : 8) / camera.zoom;
+      const poweredW = (PerformanceConfig.OPTIMIZED_ACTIVE_LINE_WIDTH_POWERED ?? 3) / camera.zoom;
+      const activeW = (PerformanceConfig.OPTIMIZED_ACTIVE_LINE_WIDTH ?? 2) / camera.zoom;
+      const poweredBlur = (PerformanceConfig.OPTIMIZED_GLOW_BLUR_POWERED ?? 15) / camera.zoom;
+      const activeBlur = (PerformanceConfig.OPTIMIZED_GLOW_BLUR_ACTIVE ?? 8) / camera.zoom;
+      ctx.lineWidth = isPowered ? poweredW : activeW;
+      if (allowGlow) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = isPowered ? poweredBlur : activeBlur;
+      } else {
+        ctx.shadowBlur = 0;
+      }
       ctx.stroke(path);
       ctx.shadowBlur = 0;
     }
@@ -385,6 +438,13 @@ export class ConnectionRenderer {
   clearCache(): void {
     if (PerformanceConfig.ENABLE_CONNECTION_CACHING) {
       this.connectionCache.clear();
+    }
+  }
+
+  /** Invalidate a specific connection cache entry */
+  invalidateConnection(connection: Connection): void {
+    if (PerformanceConfig.ENABLE_CONNECTION_CACHING) {
+      this.connectionCache.invalidateConnection(connection);
     }
   }
 }

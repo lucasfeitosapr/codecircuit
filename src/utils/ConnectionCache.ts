@@ -52,6 +52,14 @@ export class ConnectionCache {
   }
 
   /**
+   * Invalidate a specific connection's cached path (memory cleanup)
+   */
+  invalidateConnection(connection: Connection): void {
+    const key = this.getConnectionKey(connection);
+    this.cache.delete(key);
+  }
+
+  /**
    * Mark component as dirty (version bump)
    */
   markComponentDirty(componentId: string): void {

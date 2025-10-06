@@ -1,7 +1,6 @@
 import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import type { ComponentBase, ModuleComponent, PinHit, Camera } from '../types';
-// import { setupInputListeners } from '../inputHandler'; // Moved to archived - no longer used
 import { hideDatasheet as hideDatasheetUI, showDatasheet as showDatasheetUI } from '../datasheet';
 import { isFeatureEnabled } from './FeatureFlagManager';
 
@@ -75,6 +74,10 @@ export class InputEventCoordinator {
   private dragOffset: { x: number; y: number } = { x: 0, y: 0 };
   private panStart: { x: number; y: number } = { x: 0, y: 0 };
   private draggedComponent: ComponentBase | null = null; // Store dragged component locally
+  // RAF coalescing for high-frequency emits
+  private rafScheduled: number | null = null;
+  private pendingDragPayload: { componentId: string; x: number; y: number; timestamp: number } | null = null;
+  private pendingConnectionDrawing: { startPin: any; currentPos: { x: number; y: number }; isValid: boolean; timestamp: number } | null = null;
 
   // Event listeners for cleanup
   private eventListeners: Array<{ element: EventTarget; event: string; handler: EventListener }> =
@@ -405,13 +408,14 @@ export class InputEventCoordinator {
       this.draggedComponent.x = mouseX - this.dragOffset.x;
       this.draggedComponent.y = mouseY - this.dragOffset.y;
 
-      // Emit drag update event
-      eventBus.emit(Events.COMPONENT_DRAG_UPDATED, {
+      // Coalesce drag update via RAF
+      this.pendingDragPayload = {
         componentId: this.draggedComponent.id,
         x: this.draggedComponent.x,
         y: this.draggedComponent.y,
         timestamp: Date.now(),
-      });
+      };
+      this.scheduleRafEmit();
 
       // Update selection box position (if features are enabled)
       if (isFeatureEnabled('ENABLE_SELECTION_HANDLES')) {
@@ -446,13 +450,14 @@ export class InputEventCoordinator {
         category: connectionState.connectionStart.category ?? 'frontend',
       });
 
-      // Emit event to trigger re-render for connection preview
-      eventBus.emit('connection.drawing', {
+      // Coalesce connection preview emit via RAF
+      this.pendingConnectionDrawing = {
         startPin: connectionState.connectionStart,
         currentPos: { x: mouseX, y: mouseY },
         isValid: isValid || false,
         timestamp: Date.now(),
-      });
+      } as any;
+      this.scheduleRafEmit();
     }
   }
 
@@ -665,6 +670,24 @@ export class InputEventCoordinator {
     // Remove EventBus listeners would need specific handler references
     // For now, just log cleanup (proper cleanup would require storing handler refs)
     console.log('InputEventCoordinator: Event listeners cleaned up');
+  }
+
+  /**
+   * Schedule a single RAF to emit the latest high-frequency interaction events
+   */
+  private scheduleRafEmit(): void {
+    if (this.rafScheduled != null) return;
+    this.rafScheduled = requestAnimationFrame(() => {
+      this.rafScheduled = null;
+      if (this.pendingDragPayload) {
+        eventBus.emit(Events.COMPONENT_DRAG_UPDATED, this.pendingDragPayload);
+        this.pendingDragPayload = null;
+      }
+      if (this.pendingConnectionDrawing) {
+        eventBus.emit('connection.drawing', this.pendingConnectionDrawing);
+        this.pendingConnectionDrawing = null;
+      }
+    });
   }
 }
 

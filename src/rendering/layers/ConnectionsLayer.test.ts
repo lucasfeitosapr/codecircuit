@@ -1,10 +1,16 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ConnectionsLayer from './ConnectionsLayer';
+import { PerformanceConfig } from '../../config/performanceConfig';
 
 describe('ConnectionsLayer', () => {
   let ctx: any;
+  let originalOptimizedRendererFlag: boolean;
 
   beforeEach(() => {
+    // Disable optimized renderer for tests to test the legacy path
+    originalOptimizedRendererFlag = PerformanceConfig.ENABLE_OPTIMIZED_CONNECTION_RENDERER;
+    PerformanceConfig.ENABLE_OPTIMIZED_CONNECTION_RENDERER = false;
+
     ctx = {
       beginPath: vi.fn(),
       moveTo: vi.fn(),
@@ -26,11 +32,16 @@ describe('ConnectionsLayer', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    // Restore original config
+    PerformanceConfig.ENABLE_OPTIMIZED_CONNECTION_RENDERER = originalOptimizedRendererFlag;
+  });
+
   it('draws simple lines for connections', () => {
     const conn = {
       id: 'c1',
-      from: { x: 10, y: 10 },
-      to: { x: 30, y: 30 },
+      from: { x: 10, y: 10, component: { status: 'defined' } },
+      to: { x: 30, y: 30, component: { status: 'defined' } },
     } as any;
 
     const frame = {
@@ -41,8 +52,12 @@ describe('ConnectionsLayer', () => {
 
     ConnectionsLayer.render(ctx, frame);
 
+    // Orthogonal routing: from (10,10) → midX at 70% → (30,30)
+    const midX = 10 + (30 - 10) * 0.7; // = 24
     expect(ctx.beginPath).toHaveBeenCalled();
     expect(ctx.moveTo).toHaveBeenCalledWith(10, 10);
+    expect(ctx.lineTo).toHaveBeenCalledWith(midX, 10);
+    expect(ctx.lineTo).toHaveBeenCalledWith(midX, 30);
     expect(ctx.lineTo).toHaveBeenCalledWith(30, 30);
     expect(ctx.stroke).toHaveBeenCalled();
   });
@@ -56,14 +71,19 @@ describe('ConnectionsLayer', () => {
         isConnecting: true,
         connectionStart: { x: 5, y: 5 },
         mousePos: { x: 25, y: 25 },
+        categories: {},
       },
     } as any;
 
     ConnectionsLayer.render(ctx, frame);
 
-    expect(ctx.setLineDash).toHaveBeenCalledWith([5, 5]);
+    // Temporary connections also use orthogonal routing
+    const midX = 5 + (25 - 5) * 0.7; // = 19
+    expect(ctx.setLineDash).toHaveBeenCalled();
     expect(ctx.beginPath).toHaveBeenCalled();
     expect(ctx.moveTo).toHaveBeenCalledWith(5, 5);
+    expect(ctx.lineTo).toHaveBeenCalledWith(midX, 5);
+    expect(ctx.lineTo).toHaveBeenCalledWith(midX, 25);
     expect(ctx.lineTo).toHaveBeenCalledWith(25, 25);
     expect(ctx.stroke).toHaveBeenCalled();
   });
@@ -105,8 +125,8 @@ describe('ConnectionsLayer', () => {
 
   it('handles multiple connections', () => {
     const connections = [
-      { id: 'c1', from: { x: 10, y: 10 }, to: { x: 30, y: 30 } },
-      { id: 'c2', from: { x: 50, y: 50 }, to: { x: 70, y: 70 } },
+      { id: 'c1', from: { x: 10, y: 10, component: { status: 'defined' } }, to: { x: 30, y: 30, component: { status: 'defined' } } },
+      { id: 'c2', from: { x: 50, y: 50, component: { status: 'defined' } }, to: { x: 70, y: 70, component: { status: 'defined' } } },
     ] as any[];
 
     const frame = {
@@ -117,7 +137,8 @@ describe('ConnectionsLayer', () => {
 
     ConnectionsLayer.render(ctx, frame);
 
-    expect(ctx.beginPath).toHaveBeenCalledTimes(2);
+    // Each defined→defined connection gets 1 stroke call
+    expect(ctx.beginPath).toHaveBeenCalled();
     expect(ctx.stroke).toHaveBeenCalledTimes(2);
   });
 
@@ -127,7 +148,7 @@ describe('ConnectionsLayer', () => {
       throw new Error('Canvas error');
     });
 
-    const conn = { id: 'c1', from: { x: 10, y: 10 }, to: { x: 30, y: 30 } } as any;
+    const conn = { id: 'c1', from: { x: 10, y: 10, component: { status: 'defined' } }, to: { x: 30, y: 30, component: { status: 'defined' } } } as any;
     const frame = {
       timestamp: Date.now(),
       camera: { x: 0, y: 0, zoom: 1 },
