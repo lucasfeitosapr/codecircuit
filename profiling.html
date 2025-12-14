@@ -235,43 +235,9 @@
     
     <div id="report" class="report"></div>
     
-    <!-- Feature Toggle Panel -->
+    <!-- Feature Toggle Panel - Content injected by FeatureTogglePanel.ts -->
     <div id="feature-toggle-panel" class="report" style="border-color:#00aaff; display:none;">
-      <strong>Feature Toggles</strong>
-      <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
-        <button id="preset-baseline">Preset: Baseline</button>
-        <button id="preset-perf">Preset: Perf Max</button>
-        <button id="preset-visual">Preset: Visual Rich</button>
-      </div>
-      <div id="perfconfig-group" style="margin-top:10px; display:grid; grid-template-columns: repeat(2, minmax(250px, 1fr)); gap:8px;">
-        <label><input type="checkbox" data-flag="ENABLE_DIRTY_FLAG_RENDERING"/> Dirty-flag Rendering</label>
-  <label><input type="checkbox" data-flag="ENABLE_OPTIMIZED_CONNECTION_RENDERER"/> Optimized Connection Renderer</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_CULLING"/> Connection Culling</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_ANIMATIONS"/> Connection Animations (dashes/glow)</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_PARTICLES"/> Connection Particles</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_GRADIENTS"/> Connection Gradients</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_PULSE"/> Connection Pulse (lightweight)</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_MICRO_PACKETS"/> Micro Packets (dashed packets)</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_DASH_OVERLAY"/> Animated Dash Overlay (heavier)</label>
-  <label><input type="checkbox" data-flag="ENABLE_CONNECTION_DASH_ONLY"/> Show Only Animated Dash (hide main line)</label>
-        <label><input type="checkbox" data-flag="ENABLE_GRID_CACHING"/> Grid Caching</label>
-        <label><input type="checkbox" data-flag="ENABLE_SPATIAL_INDEXING"/> Spatial Indexing</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_CACHING"/> Connection Caching</label>
-        <label><input type="checkbox" data-flag="ENABLE_EVENT_BATCHING"/> Event Batching</label>
-        <label><input type="checkbox" data-flag="ENABLE_BATCH_RENDERING"/> Batch Rendering</label>
-        <label><input type="checkbox" data-flag="SHOW_PERFORMANCE_OVERLAY"/> Perf Overlay</label>
-        <label><input type="checkbox" data-flag="LOG_SLOW_FRAMES"/> Log Slow Frames</label>
-      </div>
-      <hr style="border-color:#003b4d; margin:14px 0; opacity:0.5;"/>
-      <div>
-        <strong style="display:block; margin-bottom:6px; color:#00aaff;">Main Board Feature Flags</strong>
-        <div id="featureflags-group" style="display:grid; grid-template-columns: repeat(2, minmax(250px, 1fr)); gap:8px;"></div>
-      </div>
-      <div style="margin-top:12px;">
-        <button id="apply-flags">Apply</button>
-        <button id="reset-flags">Reset to Defaults</button>
-      </div>
-      <small style="display:block; margin-top:8px; color:#888;">Changes apply immediately where possible; some may require a small interaction to take effect.</small>
+      <!-- Panel content will be populated by FeatureTogglePanel component -->
     </div>
   </div>
   
@@ -280,9 +246,8 @@
   <script type="module">
     import { RenderProfiler } from '/src/rendering/RenderProfiler.ts';
     import { getViewportManager } from '/src/core/ViewportManager.ts';
-  import { PerformanceConfig } from '/src/config/performanceConfig.ts';
-  import { getFeatureFlagManager } from '/src/core/FeatureFlagManager.ts';
-  import { FEATURE_FLAG_METADATA } from '/src/config/featureFlags.ts';
+    import { createFeatureTogglePanel } from '/src/ui/FeatureTogglePanel.ts';
+
     // Ensure profiling API exists (main.ts also sets it)
     window.renderProfiler = window.renderProfiler || RenderProfiler.publicAPI();
 
@@ -323,238 +288,20 @@
       return { w: rect.width, h: rect.height };
     }
 
-    // Feature Toggles: expose a mutable flag bag that proxies PerformanceConfig
-    window.__featureFlags = window.__featureFlags || {};
-  // Use a profiling-specific key so settings differ from main app
-  const LS_KEY = 'mb_prof_performance_flags';
-    const flagInputs = () => featurePanel?.querySelectorAll('input[type="checkbox"][data-flag]') || [];
-    const ffContainer = document.getElementById('featureflags-group');
-    const ffm = getFeatureFlagManager();
-    function buildFeatureFlagsUI() {
-      if (!ffContainer) return;
-      ffContainer.innerHTML = '';
-      const flags = ffm.getFlags();
-      const entries = Object.entries(FEATURE_FLAG_METADATA);
-      for (const [key, meta] of entries) {
-        const label = document.createElement('label');
-        label.title = `${meta.description} • ${meta.category} • impact: ${meta.performanceImpact}${meta.experimental ? ' • experimental' : ''}`;
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.dataset['featureFlag'] = key;
-        checkbox.checked = !!flags[key];
-        checkbox.addEventListener('change', () => {
-          ffm.setFlag(key, checkbox.checked);
-          // Update badge tooltip + count
-          updateBadge();
-          try { window.app?.renderScheduler?.markDirty?.(); } catch {}
-        });
-        label.appendChild(checkbox);
-        const text = document.createTextNode(' ' + meta.name);
-        label.appendChild(text);
-        ffContainer.appendChild(label);
-      }
-    }
-    function syncPanelFromConfig() {
-      for (const input of flagInputs()) {
-        const key = input.getAttribute('data-flag');
-        if (!key) continue;
-        input.checked = !!PerformanceConfig[key];
-      }
-    }
-    function updateBadge() {
-      try {
-        const inputs = [...flagInputs()];
-        const perfActive = inputs.filter(i => i.checked).length;
-        // Count active feature flags
-        const ff = ffm.getFlags();
-        const ffActive = Object.entries(ff).filter(([_, v]) => !!v).length;
-        const totalActive = perfActive + ffActive;
-        if (flagsBadge) {
-          flagsBadge.textContent = `Active: ${totalActive}`;
-          // Tooltip with active names (trim to a readable length)
-          const perfOn = inputs.filter(i => i.checked).map(i => i.getAttribute('data-flag'));
-          const ffOn = Object.entries(ff)
-            .filter(([_, v]) => !!v)
-            .map(([k]) => k);
-          const list = [...perfOn, ...ffOn];
-          const max = 10;
-          const tip = list.length > max ? `${list.slice(0, max).join(', ')}, +${list.length - max} more` : list.join(', ');
-          flagsBadge.title = tip || 'No active flags';
-        }
-      } catch {}
-    }
-    function applyPanelToConfig() {
-      for (const input of flagInputs()) {
-        const key = input.getAttribute('data-flag');
-        if (!key) continue;
-        PerformanceConfig[key] = !!input.checked;
-        window.__featureFlags[key] = !!input.checked;
-      }
-      // Persist to localStorage
-      try {
-        const toSave = {};
-        for (const input of flagInputs()) {
-          const key = input.getAttribute('data-flag');
-          if (!key) continue;
-          toSave[key] = !!input.checked;
-        }
-        localStorage.setItem(LS_KEY, JSON.stringify(toSave));
-      } catch {}
-      // Nudge the app to render with new settings
-      try { window.app?.renderScheduler?.markDirty?.(); } catch {}
-      updateBadge();
-    }
-    function loadFlagsFromStorage() {
-      try {
-        const raw = localStorage.getItem(LS_KEY);
-        if (!raw) return;
-        const obj = JSON.parse(raw);
-        if (!obj || typeof obj !== 'object') return;
-        for (const [k, v] of Object.entries(obj)) {
-          if (k in PerformanceConfig) {
-            PerformanceConfig[k] = !!v;
-            window.__featureFlags[k] = !!v;
-          }
-        }
-      } catch {}
-    }
-    const PANEL_OPEN_KEY = 'mb_prof_panel_open';
-    togglePanelBtn?.addEventListener('click', () => {
-      if (!featurePanel) return;
-      featurePanel.style.display = featurePanel.style.display === 'none' ? 'block' : 'none';
-      try { localStorage.setItem(PANEL_OPEN_KEY, featurePanel.style.display === 'block' ? '1' : '0'); } catch {}
-      if (featurePanel.style.display === 'block') { syncPanelFromConfig(); buildFeatureFlagsUI(); updateBadge(); }
+    // Initialize Feature Toggle Panel
+    createFeatureTogglePanel({
+      containerId: 'feature-toggle-panel',
+      toggleButtonId: 'toggle-panel-btn',
+      badgeId: 'flags-badge',
+      storageKey: 'mb_prof_performance_flags',
+      panelOpenKey: 'mb_prof_panel_open',
+      onApply: () => {
+        try {
+          window.app?.renderScheduler?.markDirty?.();
+        } catch {}
+      },
     });
-    document.getElementById('apply-flags')?.addEventListener('click', applyPanelToConfig);
-    document.getElementById('reset-flags')?.addEventListener('click', () => { syncPanelFromConfig(); applyPanelToConfig(); });
 
-    // Initialize toggles from localStorage and sync UI
-    loadFlagsFromStorage();
-    syncPanelFromConfig();
-    buildFeatureFlagsUI();
-    updateBadge();
-    // Auto-apply on PerformanceConfig checkbox change
-    for (const input of flagInputs()) {
-      input.addEventListener('change', applyPanelToConfig);
-    }
-    // Restore panel open state
-    try {
-      const open = localStorage.getItem(PANEL_OPEN_KEY) === '1';
-      if (open && featurePanel) {
-        featurePanel.style.display = 'block';
-      }
-    } catch {}
-
-    // Presets
-    const presetBaselineBtn = document.getElementById('preset-baseline');
-    const presetPerfBtn = document.getElementById('preset-perf');
-    const presetVisualBtn = document.getElementById('preset-visual');
-
-    function setPerfCheckbox(key, value) {
-      const el = featurePanel?.querySelector(`input[type="checkbox"][data-flag="${key}"]`);
-      if (el) el.checked = !!value;
-    }
-
-    function applyPresetBaseline() {
-      // Reset FeatureFlags to defaults via manager
-      try { ffm.resetToDefaults(); } catch {}
-      // Reset PerformanceConfig panel to defaults (mirrors current PerformanceConfig values)
-      syncPanelFromConfig();
-      // Persist and render
-      applyPanelToConfig();
-      buildFeatureFlagsUI();
-      updateBadge();
-    }
-
-    function applyPresetPerf() {
-      // PerformanceConfig: maximize performance features
-      const perfOn = {
-        ENABLE_DIRTY_FLAG_RENDERING: true,
-        ENABLE_OPTIMIZED_CONNECTION_RENDERER: true,
-        ENABLE_CONNECTION_CULLING: true,
-        ENABLE_CONNECTION_ANIMATIONS: false,
-        ENABLE_CONNECTION_PULSE: true,
-        ENABLE_CONNECTION_MICRO_PACKETS: true,
-        ENABLE_CONNECTION_DASH_OVERLAY: false,
-        ENABLE_CONNECTION_PARTICLES: false,
-        ENABLE_CONNECTION_GRADIENTS: false,
-        ENABLE_GRID_CACHING: true,
-        ENABLE_SPATIAL_INDEXING: true,
-        ENABLE_CONNECTION_CACHING: true,
-        ENABLE_EVENT_BATCHING: true,
-        ENABLE_BATCH_RENDERING: true,
-        SHOW_PERFORMANCE_OVERLAY: false,
-        LOG_SLOW_FRAMES: false,
-      };
-      Object.entries(perfOn).forEach(([k, v]) => setPerfCheckbox(k, v));
-
-      // FeatureFlags: disable eye-candy, keep system optimizations
-      ffm.updateFlags({
-        ENABLE_ALIGNMENT_GUIDES: false,
-        ENABLE_SELECTION_HANDLES: false,
-        ENABLE_COMPONENT_ANIMATIONS: false,
-        ENABLE_ENERGY_FLOW_PARTICLES: false,
-        ENABLE_CONNECTION_INTENTS: false,
-        ENABLE_COMPONENT_TOOLTIPS: false,
-        ENABLE_AUTO_SAVE: false,
-        ENABLE_SMART_RENDERING: true,
-        ENABLE_EVENT_BATCHING: true,
-        DEBUG_MODE: false,
-        SHOW_FPS_COUNTER: true,
-        SHOW_PERFORMANCE_STATS: false,
-      });
-
-      applyPanelToConfig();
-      buildFeatureFlagsUI();
-      updateBadge();
-    }
-
-    function applyPresetVisual() {
-      // PerformanceConfig: keep most performance features on
-      const perfVisual = {
-        ENABLE_DIRTY_FLAG_RENDERING: true,
-        ENABLE_OPTIMIZED_CONNECTION_RENDERER: true,
-        ENABLE_CONNECTION_CULLING: true,
-        ENABLE_CONNECTION_ANIMATIONS: true,
-        ENABLE_CONNECTION_PULSE: true,
-        ENABLE_CONNECTION_MICRO_PACKETS: true,
-        ENABLE_CONNECTION_DASH_OVERLAY: true,
-        ENABLE_CONNECTION_PARTICLES: true,
-        ENABLE_CONNECTION_GRADIENTS: true,
-        ENABLE_GRID_CACHING: true,
-        ENABLE_SPATIAL_INDEXING: true,
-        ENABLE_CONNECTION_CACHING: true,
-        ENABLE_EVENT_BATCHING: true,
-        ENABLE_BATCH_RENDERING: true,
-        SHOW_PERFORMANCE_OVERLAY: true,
-        LOG_SLOW_FRAMES: true,
-      };
-      Object.entries(perfVisual).forEach(([k, v]) => setPerfCheckbox(k, v));
-
-      // FeatureFlags: enable visual richness
-      ffm.updateFlags({
-        ENABLE_ALIGNMENT_GUIDES: true,
-        ENABLE_SELECTION_HANDLES: true,
-        ENABLE_COMPONENT_ANIMATIONS: true,
-        ENABLE_ENERGY_FLOW_PARTICLES: true,
-        ENABLE_CONNECTION_INTENTS: true,
-        ENABLE_COMPONENT_TOOLTIPS: true,
-        ENABLE_AUTO_SAVE: false,
-        ENABLE_SMART_RENDERING: true,
-        ENABLE_EVENT_BATCHING: true,
-        DEBUG_MODE: false,
-        SHOW_FPS_COUNTER: true,
-        SHOW_PERFORMANCE_STATS: false,
-      });
-
-      applyPanelToConfig();
-      buildFeatureFlagsUI();
-      updateBadge();
-    }
-
-    presetBaselineBtn?.addEventListener('click', applyPresetBaseline);
-    presetPerfBtn?.addEventListener('click', applyPresetPerf);
-    presetVisualBtn?.addEventListener('click', applyPresetVisual);
 
     // Live status panel helper (based on app state)
     function hasActiveAnimations() {

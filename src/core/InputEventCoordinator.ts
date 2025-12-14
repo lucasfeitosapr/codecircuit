@@ -129,8 +129,9 @@ export class InputEventCoordinator {
       },
     };
 
-    // TODO: Temporarily disabled to fix hanging issue
-    // setupInputListeners(appCompat);
+    // MIGRATION NOTE: setupInputListeners (archived/legacy-ui-code/inputHandler.ts)
+    // is intentionally NOT called here. InputEventCoordinator replaces that legacy system
+    // with modern event handling via setupEventListeners() above.
   }
 
   /**

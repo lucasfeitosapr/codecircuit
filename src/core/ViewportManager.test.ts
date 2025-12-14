@@ -23,6 +23,7 @@ const createMockCanvas = (width = 800, height = 600) => {
     restore: vi.fn(),
     translate: vi.fn(),
     transform: vi.fn(),
+    setTransform: vi.fn(),
   };
 
   const canvas = {

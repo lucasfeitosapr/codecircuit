@@ -15,7 +15,6 @@ export interface FeatureFlags {
   // System Features
   ENABLE_AUTO_SAVE: boolean;             // Automatic project saving to localStorage
   ENABLE_SMART_RENDERING: boolean;       // Render-on-demand optimization
-  ENABLE_EVENT_BATCHING: boolean;        // Batch high-frequency events
 
   // Debug Features
   DEBUG_MODE: boolean;                   // Show debug overlays and verbose logs
@@ -39,7 +38,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   // System Features - ON by default (stable)
   ENABLE_AUTO_SAVE: false,
   ENABLE_SMART_RENDERING: true,
-  ENABLE_EVENT_BATCHING: true,
 
   // Debug Features - OFF by default
   DEBUG_MODE: false,
@@ -113,13 +111,6 @@ export const FEATURE_FLAG_METADATA: Record<keyof FeatureFlags, FeatureFlagMetada
     description: 'Only render when changes occur (performance optimization)',
     category: 'System',
     performanceImpact: 'high',
-    experimental: false,
-  },
-  ENABLE_EVENT_BATCHING: {
-    name: 'Event Batching',
-    description: 'Batch high-frequency events for better performance',
-    category: 'System',
-    performanceImpact: 'medium',
     experimental: false,
   },
   DEBUG_MODE: {

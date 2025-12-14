@@ -24,16 +24,29 @@ export class RendererIntegrationManager {
   private animationId: number | null = null;
   private isAnimating: boolean = false;
 
+  // Store current render context for use in helper methods
+  private currentCategories: any = {};
+  private currentSelectedComponentId: string | null = null;
+  private currentConnections: Connection[] = [];
+
   // Store listener functions for proper cleanup
   private listeners = {
     requestRender: () => this.requestRender(),
   };
 
-  constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+  constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, categories: any = {}) {
     this.canvas = canvas;
     this.ctx = ctx;
+    this.currentCategories = categories;
 
     this.setupEventListeners();
+  }
+
+  /**
+   * Set categories for component rendering
+   */
+  setCategories(categories: any): void {
+    this.currentCategories = categories;
   }
 
   private setupEventListeners(): void {
@@ -166,6 +179,10 @@ export class RendererIntegrationManager {
     isDragging: boolean,
     dragOffset: { x: number; y: number }
   ): void {
+    // Store render context for use in helper methods
+    this.currentConnections = connections;
+    this.currentSelectedComponentId = selectedComponent?.id || null;
+
     // Background and grid
     this.drawSchematicBackground(camera);
     this.drawGrid(camera);
@@ -213,9 +230,9 @@ export class RendererIntegrationManager {
     try {
       renderComponent(this.ctx, { timestamp: performance.now(), camera }, component, {
         camera,
-        categories: {}, // TODO: Pass categories
-        selectedComponentId: null, // TODO: Pass selection state
-        connections: [], // TODO: Pass connections
+        categories: this.currentCategories,
+        selectedComponentId: this.currentSelectedComponentId,
+        connections: this.currentConnections,
       });
     } catch (error) {
       console.error('Error rendering component:', component.id, error);
@@ -349,9 +366,10 @@ export class RendererIntegrationManager {
  */
 export function createRendererIntegrationManager(
   canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D
+  ctx: CanvasRenderingContext2D,
+  categories: any = {}
 ): RendererIntegrationManager {
-  return new RendererIntegrationManager(canvas, ctx);
+  return new RendererIntegrationManager(canvas, ctx, categories);
 }
 
 /**

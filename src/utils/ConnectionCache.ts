@@ -163,8 +163,10 @@ export class ConnectionCache {
     // Create orthogonal path
     const path = new Path2D();
 
-    // Simple orthogonal routing (can be enhanced)
-    const midX = fromX + (toX - fromX) * 0.5;
+  // Simple orthogonal routing (can be enhanced)
+  // IMPORTANT: Keep this ratio in sync with renderer draw functions
+  // renderer.drawOrthogonalTrace and overlay helpers use 0.7
+  const midX = fromX + (toX - fromX) * 0.7;
 
     path.moveTo(fromX, fromY);
     path.lineTo(midX, fromY);

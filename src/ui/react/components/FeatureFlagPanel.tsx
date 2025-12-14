@@ -6,12 +6,14 @@ import {
   FEATURE_FLAG_METADATA,
   DEFAULT_FEATURE_FLAGS,
 } from '../../../config/featureFlags';
+import { PerformanceConfig } from '../../../config/performanceConfig';
 import { useEventBus } from '../hooks/useEventBus';
 
 export function FeatureFlagPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [flags, setFlags] = useState<FeatureFlags>(getFeatureFlagManager().getFlags());
-  const [activeCategory, setActiveCategory] = useState<'UI' | 'System' | 'Debug' | 'All'>('All');
+  const [activeCategory, setActiveCategory] = useState<'UI' | 'System' | 'Debug' | 'Performance' | 'All'>('All');
+  const [perfConfigRefresh, setPerfConfigRefresh] = useState(0);
 
   // Listen for flag changes from other sources
   useEventBus('feature-flags.updated', (payload: any) => {
@@ -60,12 +62,80 @@ export function FeatureFlagPanel() {
     {} as Record<string, Array<{ key: keyof FeatureFlags; metadata: any }>>
   );
 
+  const handlePerfConfigToggle = (key: string) => {
+    (PerformanceConfig as any)[key] = !(PerformanceConfig as any)[key];
+    setPerfConfigRefresh(prev => prev + 1); // Trigger re-render
+    // Persist to localStorage
+    try {
+      const raw = localStorage.getItem('mb_performance_flags');
+      const obj = raw ? JSON.parse(raw) : {};
+      obj[key] = (PerformanceConfig as any)[key];
+      localStorage.setItem('mb_performance_flags', JSON.stringify(obj));
+    } catch {}
+  };
+
+  const renderPerfConfigToggles = () => {
+    const perfFlags = [
+      { key: 'ENABLE_OPTIMIZED_CONNECTION_RENDERER', label: 'Optimized Connection Renderer', impact: 'high' },
+      { key: 'ENABLE_CONNECTION_CULLING', label: 'Connection Culling', impact: 'high' },
+      { key: 'ENABLE_CONNECTION_ANIMATIONS', label: 'Connection Animations', impact: 'medium' },
+      { key: 'ENABLE_CONNECTION_PARTICLES', label: 'Connection Particles', impact: 'medium' },
+      { key: 'ENABLE_CONNECTION_GRADIENTS', label: 'Connection Gradients', impact: 'low' },
+      { key: 'ENABLE_CONNECTION_PULSE', label: 'Connection Pulse', impact: 'low' },
+      { key: 'ENABLE_CONNECTION_MICRO_PACKETS', label: 'Micro Packets', impact: 'low' },
+      { key: 'ENABLE_CONNECTION_DASH_OVERLAY', label: 'Dash Overlay', impact: 'low' },
+      { key: 'ENABLE_GRID_CACHING', label: 'Grid Caching', impact: 'high' },
+      { key: 'ENABLE_SPATIAL_INDEXING', label: 'Spatial Indexing', impact: 'high' },
+      { key: 'ENABLE_CONNECTION_CACHING', label: 'Connection Caching', impact: 'medium' },
+      { key: 'ENABLE_EVENT_BATCHING', label: 'Event Batching', impact: 'medium' },
+      { key: 'ENABLE_BATCH_RENDERING', label: 'Batch Rendering', impact: 'medium' },
+      { key: 'SHOW_PERFORMANCE_OVERLAY', label: 'Performance Overlay', impact: 'none' },
+      { key: 'LOG_SLOW_FRAMES', label: 'Log Slow Frames', impact: 'none' },
+    ];
+
+    return (
+      <div key="performance" style={{ marginBottom: '16px' }}>
+        <h4
+          style={{
+            color: '#00aaff',
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            marginBottom: '8px',
+            borderBottom: '1px solid #00aaff',
+            paddingBottom: '4px',
+          }}
+        >
+          Performance Optimizations
+        </h4>
+        {perfFlags.map(({ key, label, impact }) => (
+          <ToggleSwitch
+            key={key}
+            enabled={!!(PerformanceConfig as any)[key]}
+            onChange={() => handlePerfConfigToggle(key)}
+            label={label}
+            description={`Performance impact: ${impact}`}
+            performanceImpact={impact}
+            experimental={false}
+          />
+        ))}
+      </div>
+    );
+  };
+
   const renderFlagToggles = () => {
     const categories = activeCategory === 'All'
-      ? ['UI', 'System', 'Debug']
+      ? ['Performance', 'UI', 'System', 'Debug']
+      : activeCategory === 'Performance'
+      ? ['Performance']
       : [activeCategory];
 
     return categories.map((category) => {
+      // Handle Performance category separately
+      if (category === 'Performance') {
+        return renderPerfConfigToggles();
+      }
+
       const categoryFlags = categorizedFlags[category] || [];
       if (categoryFlags.length === 0) return null;
 
@@ -176,7 +246,7 @@ export function FeatureFlagPanel() {
               borderBottom: '1px solid rgba(0, 255, 136, 0.2)',
             }}
           >
-            {(['All', 'UI', 'System', 'Debug'] as const).map((category) => (
+            {(['All', 'Performance', 'UI', 'System', 'Debug'] as const).map((category) => (
               <button
                 key={category}
                 onClick={(e) => {

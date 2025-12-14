@@ -26,27 +26,30 @@ export const PerformanceConfig = {
   PULSE_MIN_ZOOM: 0.9,                 // Only pulse when sufficiently zoomed in
   MAX_ACTIVE_WITH_PULSE: 300,          // Disable pulsing if too many active connections are visible
   PULSE_RATE: 0.006,                   // Speed of pulsing (radians/ms multiplier)
-  PULSE_AMPLITUDE: 0.2,                // 0..1 additional blur multiplier
+  // Tone down pulse so packets remain visible
+  PULSE_AMPLITUDE: 0.05,               // 0..1 additional blur multiplier
 
   // Micro-packets overlay (very light, animated dashes for packet impression)
   ENABLE_CONNECTION_MICRO_PACKETS: true,
   MICRO_PACKETS_MIN_ZOOM: 0.95,
   MICRO_PACKETS_MAX_ACTIVE: 300,
   MICRO_PACKETS_DASH: [3, 12] as [number, number],
-  MICRO_PACKETS_LINE_WIDTH: 1.4,
-  MICRO_PACKETS_ALPHA: 0.6,
+  // Make packets a bit more readable
+  MICRO_PACKETS_LINE_WIDTH: 1.6,
+  MICRO_PACKETS_ALPHA: 0.8,
   MICRO_PACKETS_SPEED: 0.06, // dash offset speed
 
   // Optimized renderer visual tuning
   ENABLE_CONNECTION_GLOW_OPTIMIZED: true,      // Allow glow in optimized path (lighter than layered)
   OPTIMIZED_GLOW_MIN_ZOOM: 1.0,                // Only glow when sufficiently zoomed in
   OPTIMIZED_MAX_ACTIVE_CONNECTIONS_WITH_GLOW: 50, // Disable glow if too many active connections are visible
-  OPTIMIZED_BACKGROUND_LINE_WIDTH_ACTIVE: 4,   // Background stroke width for active connections
-  OPTIMIZED_BACKGROUND_LINE_WIDTH_INACTIVE: 3, // Background stroke width for inactive/defined
-  OPTIMIZED_ACTIVE_LINE_WIDTH_POWERED: 2.5,    // Foreground stroke width when powered
-  OPTIMIZED_ACTIVE_LINE_WIDTH: 2,              // Foreground stroke width when active
-  OPTIMIZED_GLOW_BLUR_POWERED: 6,              // Shadow blur for powered connections
-  OPTIMIZED_GLOW_BLUR_ACTIVE: 3,               // Shadow blur for active (not powered)
+  // Soften connection glow/widths (neon -> soft)
+  OPTIMIZED_BACKGROUND_LINE_WIDTH_ACTIVE: 3,   // Background stroke width for active connections
+  OPTIMIZED_BACKGROUND_LINE_WIDTH_INACTIVE: 2, // Background stroke width for inactive/defined
+  OPTIMIZED_ACTIVE_LINE_WIDTH_POWERED: 2.0,    // Foreground stroke width when powered
+  OPTIMIZED_ACTIVE_LINE_WIDTH: 1.6,            // Foreground stroke width when active
+  OPTIMIZED_GLOW_BLUR_POWERED: 3,              // Shadow blur for powered connections
+  OPTIMIZED_GLOW_BLUR_ACTIVE: 1.5,             // Shadow blur for active (not powered)
 
   // Temp connection (rubber-band) styling
   TEMP_CONNECTION_DASH: [8, 6] as [number, number], // Dash pattern for preview line

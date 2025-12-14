@@ -117,14 +117,17 @@ export class LegacyRenderer {
           componentsRendered: visibleModels?.length ?? 0,
           connectionsRendered: visibleConnections?.length ?? 0,
         });
+        console.log('✅ LayeredRenderer SUCCESS - returning early (legacy path skipped)');
         return;
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error('LayeredRenderer render failed, falling back to legacy renderer', e);
+        console.error('⚠️ ⚠️ ⚠️  LayeredRenderer ERROR - Falling back to legacy (DOUBLE RENDERING!) ⚠️ ⚠️ ⚠️', e);
+        console.error('^ This causes duplicate connections with different paths. Fix the error above!');
       }
     }
 
     // Legacy render path (unchanged behaviour)
+    console.log('🔴 Running LEGACY render path (this will draw connections again if LayeredRenderer already ran!)');
     LegacyRenderer.renderLegacyPath(context);
 
     // End frame profiling with rough counts

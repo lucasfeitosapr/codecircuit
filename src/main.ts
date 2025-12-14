@@ -42,6 +42,8 @@ import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } fr
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
 import { RenderScheduler } from './rendering/RenderScheduler';
 import { PerformanceConfig } from './config/performanceConfig';
+import { connectionRenderer } from './ui/rendererHelpers';
+import { createFeatureTogglePanel } from './ui/FeatureTogglePanel';
 import './core/RealWorldMovementTest'; // Browser console testing utilities
 import { createRoot } from 'react-dom/client';
 import React from 'react';
@@ -286,20 +288,19 @@ export class MotherboardApp {
         viewportManager: this.viewportManager,
         components: this.appStateManager.getComponents(),
         getCurrentView: () => this.schematicViewManager.getCurrentViewType(),
-        getViewStack: () => {
-          // TODO: This should come from schematicViewManager
-          return [];
-        },
+        getViewStack: () => ViewStack.getInstance().serialize(),
         setCurrentView: (viewType: string) => {
           const currentView = this.appStateManager.getCurrentView();
           currentView.type = viewType as ViewState['type'];
           this.appStateManager.setCurrentView(currentView);
         },
         pushView: (view: string) => {
-          // TODO: Delegate to schematicViewManager
+          this.schematicViewManager.enterSchematicView(
+            this.appStateManager.getComponents().find(c => c.id === view)
+          );
         },
         popView: () => {
-          // TODO: Delegate to schematicViewManager
+          this.schematicViewManager.exitSchematicView();
         },
         requestAnimationFrame: (callback: (time: number) => void) =>
           requestAnimationFrame(callback),
@@ -977,19 +978,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch {}
   // Invalidate optimized connection cache on relevant events
-  import('./ui/rendererHelpers')
-    .then(({ connectionRenderer }) => {
-      eventBus.on(Events.ConnectionCreated, (payload: any) => {
-        try { if (payload?.connection) connectionRenderer.invalidateConnection(payload.connection); } catch {}
-      });
-      eventBus.on(Events.ConnectionDeleted, (payload: any) => {
-        try { if (payload?.connection) connectionRenderer.invalidateConnection(payload.connection); } catch {}
-      });
-      eventBus.on('connections.component_updated', (payload: any) => {
-        try { if (payload?.componentId) connectionRenderer.markComponentMoved(payload.componentId); } catch {}
-      });
-    })
-    .catch(() => {});
+  eventBus.on(Events.ConnectionCreated, (payload: any) => {
+    try { if (payload?.connection) connectionRenderer.invalidateConnection(payload.connection); } catch {}
+  });
+  eventBus.on(Events.ConnectionDeleted, (payload: any) => {
+    try { if (payload?.connection) connectionRenderer.invalidateConnection(payload.connection); } catch {}
+  });
+  eventBus.on('connections.component_updated', (payload: any) => {
+    try { if (payload?.componentId) connectionRenderer.markComponentMoved(payload.componentId); } catch {}
+  });
   // Expose profiling API for profiling.html integration
   (window as any).renderProfiler = RenderProfiler.publicAPI();
 
@@ -1030,6 +1027,23 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (e) {
     // non-fatal; profiling wrapper is best-effort
     console.warn('Profiler scheduler wrapper failed', e);
+  }
+
+  // Initialize Feature Toggle Panel for main board
+  try {
+    createFeatureTogglePanel({
+      containerId: 'fx-panel',
+      toggleButtonId: 'fx-btn',
+      storageKey: 'mb_main_performance_flags',
+      panelOpenKey: 'mb_main_panel_open',
+      onApply: () => {
+        try {
+          (app as any).renderScheduler?.markDirty?.();
+        } catch {}
+      },
+    });
+  } catch (e) {
+    console.warn('FeatureTogglePanel initialization failed:', e);
   }
 });
 

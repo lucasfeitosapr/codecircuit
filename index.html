@@ -534,17 +534,9 @@
         </div>
       </div>
 
-      <!-- FX Toggle Panel (Main Board) -->
+      <!-- FX Toggle Panel (Main Board) - Content injected by FeatureTogglePanel.ts -->
       <div class="fx-panel" id="fx-panel">
-        <h4>FX Controls</h4>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_PULSE"/> Connection Pulse (lightweight)</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_MICRO_PACKETS"/> Micro Packets (dashed packets)</label>
-        <label><input type="checkbox" data-flag="ENABLE_CONNECTION_DASH_OVERLAY"/> Animated Dash Overlay (heavier)</label>
-  <label><input type="checkbox" data-flag="ENABLE_CONNECTION_DASH_ONLY"/> Show Only Animated Dash (hide main line)</label>
-        <div style="margin-top:8px; display:flex; gap:8px;">
-          <button id="fx-reset" class="control-btn" style="flex:1;">Reset to Defaults</button>
-        </div>
-        <span class="hint">Changes apply immediately. Packet/Dash are gated by zoom and density.</span>
+        <!-- Panel content will be populated by FeatureTogglePanel component -->
       </div>
 
       <div class="help-overlay" id="help-overlay">

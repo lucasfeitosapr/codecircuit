@@ -311,7 +311,7 @@ describe('InputEventCoordinator', () => {
   });
 
   describe('Component Dragging', () => {
-    it('should emit COMPONENT_DRAG_UPDATED event during drag', () => {
+    it('should emit COMPONENT_DRAG_UPDATED event during drag', async () => {
       const emitSpy = vi.spyOn(eventBus, 'emit');
 
       // Create a mock component
@@ -339,6 +339,9 @@ describe('InputEventCoordinator', () => {
       // Simulate mouse move while dragging
       const mouseMoveEvent = new MouseEvent('mousemove', { clientX: 160, clientY: 130 });
       coordinator.handleMouseMove(mouseMoveEvent);
+
+      // Wait for RAF batching to emit the event
+      await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
 
       // Verify COMPONENT_DRAG_UPDATED event was emitted
       expect(emitSpy).toHaveBeenCalledWith(Events.COMPONENT_DRAG_UPDATED, {

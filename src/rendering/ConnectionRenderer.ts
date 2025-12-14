@@ -342,17 +342,20 @@ export class ConnectionRenderer {
     const isActive = fromStatus === 'in-progress' || fromStatus === 'done';
     const isPowered = fromStatus === 'done';
 
-    // Save context for path rendering
-    ctx.save();
+  // Save context for path rendering
+  ctx.save();
 
-    // Apply camera transformation to cached path
-    ctx.setTransform(camera.zoom, 0, 0, camera.zoom, camera.x, camera.y);
+  // Apply camera transformation to cached path without resetting the existing transform.
+  // Using setTransform here would wipe out any devicePixelRatio scaling applied by ViewportManager.
+  // Compose the transform instead: translate then scale.
+  ctx.translate(camera.x, camera.y);
+  ctx.scale(camera.zoom, camera.zoom);
 
     // Intention traces for defined components
     if (fromStatus === 'defined' && (toStatus === 'defined' || !isActive)) {
       ctx.strokeStyle = '#00ffff66';
-      ctx.lineWidth = 2 / camera.zoom;
-      ctx.setLineDash([6 / camera.zoom, 6 / camera.zoom]);
+  ctx.lineWidth = 2 / camera.zoom;
+  ctx.setLineDash([6 / camera.zoom, 6 / camera.zoom]);
       ctx.stroke(path);
       ctx.setLineDash([]);
     } else {
@@ -383,8 +386,8 @@ export class ConnectionRenderer {
     // Background trace
     if (!dashOnly) {
       ctx.strokeStyle = color + (isActive ? '40' : '20');
-      const bgActiveW = (PerformanceConfig.OPTIMIZED_BACKGROUND_LINE_WIDTH_ACTIVE ?? 6) / camera.zoom;
-      const bgInactiveW = (PerformanceConfig.OPTIMIZED_BACKGROUND_LINE_WIDTH_INACTIVE ?? 4) / camera.zoom;
+  const bgActiveW = (PerformanceConfig.OPTIMIZED_BACKGROUND_LINE_WIDTH_ACTIVE ?? 6) / camera.zoom;
+  const bgInactiveW = (PerformanceConfig.OPTIMIZED_BACKGROUND_LINE_WIDTH_INACTIVE ?? 4) / camera.zoom;
       ctx.lineWidth = isActive ? bgActiveW : bgInactiveW;
       ctx.shadowBlur = 0;
       ctx.stroke(path);

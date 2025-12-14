@@ -122,11 +122,13 @@ export const ConnectionsLayer = {
               const from: any = (connection as any).from;
               const to: any = (connection as any).to;
               if (!from || !to) continue;
-              const hasCoords =
-                typeof from === 'object' && typeof to === 'object' &&
-                from.x != null && from.y != null && to.x != null && to.y != null;
-              if (!hasCoords) continue;
 
+              // Use pre-computed world coordinates from LegacyRenderer (lines 78-96)
+              // The connection object already has from.x/from.y as world coords (component.x + pin.x)
+              // We just need to transform them to screen space with zoom and camera offset
+              if (!from.x || !from.y || !to.x || !to.y) continue;
+
+              // Transform pre-computed world coordinates to screen coordinates
               const fromX = from.x * camera.zoom + camera.x;
               const fromY = from.y * camera.zoom + camera.y;
               const toX = to.x * camera.zoom + camera.x;
@@ -152,46 +154,41 @@ export const ConnectionsLayer = {
               const isPowered = fromStatus === 'done';
               const categoryColor = (categories[(connection as any).category]?.color) || (connection as any)._categoryColor || '#00ff88';
 
-              // Pulse overlay (lightweight glow modulation)
-              const allowPulse = !dashOnly && pulseOK && (viewType !== 'schematic' || isPowered);
-              if (allowPulse) {
-                const baseIntensity = isPowered ? 0.8 : 0.55;
-                const p = 1.0 + pulseAmp * Math.sin(Date.now() * pulseRate);
-                c.save();
-                c.strokeStyle = categoryColor + '66';
-                c.lineWidth = isPowered ? 2.4 : 2.0;
-                c.shadowColor = categoryColor;
-                c.shadowBlur = 7 * baseIntensity * p;
-                strokeOrthogonalSimple(c, fromX, fromY, toX, toY);
-                c.restore();
-              }
+              // Pulse overlay (lightweight glow modulation) - DISABLED to prevent double rendering
+              // The optimized ConnectionRenderer already handles glow effects
+              const allowPulse = false; // Disabled - redundant with optimized renderer glow
 
-              // Animated dash overlay (heavier)
+              // Animated dash overlay - Only render if DASH_OVERLAY is explicitly enabled
+              // When dashOnly mode is active, the optimized renderer skips base strokes, so overlay should render
+              // Otherwise, skip to avoid double rendering (optimized renderer already drew the connection)
               const allowDashOverlay = (enableDashOverlay || dashOnly) && animationsBudgetOK && animationsZoomOK && (viewType !== 'schematic' || isPowered);
-              if (allowDashOverlay) {
+              if (allowDashOverlay && (dashOnly || enableDashOverlay)) {
                 c.save();
                 const dashLen = 14;
                 const gapLen = 10;
                 c.setLineDash([dashLen, gapLen]);
                 const t = Date.now() * (isPowered ? 0.08 : 0.05);
                 c.lineDashOffset = -(t % (dashLen + gapLen));
-                c.lineWidth = isPowered ? 2.0 : 1.8;
-                c.strokeStyle = `rgba(${hexToRgb(categoryColor)}, ${isPowered ? 0.7 : 0.55})`;
+                // Use thinner line and lower opacity to make this truly an overlay effect
+                c.lineWidth = isPowered ? 1.2 : 1.0;
+                c.strokeStyle = `rgba(${hexToRgb(categoryColor)}, ${isPowered ? 0.4 : 0.3})`;
                 c.shadowColor = categoryColor;
-                c.shadowBlur = isPowered ? 4 : 2;
+                c.shadowBlur = 0; // No shadow to avoid heaviness
                 strokeOrthogonalSimple(c, fromX, fromY, toX, toY);
                 c.restore();
               }
 
-              // Micro packets (ultra-light dashed pass)
-              if (microOK) {
+              // Micro packets (ultra-light dashed pass) - Keep this as it's subtle by design
+              // Only render when explicitly enabled AND not redundant with optimized renderer
+              if (microOK && enableMicroPackets) {
                 c.save();
                 c.setLineDash(microDash);
                 const t2 = Date.now() * microSpeed * (isPowered ? 1.2 : 1);
                 const period = microDash.reduce((a, b) => a + b, 0);
                 c.lineDashOffset = -(t2 % period);
-                c.lineWidth = microWidth;
-                c.strokeStyle = `rgba(${hexToRgb(categoryColor)}, ${microAlpha})`;
+                // Keep this light - it's meant to be a subtle packet effect
+                c.lineWidth = Math.max(0.8, microWidth * 0.7); // Thinner to be more subtle
+                c.strokeStyle = `rgba(${hexToRgb(categoryColor)}, ${Math.min(0.4, microAlpha * 0.7)})`; // Lower opacity
                 c.shadowBlur = 0;
                 strokeOrthogonalSimple(c, fromX, fromY, toX, toY);
                 c.restore();
