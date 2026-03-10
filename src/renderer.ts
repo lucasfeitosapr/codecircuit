@@ -3,7 +3,7 @@
 // Phase 2B: Integrated optimized GridRenderer
 
 import { GridRenderer } from './rendering/GridRenderer';
-import { PerformanceConfig } from './config/performanceConfig';
+import { PerformanceConfig } from './config/FeatureFlagAdapter';
 
 export { hexToRgb, getPointOnPath } from './utils';
 

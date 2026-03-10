@@ -1,6 +1,11 @@
 /**
  * Feature Flags Configuration
  * Controls experimental and optional UI features
+ *
+ * @deprecated This file is being phased out in favor of UnifiedFeatureConfig
+ * See: src/config/UnifiedFeatureConfig.ts
+ * Migration: Use getUnifiedFeatureManager().getFlag() instead
+ * Status: Will be archived after Phase 2 migration completes
  */
 
 export interface FeatureFlags {

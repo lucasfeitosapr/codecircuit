@@ -1,5 +1,5 @@
 import type { RenderFrame } from '../LayeredRenderer';
-import { isFeatureEnabled } from '../../core/FeatureFlagManager';
+import { isFeatureEnabled } from '../../config/FeatureFlagAdapter';
 
 export interface Animation {
   id: string;

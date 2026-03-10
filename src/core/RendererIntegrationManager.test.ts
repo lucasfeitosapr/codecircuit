@@ -95,7 +95,7 @@ describe('RendererIntegrationManager', () => {
     expect(emitSpy).toHaveBeenCalledWith(
       Events.RENDER_FRAME_COMPLETE,
       expect.objectContaining({
-        renderer: 'legacy',
+        renderer: 'layered', // Now using layered renderer by default
         timestamp: expect.any(Number),
         componentsRendered: 0,
         connectionsRendered: 0,

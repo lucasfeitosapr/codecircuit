@@ -22,6 +22,7 @@ import {
 import { InputEventCoordinator, createInputEventCoordinator } from './core/InputEventCoordinator';
 import { ComponentRegistry, createComponentRegistry } from './components/ComponentRegistry';
 import { UIController, createUIController } from './ui/UIController';
+import { PartsTrayRenderer, createPartsTrayRenderer } from './ui/PartsTrayRenderer';
 import { ViewNavigationManager } from './ui/ViewNavigationManager';
 
 // New extracted managers
@@ -41,7 +42,7 @@ import {
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
 import { RenderScheduler } from './rendering/RenderScheduler';
-import { PerformanceConfig } from './config/performanceConfig';
+import { PerformanceConfig } from './config/FeatureFlagAdapter';
 import { connectionRenderer } from './ui/rendererHelpers';
 import { createFeatureTogglePanel } from './ui/FeatureTogglePanel';
 import './core/RealWorldMovementTest'; // Browser console testing utilities
@@ -86,6 +87,7 @@ export class MotherboardApp {
   private inputEventCoordinator!: InputEventCoordinator;
   private componentRegistry!: ComponentRegistry;
   private uiController!: UIController;
+  private partsTrayRenderer!: PartsTrayRenderer;
   private viewNavigationManager!: ViewNavigationManager;
 
   // Legacy runtime layers (to be gradually migrated to LayeredRenderer)
@@ -409,6 +411,11 @@ export class MotherboardApp {
         onMouseUp: this.onMouseUp.bind(this),
         onWheel: this.onWheel.bind(this),
   // setMousePos is not part of UIControllerContext; mouse position updates are handled via InputEventCoordinator
+      });
+
+      // Initialize PartsTrayRenderer (Phase 4 - Dynamic Parts Tray)
+      this.partsTrayRenderer = createPartsTrayRenderer({
+        containerSelector: '#parts-tray-components',
       });
 
       // Initialize ApplicationInitializer

@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LayeredRenderer, Layer, RenderFrame } from './LayeredRenderer';
-import * as featureFlags from '../config/featureFlags';
+import * as featureFlagAdapter from '../config/FeatureFlagAdapter';
 
 describe('LayeredRenderer', () => {
   let renderer: LayeredRenderer;
@@ -24,7 +24,7 @@ describe('LayeredRenderer', () => {
     };
 
     // Enable new renderer by default for tests
-    vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
+    vi.spyOn(featureFlagAdapter, 'isNewRendererEnabled').mockReturnValue(true);
   });
 
   afterEach(() => {

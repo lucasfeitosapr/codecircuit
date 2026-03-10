@@ -14,7 +14,7 @@
 import type { Connection, Camera, ComponentBase } from '../types';
 import { drawOrthogonalTrace } from '../renderer';
 import { ConnectionCache } from '../utils/ConnectionCache';
-import { PerformanceConfig } from '../config/performanceConfig';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 import { logger } from '../utils/Logger';
 
 interface Viewport {

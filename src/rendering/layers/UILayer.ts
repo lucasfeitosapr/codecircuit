@@ -1,6 +1,6 @@
 import type { RenderFrame } from '../LayeredRenderer';
 import type { ComponentBase, Connection, PinHit } from '../../types';
-import { isFeatureEnabled } from '../../core/FeatureFlagManager';
+import { isFeatureEnabled } from '../../config/FeatureFlagAdapter';
 
 export interface SelectionBox {
   x: number;

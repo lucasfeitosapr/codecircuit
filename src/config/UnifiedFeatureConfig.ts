@@ -18,6 +18,9 @@
 export interface UnifiedFeatureConfig {
   // === PERFORMANCE OPTIMIZATIONS ===
   performance: {
+    // Renderer selection
+    useLayeredRenderer: boolean;      // Use LayeredRenderer (vs legacy fallback)
+
     // Rendering optimizations
     dirtyFlagRendering: boolean;      // Only render when something changes (90% idle CPU reduction)
     batchRendering: boolean;          // Batch components by type (reduce state changes)
@@ -155,6 +158,9 @@ export interface UnifiedFeatureConfig {
 export const DEFAULT_UNIFIED_CONFIG: UnifiedFeatureConfig = {
   // === PERFORMANCE ===
   performance: {
+    // Renderer selection - ON by default (stable, production-ready)
+    useLayeredRenderer: true,
+
     // Rendering optimizations - ON by default (stable, major wins)
     dirtyFlagRendering: true,
     batchRendering: true,
@@ -309,6 +315,13 @@ type SystemFlags = keyof UnifiedFeatureConfig['system'];
 type DebugFlags = keyof UnifiedFeatureConfig['debug'];
 
 export const PERFORMANCE_FLAG_METADATA: Record<PerformanceFlags, FlagMetadata> = {
+  useLayeredRenderer: {
+    name: 'Layered Renderer',
+    description: 'Use modern LayeredRenderer instead of legacy renderer',
+    category: 'Performance',
+    impact: 'high',
+    experimental: false,
+  },
   dirtyFlagRendering: {
     name: 'Dirty Flag Rendering',
     description: 'Only render when something changes (90% idle CPU reduction)',
@@ -558,6 +571,7 @@ export const PRESETS: Record<PresetName, Partial<UnifiedFeatureConfig>> = {
   // Performance Max: Speed over visuals
   performanceMax: {
     performance: {
+      useLayeredRenderer: true,
       dirtyFlagRendering: true,
       batchRendering: true,
       smartRendering: true,
@@ -598,6 +612,7 @@ export const PRESETS: Record<PresetName, Partial<UnifiedFeatureConfig>> = {
   // Visual Rich: Eye-candy over speed
   visualRich: {
     performance: {
+      useLayeredRenderer: true,         // Use modern renderer
       dirtyFlagRendering: true,         // Keep optimizations ON
       batchRendering: true,
       smartRendering: true,

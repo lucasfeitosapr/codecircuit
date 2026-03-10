@@ -1,7 +1,7 @@
 import type { RenderFrame } from '../LayeredRenderer';
 import type { Connection } from '../../types';
 import { hexToRgb, getPointOnPath } from '../../utils';
-import { PerformanceConfig } from '../../config/performanceConfig';
+import { PerformanceConfig } from '../../config/FeatureFlagAdapter';
 import { connectionRenderer as sharedConnectionRenderer } from '../../ui/rendererHelpers';
 
 /**

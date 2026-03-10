@@ -21,9 +21,8 @@ import {
 import * as rendererHelpers from '../ui/rendererHelpers';
 import { renderComponentWrapper } from '../ui/componentRenderer';
 import { layeredRenderer } from './LayeredRenderer';
-import { isNewRendererEnabled } from '../config/featureFlags';
+import { isNewRendererEnabled, PerformanceConfig } from '../config/FeatureFlagAdapter';
 import { BatchedComponentRenderer } from './BatchedComponentRenderer';
-import { PerformanceConfig } from '../config/performanceConfig';
 import { RenderProfiler } from './RenderProfiler';
 import { logger } from '../utils/Logger';
 import type { ComponentBase, Connection, Camera } from '../types';

@@ -15,7 +15,7 @@
  */
 
 import { logger } from '../utils/Logger';
-import { PerformanceConfig } from '../config/performanceConfig';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 
 export class RenderScheduler {
   private dirty: boolean = true;

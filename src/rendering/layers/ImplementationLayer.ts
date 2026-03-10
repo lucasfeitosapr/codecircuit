@@ -1,5 +1,5 @@
 import { getComponentRegistry } from '../../components/ComponentRegistry';
-import { PerformanceConfig } from '../../config/performanceConfig';
+import { PerformanceConfig } from '../../config/FeatureFlagAdapter';
 import type { RenderFrame } from '../LayeredRenderer';
 
 // Cache bust: 2024-01-20 - Removed all console logs

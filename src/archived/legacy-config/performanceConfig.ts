@@ -1,7 +1,12 @@
 /**
  * Performance Configuration - Phase 2B Optimizations
- * 
+ *
  * Controls for performance optimization features
+ *
+ * @deprecated This file is being phased out in favor of UnifiedFeatureConfig
+ * See: src/config/UnifiedFeatureConfig.ts
+ * Migration: Use getUnifiedFeatureManager().getFlag('performance', 'flagName') instead
+ * Status: Will be archived after Phase 2 migration completes
  */
 
 export const PerformanceConfig = {

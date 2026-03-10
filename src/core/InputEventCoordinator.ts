@@ -2,7 +2,7 @@ import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import type { ComponentBase, ModuleComponent, PinHit, Camera } from '../types';
 import { hideDatasheet as hideDatasheetUI, showDatasheet as showDatasheetUI } from '../datasheet';
-import { isFeatureEnabled } from './FeatureFlagManager';
+import { isFeatureEnabled } from '../config/FeatureFlagAdapter';
 
 /**
  * Phase 6B: Input Event Coordinator

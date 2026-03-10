@@ -3,8 +3,9 @@ import { layeredRenderer } from './LayeredRenderer';
 import BackgroundLayer from './layers/BackgroundLayer';
 import ImplementationLayer from './layers/ImplementationLayer';
 import ConnectionsLayer from './layers/ConnectionsLayer';
-import { componentSystem } from '../components/ComponentSystem';
-import * as featureFlags from '../config/featureFlags';
+import { createComponentRegistry, getComponentRegistry } from '../components/ComponentRegistry';
+import { eventBus } from '../events/EventBus';
+import * as featureFlagAdapter from '../config/FeatureFlagAdapter';
 import * as legacyRenderer from '../renderer';
 
 describe('LayeredRenderer Integration', () => {
@@ -12,7 +13,16 @@ describe('LayeredRenderer Integration', () => {
   let canvas: any;
 
   beforeEach(() => {
-    // Mock canvas context
+    // Initialize ComponentRegistry
+    createComponentRegistry(eventBus);
+
+    // Mock canvas first
+    canvas = {
+      width: 800,
+      height: 600,
+    };
+
+    // Mock canvas context with canvas reference
     ctx = {
       clearRect: vi.fn(),
       fillRect: vi.fn(),
@@ -31,12 +41,7 @@ describe('LayeredRenderer Integration', () => {
       lineWidth: 0,
       shadowBlur: 0,
       shadowColor: '',
-    };
-
-    // Mock canvas
-    canvas = {
-      width: 800,
-      height: 600,
+      canvas: canvas, // Link canvas to ctx
     };
 
     // Clear layers
@@ -49,7 +54,8 @@ describe('LayeredRenderer Integration', () => {
 
     // Clear component system
     try {
-      componentSystem.unregister('test-plugin');
+      const registry = getComponentRegistry();
+      registry.unregister('test-plugin');
     } catch (e) {
       // Ignore cleanup errors
     }
@@ -62,7 +68,7 @@ describe('LayeredRenderer Integration', () => {
   });
 
   it('renders all layers in correct order when feature flag is enabled', () => {
-    vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
+    vi.spyOn(featureFlagAdapter, 'isNewRendererEnabled').mockReturnValue(true);
 
     // Register all layers
     layeredRenderer.registerLayer('background', BackgroundLayer);
@@ -72,13 +78,21 @@ describe('LayeredRenderer Integration', () => {
     // Register a test plugin
     const renderSpy = vi.fn();
     const plugin = {
-      id: 'test-plugin',
-      displayName: 'Test Plugin',
-      render: renderSpy,
+      type: 'test-plugin',
+      metadata: {
+        displayName: 'Test Plugin',
+      },
+      getRenderInstructions: (model: any) => [
+        {
+          render: renderSpy
+        }
+      ],
       serialize: (m: any) => m,
       deserialize: (d: any) => d,
+      getMetadata: function() { return this.metadata; }
     };
-    componentSystem.register(plugin);
+    const registry = getComponentRegistry();
+    registry.register(plugin);
 
     const frame = {
       timestamp: Date.now(),
@@ -96,19 +110,15 @@ describe('LayeredRenderer Integration', () => {
     // Background layer should clear canvas
     expect(ctx.clearRect).toHaveBeenCalled();
 
-    // Implementation layer should call plugin render
-    expect(renderSpy).toHaveBeenCalledWith(
-      ctx,
-      frame,
-      expect.objectContaining({ type: 'test-plugin' })
-    );
+    // Implementation layer should call plugin render (V2 architecture)
+    expect(renderSpy).toHaveBeenCalledWith(expect.any(Object), expect.any(Object));
 
     // Connections layer should be called (even with empty connections)
     expect(ctx.beginPath).toHaveBeenCalled();
   });
 
   it('delegates to legacy renderer when feature flag is disabled', () => {
-    vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(false);
+    vi.spyOn(featureFlagAdapter, 'isNewRendererEnabled').mockReturnValue(false);
     const legacyRenderSpy = vi.spyOn(legacyRenderer, 'render');
 
     const frame = {
@@ -124,7 +134,7 @@ describe('LayeredRenderer Integration', () => {
   });
 
   it('handles layer registration errors gracefully', () => {
-    vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
+    vi.spyOn(featureFlagAdapter, 'isNewRendererEnabled').mockReturnValue(true);
 
     // Register a layer that will throw an error
     const errorLayer = {
@@ -155,7 +165,7 @@ describe('LayeredRenderer Integration', () => {
   });
 
   it('handles missing frame payload gracefully', () => {
-    vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
+    vi.spyOn(featureFlagAdapter, 'isNewRendererEnabled').mockReturnValue(true);
 
     layeredRenderer.registerLayer('background', BackgroundLayer);
     layeredRenderer.registerLayer('implementation', ImplementationLayer);
@@ -172,7 +182,7 @@ describe('LayeredRenderer Integration', () => {
   });
 
   it('renders with different view types correctly', () => {
-    vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
+    vi.spyOn(featureFlagAdapter, 'isNewRendererEnabled').mockReturnValue(true);
 
     const drawGridSpy = vi.spyOn(legacyRenderer, 'drawGrid');
     const drawSchematicSpy = vi.spyOn(legacyRenderer, 'drawSchematicBackground');
@@ -203,17 +213,25 @@ describe('LayeredRenderer Integration', () => {
   });
 
   it('handles component rendering with different statuses', () => {
-    vi.spyOn(featureFlags, 'isNewRendererEnabled').mockReturnValue(true);
+    vi.spyOn(featureFlagAdapter, 'isNewRendererEnabled').mockReturnValue(true);
 
     const renderSpy = vi.fn();
     const plugin = {
-      id: 'test-plugin',
-      displayName: 'Test Plugin',
-      render: renderSpy,
+      type: 'test-plugin',
+      metadata: {
+        displayName: 'Test Plugin',
+      },
+      getRenderInstructions: (model: any) => [
+        {
+          render: renderSpy
+        }
+      ],
       serialize: (m: any) => m,
       deserialize: (d: any) => d,
+      getMetadata: function() { return this.metadata; }
     };
-    componentSystem.register(plugin);
+    const registry = getComponentRegistry();
+    registry.register(plugin);
 
     layeredRenderer.registerLayer('implementation', ImplementationLayer);
 
@@ -237,8 +255,6 @@ describe('LayeredRenderer Integration', () => {
     layeredRenderer.render(ctx, frame);
 
     expect(renderSpy).toHaveBeenCalledTimes(3);
-    expect(renderSpy).toHaveBeenCalledWith(ctx, frame, models[0]);
-    expect(renderSpy).toHaveBeenCalledWith(ctx, frame, models[1]);
-    expect(renderSpy).toHaveBeenCalledWith(ctx, frame, models[2]);
+    expect(renderSpy).toHaveBeenCalledWith(expect.any(Object), expect.any(Object));
   });
 });

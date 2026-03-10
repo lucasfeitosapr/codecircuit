@@ -7,9 +7,11 @@
  * Used by both index.html and profiling.html to eliminate duplication.
  */
 
-import { PerformanceConfig } from '../config/performanceConfig';
-import { getFeatureFlagManager } from '../core/FeatureFlagManager';
-import { FEATURE_FLAG_METADATA } from '../config/featureFlags';
+import {
+  PerformanceConfig,
+  getFeatureFlagManager,
+  FEATURE_FLAG_METADATA,
+} from '../config/FeatureFlagAdapter';
 
 export interface FeatureTogglePanelConfig {
   containerId: string;           // ID of the DOM element to mount the panel

@@ -10,7 +10,7 @@
 
 import { renderProfiler } from './RenderProfiler';
 import { eventBus } from '../events/EventBus';
-import { PerformanceConfig } from '../config/performanceConfig';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 import { LegacyRenderer } from '../rendering/LegacyRenderer';
 
 export interface SystemPerformanceStats {

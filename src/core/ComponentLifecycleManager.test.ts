@@ -7,7 +7,7 @@ import { EventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import RuntimeLayer from '../rendering/layers/RuntimeLayer';
 import type { ComponentBase, ViewState } from '../types';
-import { PerformanceConfig } from '../config/performanceConfig';
+import { getUnifiedFeatureManager } from './UnifiedFeatureManager';
 
 // Mock RuntimeLayer
 vi.mock('../rendering/layers/RuntimeLayer', () => {
@@ -348,8 +348,9 @@ describe('ComponentLifecycleManager', () => {
       // KNOWN ISSUE: Spatial index (quadtree) has boundary precision issues with exact edges
       // Disabling spatial indexing temporarily to test the correct linear search logic
       // TODO: Fix quadtree queryPoint to handle exact boundary coordinates correctly
-      const originalSpatialFlag = PerformanceConfig.ENABLE_SPATIAL_INDEXING;
-      PerformanceConfig.ENABLE_SPATIAL_INDEXING = false;
+      const manager = getUnifiedFeatureManager();
+      const originalSpatialFlag = manager.getFlag('performance', 'spatialIndexing');
+      manager.setFlag('performance', 'spatialIndexing', false);
 
       try {
         // Test exact corners and edges (component at x:100, y:50, w:80, h:40)
@@ -358,7 +359,7 @@ describe('ComponentLifecycleManager', () => {
         expect(componentLifecycleManager.getComponentAt(99, 50, currentView)).toBeNull(); // just outside left
         expect(componentLifecycleManager.getComponentAt(181, 90, currentView)).toBeNull(); // just outside right
       } finally {
-        PerformanceConfig.ENABLE_SPATIAL_INDEXING = originalSpatialFlag;
+        manager.setFlag('performance', 'spatialIndexing', originalSpatialFlag);
       }
     });
   });

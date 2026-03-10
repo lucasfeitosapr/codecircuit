@@ -3,7 +3,7 @@ import { Events } from '../events/eventTypes';
 import type { ComponentBase, ViewState, ModuleComponent } from '../types';
 import RuntimeLayer from '../rendering/layers/RuntimeLayer';
 import { SpatialIndex } from '../utils/SpatialIndex';
-import { PerformanceConfig } from '../config/performanceConfig';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 import { connectionRenderer } from '../ui/rendererHelpers';
 import { logger } from '../utils/Logger';
 

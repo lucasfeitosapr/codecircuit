@@ -2,7 +2,7 @@ import { drawOrthogonalTrace as rendererDrawOrthogonalTrace } from '../renderer'
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from '../utils';
 import type { Camera, Connection, ComponentBase, PinRef } from '../types';
 import { ConnectionRenderer } from '../rendering/ConnectionRenderer';
-import { PerformanceConfig } from '../config/performanceConfig';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 import { logger } from '../utils/Logger';
 
 // Minimal app context used by these helpers. Keep it intentionally small so

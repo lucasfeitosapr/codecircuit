@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ToggleSwitch } from './ToggleSwitch';
-import { getFeatureFlagManager } from '../../../core/FeatureFlagManager';
 import {
   type FeatureFlags,
   FEATURE_FLAG_METADATA,
   DEFAULT_FEATURE_FLAGS,
-} from '../../../config/featureFlags';
-import { PerformanceConfig } from '../../../config/performanceConfig';
+  PerformanceConfig,
+  getFeatureFlagManager,
+} from '../../../config/FeatureFlagAdapter';
 import { useEventBus } from '../hooks/useEventBus';
 
 export function FeatureFlagPanel() {

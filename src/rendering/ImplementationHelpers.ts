@@ -1,6 +1,6 @@
 import { hexToRgb } from '../utils';
 import { getComponentRegistry } from '../components/ComponentRegistry';
-import { PerformanceConfig } from '../config/performanceConfig';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 
 export type RenderOptions = {
   camera: any;

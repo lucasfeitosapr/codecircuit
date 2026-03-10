@@ -7,8 +7,6 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     exclude: [
       'src/archived/**/*.test.ts', // Exclude archived test files
-      'src/rendering/layers/ImplementationLayer.test.ts', // Empty test file
-      'src/rendering/layered-renderer-integration.test.ts', // Empty test file
     ],
     setupFiles: ['./src/test-setup.ts'],
     coverage: {

@@ -2,7 +2,7 @@ import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import { layeredRenderer } from '../rendering/LayeredRenderer';
 import { renderComponent } from '../rendering/ImplementationHelpers';
-import { isNewRendererEnabled } from '../config/featureFlags';
+import { isNewRendererEnabled } from '../config/FeatureFlagAdapter';
 import {
   drawGrid as rendererDrawGrid,
   drawSchematicBackground as rendererDrawSchematicBackground,

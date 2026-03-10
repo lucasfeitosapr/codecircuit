@@ -4,26 +4,29 @@
  */
 
 import { vi } from 'vitest';
-import { DEFAULT_FEATURE_FLAGS } from './config/featureFlags';
+import { DEFAULT_UNIFIED_CONFIG } from './config/UnifiedFeatureConfig';
 
-// Mock FeatureFlagManager for all tests
+// Mock FeatureFlagManager for backward compatibility (will be removed with archived files)
 vi.mock('./core/FeatureFlagManager', () => {
-  // Enable all features for tests by default
-  const mockFlags = {
-    ...DEFAULT_FEATURE_FLAGS,
-    ENABLE_ALIGNMENT_GUIDES: true,
-    ENABLE_SELECTION_HANDLES: true,
-    ENABLE_COMPONENT_ANIMATIONS: true,
-    ENABLE_ENERGY_FLOW_PARTICLES: true,
-    ENABLE_CONNECTION_INTENTS: true,
-    ENABLE_COMPONENT_TOOLTIPS: true,
-  } as const;
+  // Enable all UI features for tests by default
+  const mockConfig = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    ui: {
+      ...DEFAULT_UNIFIED_CONFIG.ui,
+      alignmentGuides: true,
+      selectionHandles: true,
+      componentAnimations: true,
+      energyFlowParticles: true,
+      connectionIntents: true,
+      componentTooltips: true,
+    }
+  };
 
   return {
-    isFeatureEnabled: vi.fn((flag: string) => (mockFlags as any)[flag]),
+    isFeatureEnabled: vi.fn(() => true),
     getFeatureFlagManager: vi.fn(() => ({
-      getFlags: () => mockFlags,
-      getFlag: (key: string) => (mockFlags as any)[key],
+      getFlags: () => mockConfig.ui,
+      getFlag: (key: string) => true,
       setFlag: vi.fn(),
       toggleFlag: vi.fn(),
       resetToDefaults: vi.fn(),

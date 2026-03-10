@@ -1,4 +1,4 @@
-import { isNewRendererEnabled } from '../config/featureFlags';
+import { isNewRendererEnabled } from '../config/FeatureFlagAdapter';
 import * as legacyRenderer from '../renderer';
 import { RenderProfiler } from './RenderProfiler';
 

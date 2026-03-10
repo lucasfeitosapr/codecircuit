@@ -10,7 +10,7 @@
 
 import type { ComponentBase, Camera, Connection } from '../types';
 import { renderComponent } from './ImplementationHelpers';
-import { PerformanceConfig } from '../config/performanceConfig';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 import { logger } from '../utils/Logger';
 
 interface BatchRenderContext {

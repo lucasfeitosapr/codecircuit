@@ -6,6 +6,11 @@
  * - Persists flags to localStorage
  * - Emits events when flags change
  * - Integrates with EventBus for reactive updates
+ *
+ * @deprecated This manager is being phased out in favor of UnifiedFeatureManager
+ * See: src/core/UnifiedFeatureManager.ts
+ * Migration: Use getUnifiedFeatureManager() instead
+ * Status: Will be archived after Phase 2 migration completes
  */
 
 import { eventBus } from '../events/EventBus';

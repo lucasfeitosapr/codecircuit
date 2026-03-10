@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ConnectionsLayer from './ConnectionsLayer';
-import { PerformanceConfig } from '../../config/performanceConfig';
+import { getUnifiedFeatureManager } from '../../core/UnifiedFeatureManager';
 
 describe('ConnectionsLayer', () => {
   let ctx: any;
@@ -8,8 +8,9 @@ describe('ConnectionsLayer', () => {
 
   beforeEach(() => {
     // Disable optimized renderer for tests to test the legacy path
-    originalOptimizedRendererFlag = PerformanceConfig.ENABLE_OPTIMIZED_CONNECTION_RENDERER;
-    PerformanceConfig.ENABLE_OPTIMIZED_CONNECTION_RENDERER = false;
+    const manager = getUnifiedFeatureManager();
+    originalOptimizedRendererFlag = manager.getFlag('performance', 'optimizedConnectionRenderer');
+    manager.setFlag('performance', 'optimizedConnectionRenderer', false);
 
     ctx = {
       beginPath: vi.fn(),
@@ -34,7 +35,8 @@ describe('ConnectionsLayer', () => {
 
   afterEach(() => {
     // Restore original config
-    PerformanceConfig.ENABLE_OPTIMIZED_CONNECTION_RENDERER = originalOptimizedRendererFlag;
+    const manager = getUnifiedFeatureManager();
+    manager.setFlag('performance', 'optimizedConnectionRenderer', originalOptimizedRendererFlag);
   });
 
   it('draws simple lines for connections', () => {

@@ -11,7 +11,7 @@
  * - Environment-aware (verbose in dev, quiet in prod)
  */
 
-import { PerformanceConfig } from '../config/performanceConfig';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 
 export enum LogLevel {
   DEBUG = 0,
