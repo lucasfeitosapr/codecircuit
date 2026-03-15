@@ -281,18 +281,9 @@ describe('InputEventCoordinator', () => {
   });
 
   describe('Event Bus Integration', () => {
-    it('should handle PROJECT_STATE_REQUEST event', () => {
-      const callback = vi.fn();
-
-      eventBus.emit(Events.PROJECT_STATE_REQUEST, {
-        callback,
-        timestamp: Date.now(),
-      });
-
-      expect(callback).toHaveBeenCalledWith(
-        mockDependencies.components,
-        mockDependencies.connections
-      );
+    it.skip('PROJECT_STATE_REQUEST handling moved to ExportImportManager (sole owner)', () => {
+      // Duplicate handler removed — ExportImportManager is the single owner
+      // for project state serialization (uses live getters, not stale snapshots).
     });
 
     it.skip('PROJECT_IMPORTED handling moved to main.ts', () => {

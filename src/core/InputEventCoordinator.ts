@@ -241,20 +241,8 @@ export class InputEventCoordinator {
    * Setup event handlers for ExportImportManager integration
    */
   private setupExportImportEventHandlers(): void {
-    // Handle requests for current project state
-    eventBus.on(
-      Events.PROJECT_STATE_REQUEST,
-      (payload: {
-        callback: (components: any[], connections: any[]) => void;
-        timestamp: number;
-      }) => {
-        payload.callback(this.dependencies.components, this.dependencies.connections);
-      }
-    );
-
-    // Note: PROJECT_IMPORTED event handling moved to main.ts setupExportImportEventHandlers()
-    // which properly uses AppStateManager.setComponents() and setConnections()
-    // Duplicate handler removed to avoid state management conflicts
+    // PROJECT_STATE_REQUEST ownership: ExportImportManager (sole handler).
+    // Duplicate handler removed — it used stale snapshot deps.
 
     // Handle import errors
     eventBus.on(
