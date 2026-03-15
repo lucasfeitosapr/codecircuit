@@ -455,8 +455,8 @@ describe('UnifiedFeatureManager', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Mock localStorage to throw quota exceeded error
-      const originalSetItem = Storage.prototype.setItem;
-      Storage.prototype.setItem = vi.fn(() => {
+      const originalSetItem = localStorage.setItem;
+      localStorage.setItem = vi.fn(() => {
         throw new Error('QuotaExceededError');
       });
 
@@ -466,7 +466,7 @@ describe('UnifiedFeatureManager', () => {
       expect(consoleSpy.mock.calls[0][0]).toContain('Failed to save config');
 
       // Restore
-      Storage.prototype.setItem = originalSetItem;
+      localStorage.setItem = originalSetItem;
       consoleSpy.mockRestore();
     });
 
