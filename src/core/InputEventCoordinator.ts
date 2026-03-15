@@ -37,15 +37,15 @@ export interface InputEventCoordinatorDependencies {
   hideDatasheet: () => void;
   showTemporaryMessage: (message: string, duration?: number) => void;
 
-  // View management
-  currentView: any; // View type from main.ts
+  // View management (live getters — no stale snapshots)
+  getCurrentView: () => any; // Returns current ViewState
   enterSchematicView: (component: ModuleComponent) => void;
   exitSchematicView: () => void;
   viewStack: any; // ViewStack type
-  isTransitioning: boolean;
+  getIsTransitioning: () => boolean;
 
-  // Selection and interaction state
-  selectedComponent: ComponentBase | null;
+  // Selection and interaction state (live getters)
+  getSelectedComponent: () => ComponentBase | null;
   setSelectedComponent: (component: ComponentBase | null) => void;
   addToSelection: (component: ComponentBase) => void;
   removeFromSelection: (componentId: string) => void;
@@ -64,9 +64,9 @@ export interface InputEventCoordinatorDependencies {
   uiLayer: any; // UILayer type
   runtimeLayer: any; // RuntimeLayer type
 
-  // Component types and state
-  components: ComponentBase[];
-  connections: any[];
+  // Component types and state (live getters)
+  getComponents: () => ComponentBase[];
+  getConnections: () => any[];
 }
 
 export class InputEventCoordinator {
@@ -130,7 +130,7 @@ export class InputEventCoordinator {
           type,
           x,
           y,
-          this.dependencies.currentView
+          this.dependencies.getCurrentView()
         );
       },
     };
@@ -177,84 +177,23 @@ export class InputEventCoordinator {
       });
     }
 
-    // Back button handled by UIController - removed duplicate handler
-
-    // Help button handled by UIController - removed duplicate handler
-
-    // Reset button
-    const resetBtn = document.getElementById('reset-btn');
-    if (resetBtn) {
-      const resetHandler = () => {
-        if (confirm('Reset the entire board? This cannot be undone.')) {
-          this.dependencies.components.length = 0;
-          this.dependencies.connections.length = 0;
-          this.dependencies.setSelectedComponent(null);
-          this.dependencies.hideDatasheet();
-        }
-      };
-      resetBtn.addEventListener('click', resetHandler);
-      this.eventListeners.push({
-        element: resetBtn,
-        event: 'click',
-        handler: resetHandler,
-      });
-    }
-
-    // Export button
-    const exportBtn = document.getElementById('export-btn');
-    if (exportBtn) {
-      const exportHandler = () => {
-        eventBus.emit(Events.PROJECT_EXPORT_REQUESTED, {
-          timestamp: Date.now(),
-        });
-      };
-      exportBtn.addEventListener('click', exportHandler);
-      this.eventListeners.push({
-        element: exportBtn,
-        event: 'click',
-        handler: exportHandler,
-      });
-    }
+    // Back button, Help button, Reset button, Export button:
+    // All handled by UIController (sole owner). Duplicate handlers removed.
   }
 
   /**
    * Setup file import handler
    */
   private setupImportHandler(): void {
-    const importBtn = document.getElementById('import-btn');
-    if (importBtn) {
-      const importHandler = () => {
-        eventBus.emit(Events.PROJECT_IMPORT_REQUESTED, {
-          timestamp: Date.now(),
-        });
-      };
-      importBtn.addEventListener('click', importHandler);
-      this.eventListeners.push({
-        element: importBtn,
-        event: 'click',
-        handler: importHandler,
-      });
-    }
+    // Import button handled by UIController (sole owner). Duplicate handler removed.
   }
 
   /**
    * Setup event handlers for ExportImportManager integration
    */
   private setupExportImportEventHandlers(): void {
-    // Handle requests for current project state
-    eventBus.on(
-      Events.PROJECT_STATE_REQUEST,
-      (payload: {
-        callback: (components: any[], connections: any[]) => void;
-        timestamp: number;
-      }) => {
-        payload.callback(this.dependencies.components, this.dependencies.connections);
-      }
-    );
-
-    // Note: PROJECT_IMPORTED event handling moved to main.ts setupExportImportEventHandlers()
-    // which properly uses AppStateManager.setComponents() and setConnections()
-    // Duplicate handler removed to avoid state management conflicts
+    // PROJECT_STATE_REQUEST ownership: ExportImportManager (sole handler).
+    // Duplicate handler removed — it used stale snapshot deps.
 
     // Handle import errors
     eventBus.on(
@@ -625,14 +564,14 @@ export class InputEventCoordinator {
     }
 
     // Priority 3: Clear component selection
-    if (this.dependencies.selectedComponent) {
+    if (this.dependencies.getSelectedComponent()) {
       this.dependencies.setSelectedComponent(null);
       hideDatasheetUI();
       return;
     }
 
     // Priority 4: Exit schematic view if in one
-    if (this.dependencies.currentView.type === 'schematic') {
+    if (this.dependencies.getCurrentView().type === 'schematic') {
       this.dependencies.exitSchematicView();
       return;
     }
@@ -642,7 +581,7 @@ export class InputEventCoordinator {
    * Handle Tab key - cycle between views
    */
   private handleTabKey(shiftPressed: boolean): void {
-    if (this.dependencies.isTransitioning) return;
+    if (this.dependencies.getIsTransitioning()) return;
 
     const viewStackSize = this.dependencies.viewStack.size();
 
@@ -652,14 +591,14 @@ export class InputEventCoordinator {
 
     if (shiftPressed) {
       // Shift+Tab: Go back one level
-      if (this.dependencies.currentView.type === 'schematic') {
+      if (this.dependencies.getCurrentView().type === 'schematic') {
         this.dependencies.exitSchematicView();
       }
     } else {
       // Tab: Navigate deeper or cycle through Module ICs
-      if (this.dependencies.currentView.type === 'main') {
+      if (this.dependencies.getCurrentView().type === 'main') {
         // Find first Module IC and enter it
-        const moduleICs = this.dependencies.components.filter(c => c.type === 'module-ic');
+        const moduleICs = this.dependencies.getComponents().filter(c => c.type === 'module-ic');
         if (moduleICs.length > 0) {
           this.dependencies.enterSchematicView(moduleICs[0] as ModuleComponent);
         }
@@ -680,7 +619,7 @@ export class InputEventCoordinator {
    * Handle Space key - toggle component status
    */
   private handleSpaceKey(): void {
-    const selectedComponent = this.dependencies.selectedComponent;
+    const selectedComponent = this.dependencies.getSelectedComponent();
     if (selectedComponent && selectedComponent.type !== 'power-core') {
       this.dependencies.toggleComponentStatus(selectedComponent);
 

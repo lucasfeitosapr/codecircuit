@@ -284,12 +284,12 @@ export class MotherboardApp {
         hideDatasheet: this.hideDatasheet.bind(this),
         showTemporaryMessage: (message, duration) =>
           this.notificationManager.showTemporaryMessage(message, duration),
-        currentView: this.appStateManager.getCurrentView(),
+        getCurrentView: () => this.appStateManager.getCurrentView(),
         enterSchematicView: component => this.schematicViewManager.enterSchematicView(component),
         exitSchematicView: () => this.schematicViewManager.exitSchematicView(),
         viewStack: ViewStack.getInstance(),
-        isTransitioning: this.appStateManager.isInTransition(),
-        selectedComponent: this.appStateManager.getSelectedComponent(),
+        getIsTransitioning: () => this.appStateManager.isInTransition(),
+        getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
         setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
         addToSelection: component => this.appStateManager.addToSelection(component),
         removeFromSelection: componentId => this.appStateManager.removeFromSelection(componentId),
@@ -301,8 +301,8 @@ export class MotherboardApp {
         componentLifecycleManager: this.componentLifecycleManager,
         uiLayer: this.uiLayer,
         runtimeLayer: this.runtimeLayer,
-        components: this.appStateManager.getComponents(),
-        connections: this.appStateManager.getConnections(),
+        getComponents: () => this.appStateManager.getComponents(),
+        getConnections: () => this.appStateManager.getConnections(),
       });
 
       // Initialize ViewNavigationManager

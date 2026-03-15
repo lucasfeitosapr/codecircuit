@@ -57,20 +57,20 @@ describe('InputEventCoordinator', () => {
       showTemporaryMessage: vi.fn(),
 
       // View management
-      currentView: {
+      getCurrentView: vi.fn().mockReturnValue({
         type: 'main',
         component: null,
         camera: { x: 0, y: 0, zoom: 1 },
         components: [],
         connections: [],
-      },
+      }),
       enterSchematicView: vi.fn(),
       exitSchematicView: vi.fn(),
       viewStack: { size: vi.fn().mockReturnValue(0) },
-      isTransitioning: false,
+      getIsTransitioning: vi.fn().mockReturnValue(false),
 
       // Selection and interaction state
-      selectedComponent: null,
+      getSelectedComponent: vi.fn().mockReturnValue(null),
       setSelectedComponent: vi.fn(),
       addToSelection: vi.fn(),
       removeFromSelection: vi.fn(),
@@ -100,8 +100,8 @@ describe('InputEventCoordinator', () => {
       runtimeLayer: {},
 
       // Component types and state
-      components: [],
-      connections: [],
+      getComponents: vi.fn().mockReturnValue([]),
+      getConnections: vi.fn().mockReturnValue([]),
       // Component lifecycle manager stub
       componentLifecycleManager: { createComponent: vi.fn() },
     };
@@ -192,14 +192,12 @@ describe('InputEventCoordinator', () => {
       };
 
       // Test the logic directly rather than DOM events
-      mockDependencies.selectedComponent = component;
+      mockDependencies.getSelectedComponent = vi.fn().mockReturnValue(component);
 
       // Simulate the space key handler logic
-      if (
-        mockDependencies.selectedComponent &&
-        mockDependencies.selectedComponent.type !== 'power-core'
-      ) {
-        mockDependencies.toggleComponentStatus(mockDependencies.selectedComponent);
+      const selected = mockDependencies.getSelectedComponent();
+      if (selected && selected.type !== 'power-core') {
+        mockDependencies.toggleComponentStatus(selected);
       }
 
       expect(mockDependencies.toggleComponentStatus).toHaveBeenCalledWith(component);
@@ -239,60 +237,19 @@ describe('InputEventCoordinator', () => {
   });
 
   describe('UI Button Event Handlers', () => {
-    it('should handle reset button click', () => {
-      const resetBtn = document.createElement('button');
-      resetBtn.id = 'reset-btn';
-      document.body.appendChild(resetBtn);
-
-      // Mock confirm to return true
-      (globalThis as any).confirm = vi.fn().mockReturnValue(true);
-
-      // Create new coordinator to register the button
-      coordinator.destroy();
-      coordinator = new InputEventCoordinator(mockDependencies);
-
-      resetBtn.click();
-
-      expect(mockDependencies.setSelectedComponent).toHaveBeenCalledWith(null);
-      expect(mockDependencies.hideDatasheet).toHaveBeenCalled();
-
-      document.body.removeChild(resetBtn);
+    it.skip('reset-btn handled by UIController (sole owner)', () => {
+      // Duplicate handler removed — UIController owns all DOM button wiring.
     });
 
-    it('should handle export button click', () => {
-      const exportBtn = document.createElement('button');
-      exportBtn.id = 'export-btn';
-      document.body.appendChild(exportBtn);
-
-      const emitSpy = vi.spyOn(eventBus, 'emit');
-
-      // Create new coordinator to register the button
-      coordinator.destroy();
-      coordinator = new InputEventCoordinator(mockDependencies);
-
-      exportBtn.click();
-
-      expect(emitSpy).toHaveBeenCalledWith(Events.PROJECT_EXPORT_REQUESTED, {
-        timestamp: expect.any(Number),
-      });
-
-      document.body.removeChild(exportBtn);
+    it.skip('export-btn handled by UIController (sole owner)', () => {
+      // Duplicate handler removed — UIController owns all DOM button wiring.
     });
   });
 
   describe('Event Bus Integration', () => {
-    it('should handle PROJECT_STATE_REQUEST event', () => {
-      const callback = vi.fn();
-
-      eventBus.emit(Events.PROJECT_STATE_REQUEST, {
-        callback,
-        timestamp: Date.now(),
-      });
-
-      expect(callback).toHaveBeenCalledWith(
-        mockDependencies.components,
-        mockDependencies.connections
-      );
+    it.skip('PROJECT_STATE_REQUEST handling moved to ExportImportManager (sole owner)', () => {
+      // Duplicate handler removed — ExportImportManager is the single owner
+      // for project state serialization (uses live getters, not stale snapshots).
     });
 
     it.skip('PROJECT_IMPORTED handling moved to main.ts', () => {
@@ -332,7 +289,7 @@ describe('InputEventCoordinator', () => {
 
       // Set up component selection and dragging state
       mockDependencies.getComponentAt = vi.fn().mockReturnValue(component);
-      mockDependencies.selectedComponent = component;
+      mockDependencies.getSelectedComponent = vi.fn().mockReturnValue(component);
 
       // Simulate mouse down to start dragging
       const mouseDownEvent = new MouseEvent('mousedown', { clientX: 150, clientY: 120, button: 0 });
@@ -373,7 +330,7 @@ describe('InputEventCoordinator', () => {
 
       // Set up component selection and ensure getComponentAt returns the component
       mockDependencies.getComponentAt = vi.fn().mockReturnValue(component);
-      mockDependencies.selectedComponent = component;
+      mockDependencies.getSelectedComponent = vi.fn().mockReturnValue(component);
 
       // Simulate mouse down to start dragging
       const mouseDownEvent = new MouseEvent('mousedown', { clientX: 150, clientY: 120, button: 0 });
