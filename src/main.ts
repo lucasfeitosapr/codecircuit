@@ -317,7 +317,7 @@ export class MotherboardApp {
           this.appStateManager.setCurrentView(currentView);
         },
         pushView: (view: string) => {
-          const comp = this.appStateManager.getComponents().find(c => c.id === view);
+          const comp = this.appStateManager.findComponentDeep(view, ViewStack.getInstance());
           if (comp) {
             this.schematicViewManager.enterSchematicView(comp as ModuleComponent);
           }
@@ -481,6 +481,7 @@ export class MotherboardApp {
       getCurrentView: () => this.appStateManager.getCurrentView(),
       getComponents: () => this.appStateManager.getComponents(),
       getConnections: () => this.appStateManager.getConnections(),
+      findComponentDeep: id => this.appStateManager.findComponentDeep(id, ViewStack.getInstance()),
       setComponents: components => this.appStateManager.setComponents(components),
       setConnections: connections => this.appStateManager.setConnections(connections),
       setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
