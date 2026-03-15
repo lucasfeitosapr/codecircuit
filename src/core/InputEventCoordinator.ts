@@ -177,64 +177,15 @@ export class InputEventCoordinator {
       });
     }
 
-    // Back button handled by UIController - removed duplicate handler
-
-    // Help button handled by UIController - removed duplicate handler
-
-    // Reset button
-    const resetBtn = document.getElementById('reset-btn');
-    if (resetBtn) {
-      const resetHandler = () => {
-        if (confirm('Reset the entire board? This cannot be undone.')) {
-          this.dependencies.components.length = 0;
-          this.dependencies.connections.length = 0;
-          this.dependencies.setSelectedComponent(null);
-          this.dependencies.hideDatasheet();
-        }
-      };
-      resetBtn.addEventListener('click', resetHandler);
-      this.eventListeners.push({
-        element: resetBtn,
-        event: 'click',
-        handler: resetHandler,
-      });
-    }
-
-    // Export button
-    const exportBtn = document.getElementById('export-btn');
-    if (exportBtn) {
-      const exportHandler = () => {
-        eventBus.emit(Events.PROJECT_EXPORT_REQUESTED, {
-          timestamp: Date.now(),
-        });
-      };
-      exportBtn.addEventListener('click', exportHandler);
-      this.eventListeners.push({
-        element: exportBtn,
-        event: 'click',
-        handler: exportHandler,
-      });
-    }
+    // Back button, Help button, Reset button, Export button:
+    // All handled by UIController (sole owner). Duplicate handlers removed.
   }
 
   /**
    * Setup file import handler
    */
   private setupImportHandler(): void {
-    const importBtn = document.getElementById('import-btn');
-    if (importBtn) {
-      const importHandler = () => {
-        eventBus.emit(Events.PROJECT_IMPORT_REQUESTED, {
-          timestamp: Date.now(),
-        });
-      };
-      importBtn.addEventListener('click', importHandler);
-      this.eventListeners.push({
-        element: importBtn,
-        event: 'click',
-        handler: importHandler,
-      });
-    }
+    // Import button handled by UIController (sole owner). Duplicate handler removed.
   }
 
   /**

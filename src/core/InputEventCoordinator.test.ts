@@ -239,44 +239,12 @@ describe('InputEventCoordinator', () => {
   });
 
   describe('UI Button Event Handlers', () => {
-    it('should handle reset button click', () => {
-      const resetBtn = document.createElement('button');
-      resetBtn.id = 'reset-btn';
-      document.body.appendChild(resetBtn);
-
-      // Mock confirm to return true
-      (globalThis as any).confirm = vi.fn().mockReturnValue(true);
-
-      // Create new coordinator to register the button
-      coordinator.destroy();
-      coordinator = new InputEventCoordinator(mockDependencies);
-
-      resetBtn.click();
-
-      expect(mockDependencies.setSelectedComponent).toHaveBeenCalledWith(null);
-      expect(mockDependencies.hideDatasheet).toHaveBeenCalled();
-
-      document.body.removeChild(resetBtn);
+    it.skip('reset-btn handled by UIController (sole owner)', () => {
+      // Duplicate handler removed — UIController owns all DOM button wiring.
     });
 
-    it('should handle export button click', () => {
-      const exportBtn = document.createElement('button');
-      exportBtn.id = 'export-btn';
-      document.body.appendChild(exportBtn);
-
-      const emitSpy = vi.spyOn(eventBus, 'emit');
-
-      // Create new coordinator to register the button
-      coordinator.destroy();
-      coordinator = new InputEventCoordinator(mockDependencies);
-
-      exportBtn.click();
-
-      expect(emitSpy).toHaveBeenCalledWith(Events.PROJECT_EXPORT_REQUESTED, {
-        timestamp: expect.any(Number),
-      });
-
-      document.body.removeChild(exportBtn);
+    it.skip('export-btn handled by UIController (sole owner)', () => {
+      // Duplicate handler removed — UIController owns all DOM button wiring.
     });
   });
 
