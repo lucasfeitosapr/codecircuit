@@ -128,8 +128,11 @@ describe('SchematicViewManager', () => {
       hideDatasheet: vi.fn(),
       getComponents: () => appStateManager.getComponents(),
       getConnections: () => appStateManager.getConnections(),
+      getCurrentViewComponents: () => appStateManager.getCurrentViewComponents(),
+      getCurrentViewConnections: () => appStateManager.getCurrentViewConnections(),
       setComponents: (components) => appStateManager.setComponents(components),
       setConnections: (connections) => appStateManager.setConnections(connections),
+      initializeMainView: () => appStateManager.initializeMainView(),
     });
   });
 

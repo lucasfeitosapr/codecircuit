@@ -225,8 +225,13 @@ describe('Component Lookup Fix Verification', () => {
       hideDatasheet: vi.fn(),
       getComponents: () => globalComponents,
       getConnections: () => connections,
+      getCurrentViewComponents: () => currentView.components,
+      getCurrentViewConnections: () => currentView.connections,
       setComponents: (c: ComponentBase[]) => { globalComponents.length = 0; globalComponents.push(...c); },
       setConnections: (c: any[]) => { connections.length = 0; connections.push(...c); },
+      initializeMainView: () => {
+        currentView = { type: 'main', component: null, camera: { ...camera }, components: globalComponents, connections };
+      },
     };
 
     schematicViewManager = createSchematicViewManager(schematicContext);
