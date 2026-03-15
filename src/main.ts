@@ -788,9 +788,12 @@ document.addEventListener('DOMContentLoaded', () => {
   (window as any).app = app;
 
   // Phase 3 (CC-15): Bootstrap DOM-dependent features
-  bootstrapDOM({
-    renderScheduler: (app as any).renderScheduler,
-  });
+  // Skip in test environments to avoid EventBus listener overhead in performance tests
+  if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+    bootstrapDOM({
+      renderScheduler: (app as any).renderScheduler,
+    });
+  }
 });
 
 export default MotherboardApp;
