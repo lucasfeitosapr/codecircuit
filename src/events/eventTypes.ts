@@ -21,6 +21,7 @@ export const Events = {
   COMPONENT_DELETE_REQUESTED: 'input.component.delete.requested',
   COMPONENT_SELECTED: 'input.component.selected',
   COMPONENT_DESELECTED: 'input.component.deselected',
+  COMPONENT_DRAG_STARTED: 'input.component.drag.started',
   COMPONENT_DRAG_UPDATED: 'input.component.drag.updated',
   COMPONENT_DRAG_COMPLETED: 'input.component.drag.completed',
   COMPONENT_HIT_TEST_REQUESTED: 'input.component.hit.test.requested',

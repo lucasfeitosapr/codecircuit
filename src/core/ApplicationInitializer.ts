@@ -5,8 +5,6 @@
 
 import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
-import { stateManager } from '../state/StateManager';
-import { layeredRenderer } from '../rendering/LayeredRenderer';
 import { logger } from '../utils/Logger';
 
 // Import V2 plugins
@@ -15,13 +13,6 @@ import { PowerCorePluginV2 } from '../components/plugins/PowerCorePluginV2';
 import { ModuleICPluginV2 } from '../components/plugins/ModuleICPluginV2';
 import { TaskResistorPluginV2 } from '../components/plugins/TaskResistorPluginV2';
 import { GatewayPluginV2 } from '../components/plugins/GatewayPluginV2';
-
-// Import layers
-import BackgroundLayer from '../rendering/layers/BackgroundLayer';
-import ImplementationLayer from '../rendering/layers/ImplementationLayer';
-import ConnectionsLayer from '../rendering/layers/ConnectionsLayer';
-import RuntimeLayer from '../rendering/layers/RuntimeLayer';
-import UILayer from '../rendering/layers/UILayer';
 
 import type { ComponentBase, Connection } from '../types';
 
@@ -36,9 +27,6 @@ export interface InitializationContext {
   componentRegistry: any;
   componentTypes: Record<string, any>;
   categories: Record<string, any>;
-  // Optional: provide existing layer instances so LayeredRenderer uses the same ones as the app
-  runtimeLayer?: RuntimeLayer;
-  uiLayer?: UILayer;
 }
 
 export class ApplicationInitializer {
@@ -82,56 +70,6 @@ export class ApplicationInitializer {
     logger.debug('init', `V2 Plugins registered: ${this.context.componentRegistry.getPluginTypes().join(', ')}`);
   }
 
-  registerRenderingLayers() {
-    // Register layers (idempotent during app lifecycle)
-    try {
-      layeredRenderer.registerLayer(BackgroundLayer.name, BackgroundLayer as any);
-      layeredRenderer.registerLayer(ImplementationLayer.name, ImplementationLayer as any);
-      layeredRenderer.registerLayer(ConnectionsLayer.name, ConnectionsLayer as any);
-      // Class-based layers must be registered as instances — use app instances if provided
-      const runtime = this.context.runtimeLayer ?? new RuntimeLayer();
-      const ui = this.context.uiLayer ?? new UILayer();
-      layeredRenderer.registerLayer(RuntimeLayer.name, runtime as any);
-      layeredRenderer.registerLayer(UILayer.name, ui as any);
-    } catch (e) {
-      // ignore if already registered
-    }
-  }
-
-  initializeStateManager() {
-    try {
-      // initialize state manager snapshot from current app state (Phase-1)
-      // StateManager expects records keyed by id; convert arrays to maps keyed by component/connection id
-      const components = this.context.getComponents();
-      const connections = this.context.getConnections();
-      const currentView = this.context.getCurrentView();
-      const selectedComponent = this.context.getSelectedComponent();
-      const camera = this.context.getCamera();
-
-      const componentsById = components.reduce((acc: Record<string, any>, c: any) => {
-        acc[c.id] = c;
-        return acc;
-      }, {} as Record<string, any>);
-
-      const connectionsById = connections.reduce((acc: Record<string, any>, conn: any) => {
-        acc[conn.id] = conn;
-        return acc;
-      }, {} as Record<string, any>);
-
-      stateManager.setSnapshot({
-        components: componentsById,
-        connections: connectionsById,
-        view: currentView,
-        selectedComponentId: (selectedComponent as any)?.id ?? null,
-        selectedComponentIds: selectedComponent ? [(selectedComponent as any).id] : [],
-        camera: { x: camera.x, y: camera.y, zoom: camera.zoom },
-      } as any);
-    } catch (err) {
-      // avoid affecting runtime if snapshotting fails
-      // eslint-disable-next-line no-console
-      console.error('Failed to initialize stateManager snapshot', err);
-    }
-  }
 
   seedDemoDataIfRequested() {
     // Optional demo seeding: append `?seedDemo=true` to the URL to populate sample components for smoke tests
@@ -205,15 +143,7 @@ export class ApplicationInitializer {
     console.log('🚀 Starting application initialization...');
 
     try {
-      // Phase 1: Register rendering layers
-      this.registerRenderingLayers();
-      logger.debug('init', 'Rendering layers registered');
-
-      // Phase 2: Initialize state manager
-      this.initializeStateManager();
-      console.log('✅ State manager initialized');
-
-      // Phase 3: Setup plugin system
+      // Setup plugin system
       this.setupPluginSystem();
       console.log('✅ Plugin system initialized');
 

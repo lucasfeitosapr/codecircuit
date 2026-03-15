@@ -62,6 +62,67 @@ export class ConnectionManager {
         this.setupEventHandlers();
     }
 
+    /**
+     * Phase 4: Wire app-level event handlers that were previously in main.ts
+     * (setupConnectionManagerEventHandlers).
+     */
+    wireAppHandlers(hooks: {
+        getCurrentViewComponents: () => any[];
+        addConnectionToCurrentView: (connection: Connection) => void;
+        getConnections: () => Connection[];
+        updateConnectionModeUI: () => void;
+        clearConnectionIntents: () => void;
+        runtimeEnergyFlow: (fromX: number, fromY: number, toX: number, toY: number, color: string) => void;
+        getCategoryColor: (category: string) => string;
+    }): void {
+        // Handle connection creation requests from UI
+        this.eventBus.on(Events.CONNECTION_CREATE_REQUESTED, (payload: any) => {
+            const pinHit = this.getPinAt(
+                payload.x,
+                payload.y,
+                hooks.getCurrentViewComponents()
+            );
+            if (pinHit) {
+                if (this.getConnectionState().isConnecting) {
+                    this.endConnection(pinHit);
+                } else {
+                    this.startConnection(pinHit);
+                }
+            }
+        });
+
+        // Handle connection state changes for UI updates
+        this.eventBus.on('connection.start', () => {
+            hooks.updateConnectionModeUI();
+        });
+
+        this.eventBus.on('connection.cancelled', () => {
+            hooks.updateConnectionModeUI();
+            hooks.clearConnectionIntents();
+        });
+
+        // Handle successful connection creation
+        this.eventBus.on(Events.ConnectionCreated, (payload: any) => {
+            if (
+                payload.connection &&
+                !hooks.getConnections().find((c: Connection) => c.id === payload.connection.id)
+            ) {
+                hooks.addConnectionToCurrentView(payload.connection);
+            }
+
+            const categoryColor = hooks.getCategoryColor(payload.type ?? 'frontend');
+            hooks.runtimeEnergyFlow(
+                payload.from.x,
+                payload.from.y,
+                payload.to.x,
+                payload.to.y,
+                categoryColor
+            );
+
+            hooks.updateConnectionModeUI();
+        });
+    }
+
     private setupEventHandlers() {
         // Listen for connection requests from UI interactions
         this.eventBus.on(Events.CONNECTION_START_REQUESTED, (payload: any) => {

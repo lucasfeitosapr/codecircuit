@@ -14,6 +14,8 @@
  *   scheduler.start();     // Begin render loop
  */
 
+import { eventBus } from '../events/EventBus';
+import { Events } from '../events/eventTypes';
 import { logger } from '../utils/Logger';
 import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 
@@ -128,5 +130,51 @@ export class RenderScheduler {
     const timestamp = performance.now();
     this.renderFn(timestamp);
     this.dirty = false;
+  }
+
+  /**
+   * Phase 4: Wire event handlers that were previously in main.ts
+   * (setupRenderSchedulerEventHandlers). Marks dirty on state changes.
+   */
+  wireEventHandlers(hooks: {
+    pushHistorySnapshot: () => void;
+    showTemporaryMessage: (message: string) => void;
+  }): void {
+    // Component changes
+    eventBus.on(Events.ComponentCreated, () => this.markDirty());
+    eventBus.on(Events.ComponentUpdated, () => this.markDirty());
+    eventBus.on(Events.ComponentDeleted, () => this.markDirty());
+
+    // Push undo snapshot when a drag begins (before position changes)
+    eventBus.on(Events.COMPONENT_DRAG_STARTED, () => hooks.pushHistorySnapshot());
+
+    // High-frequency interaction updates (dragging, connection preview)
+    eventBus.on(Events.COMPONENT_DRAG_UPDATED, () => this.markDirty());
+    eventBus.on('connection.drawing', () => this.markDirty());
+
+    // Connection changes
+    eventBus.on(Events.ConnectionCreated, () => this.markDirty());
+    eventBus.on(Events.ConnectionDeleted, () => this.markDirty());
+
+    // Camera/Viewport changes
+    eventBus.on(Events.VIEWPORT_CAMERA_UPDATED, () => this.markDirty());
+    eventBus.on(Events.VIEWPORT_ZOOM_REQUESTED, () => this.markDirty());
+    eventBus.on(Events.VIEWPORT_PAN_REQUESTED, () => this.markDirty());
+
+    // Undo/redo feedback and re-render
+    eventBus.on('history.undo.applied', () => {
+      hooks.showTemporaryMessage('Undo');
+      this.markDirty();
+    });
+    eventBus.on('history.redo.applied', () => {
+      hooks.showTemporaryMessage('Redo');
+      this.markDirty();
+    });
+    eventBus.on('history.undo.empty', () => {
+      hooks.showTemporaryMessage('Nothing to undo');
+    });
+    eventBus.on('history.redo.empty', () => {
+      hooks.showTemporaryMessage('Nothing to redo');
+    });
   }
 }

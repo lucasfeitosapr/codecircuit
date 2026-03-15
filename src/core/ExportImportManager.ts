@@ -22,13 +22,77 @@ import type { ComponentBase, Connection, ModuleComponent } from '../types';
  * 
  * Phase 2B: Added circular reference detection and depth limiting
  */
+export interface ExportImportAppHooks {
+  getCurrentView: () => { type: string; component?: any; components: any[]; connections: any[] };
+  getComponents: () => ComponentBase[];
+  getConnections: () => Connection[];
+  setComponents: (components: ComponentBase[], emitEvents?: boolean) => void;
+  setConnections: (connections: Connection[]) => void;
+  setSelectedComponent: (component: ComponentBase | null) => void;
+  initializeMainView: () => void;
+  setCamera: (camera: { x: number; y: number; zoom: number }) => void;
+  rebuildSpatialIndex: (components: ComponentBase[]) => void;
+  pushHistorySnapshot: () => void;
+  showError: (message: string) => void;
+  showSuccess: (message: string) => void;
+}
+
 export class ExportImportManager {
   private projectName: string = 'Motherboard Project';
   private projectVersion: string = '1.0.0';
   private visitedComponents: Set<string> = new Set();
+  private hooks: ExportImportAppHooks | null = null;
 
   constructor() {
     this.setupEventListeners();
+  }
+
+  /**
+   * Phase 4: Wire app-level event handlers that were previously in main.ts.
+   * Call this after all managers are initialized.
+   */
+  wireAppHandlers(hooks: ExportImportAppHooks): void {
+    this.hooks = hooks;
+
+    // Handle requests for current project state (export needs live data)
+    eventBus.on(
+      Events.PROJECT_STATE_REQUEST,
+      (payload: { callback: (components: any[], connections: any[]) => void }) => {
+        const currentView = hooks.getCurrentView();
+        if (currentView.type === 'schematic' && currentView.component) {
+          currentView.component.internalComponents = [...currentView.components];
+          currentView.component.internalConnections = [...currentView.connections];
+        }
+        payload.callback(hooks.getComponents(), hooks.getConnections());
+      }
+    );
+
+    // Handle project import completion
+    eventBus.on(Events.PROJECT_IMPORTED, (payload: { components: any[]; connections: any[] }) => {
+      hooks.pushHistorySnapshot();
+      // Use emitEvents=false to prevent duplicate ComponentCreated events during bulk import
+      hooks.setComponents(payload.components, false);
+      hooks.setConnections(payload.connections);
+      hooks.setSelectedComponent(null);
+      hooks.initializeMainView();
+      hooks.setCamera({ x: 0, y: 0, zoom: 1 });
+      hooks.rebuildSpatialIndex(payload.components);
+    });
+
+    // Handle import errors
+    eventBus.on(Events.PROJECT_IMPORT_ERROR, (payload: { error: string }) => {
+      hooks.showError(`Import Error: ${payload.error}`);
+    });
+
+    // Handle export completion
+    eventBus.on(
+      Events.PROJECT_EXPORTED,
+      (payload: { componentCount: number; connectionCount: number }) => {
+        hooks.showSuccess(
+          `Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`
+        );
+      }
+    );
   }
 
   /**

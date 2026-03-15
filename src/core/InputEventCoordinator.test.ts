@@ -72,6 +72,11 @@ describe('InputEventCoordinator', () => {
       // Selection and interaction state
       selectedComponent: null,
       setSelectedComponent: vi.fn(),
+      addToSelection: vi.fn(),
+      removeFromSelection: vi.fn(),
+      clearSelection: vi.fn(),
+      getSelectedComponentIds: vi.fn().mockReturnValue(new Set()),
+      isComponentSelected: vi.fn().mockReturnValue(false),
 
       // Connection management
       connectionManager: {

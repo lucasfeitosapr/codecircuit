@@ -1,16 +1,17 @@
 /**
- * Legacy Renderer Module
+ * Renderer Module (formerly LegacyRenderer)
  *
- * Extracted from main.ts - contains all legacy rendering methods
- * that were previously inline in the MotherboardApp class.
+ * Phase 5: Simplified — LayeredRenderer feature-flag toggle removed.
+ * This is now the sole renderer for the application.
  *
- * This module handles:
+ * Handles:
  * - Canvas drawing operations (grid, backgrounds, overlays)
  * - Trace rendering (orthogonal, intention, temp connections)
  * - Component and connection rendering delegation
- * - Legacy render loop (when LayeredRenderer is disabled)
+ * - Viewport culling and batched component rendering
  *
  * Created: 2025-09-22 (Phase 2A Extended - Main.ts Migration)
+ * Simplified: 2026-03 (Phase 5 - Rendering Cleanup)
  */
 
 import {
@@ -20,8 +21,7 @@ import {
 } from '../renderer';
 import * as rendererHelpers from '../ui/rendererHelpers';
 import { renderComponentWrapper } from '../ui/componentRenderer';
-import { layeredRenderer } from './LayeredRenderer';
-import { isNewRendererEnabled, PerformanceConfig } from '../config/FeatureFlagAdapter';
+import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 import { BatchedComponentRenderer } from './BatchedComponentRenderer';
 import { RenderProfiler } from './RenderProfiler';
 import { logger } from '../utils/Logger';
@@ -56,80 +56,19 @@ export class LegacyRenderer {
   // Shared batched renderer instance for optimal performance
   private static batchedRenderer = new BatchedComponentRenderer();
   /**
-   * Main legacy render method - handles the complete render cycle
-   * when LayeredRenderer is disabled or fails
+   * Main render method — single render path (Phase 5: LayeredRenderer toggle removed).
    */
   static render(context: LegacyRendererContext): void {
-    // Start frame profiling if enabled
     RenderProfiler.beginFrame();
-    // Debug: Check if render is being called during component drag
+
     if (context.inputEventCoordinator.getInteractionState().isDragging) {
       if (PerformanceConfig.LOGGING?.LOG_RENDER_FRAMES) {
-        logger.debug('render', 'Legacy render() called during drag');
+        logger.debug('render', 'Render called during drag');
       }
     }
 
-    // Try LayeredRenderer first (feature-flagged)
-    if (isNewRendererEnabled()) {
-      try {
-        const visibleModels = context.getCurrentViewComponents();
-        // precompute simple connection pin positions for ConnectionsLayer
-        const visibleConnections = context
-          .getCurrentViewConnections()
-          .map((connection: Connection) => {
-            const fromPinDef = connection.from.component.pins?.output?.[connection.from.pinIndex];
-            const toPinDef = connection.to.component.pins?.input?.[connection.to.pinIndex];
-            const fromX = connection.from.component.x + (fromPinDef?.x ?? 0);
-            const fromY = connection.from.component.y + (fromPinDef?.y ?? 0);
-            const toX = connection.to.component.x + (toPinDef?.x ?? 0);
-            const toY = connection.to.component.y + (toPinDef?.y ?? 0);
-            return {
-              ...connection,
-              from: {
-                ...connection.from,
-                x: fromX,
-                y: fromY,
-                component: connection.from.component,
-              },
-              to: { ...connection.to, x: toX, y: toY, component: connection.to.component },
-            };
-          });
-
-        // Begin frame when using layered path as well
-        RenderProfiler.beginFrame();
-        layeredRenderer.render(context.ctx, {
-          timestamp: performance.now(),
-          camera: context.camera,
-          payload: {
-            models: visibleModels,
-            connections: visibleConnections,
-            categories: context.categories,
-            selectedComponentId: context.selectedComponent?.id ?? null,
-            viewType: context.currentView.type,
-            isConnecting: context.connectionManager.getConnectionState().isConnecting,
-            connectionStart: context.connectionManager.getConnectionState().connectionStart,
-            mousePos: context.inputEventCoordinator.getMousePosition(),
-          },
-        });
-        // End frame with counts when layered path succeeds
-        RenderProfiler.endFrame({
-          componentsRendered: visibleModels?.length ?? 0,
-          connectionsRendered: visibleConnections?.length ?? 0,
-        });
-        console.log('✅ LayeredRenderer SUCCESS - returning early (legacy path skipped)');
-        return;
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('⚠️ ⚠️ ⚠️  LayeredRenderer ERROR - Falling back to legacy (DOUBLE RENDERING!) ⚠️ ⚠️ ⚠️', e);
-        console.error('^ This causes duplicate connections with different paths. Fix the error above!');
-      }
-    }
-
-    // Legacy render path (unchanged behaviour)
-    console.log('🔴 Running LEGACY render path (this will draw connections again if LayeredRenderer already ran!)');
     LegacyRenderer.renderLegacyPath(context);
 
-    // End frame profiling with rough counts
     try {
       const componentsRendered = context.getCurrentViewComponents()?.length ?? 0;
       const connectionsRendered = context.getCurrentViewConnections()?.length ?? 0;

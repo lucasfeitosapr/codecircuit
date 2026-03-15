@@ -22,8 +22,11 @@ export interface SchematicViewManagerContext {
   hideDatasheet: () => void;
   getComponents: () => ComponentBase[];
   getConnections: () => any[];
+  getCurrentViewComponents: () => ComponentBase[];
+  getCurrentViewConnections: () => any[];
   setComponents: (components: ComponentBase[]) => void;
   setConnections: (connections: any[]) => void;
+  initializeMainView: () => void;
 }
 
 export class SchematicViewManager {
@@ -57,21 +60,14 @@ export class SchematicViewManager {
     const viewNavigationManager = this.context.getViewNavigationManager();
     const uiController = this.context.getUIController();
 
-    // Save current view state with proper array copying
+    // Save current view state — snapshot copies for the viewStack
     const currentViewState = {
       type: currentView.type,
       component: currentView.component,
       camera: { ...viewportManager.camera },
       selectedComponent: this.context.getSelectedComponent(),
-      // For main view, save global arrays; for schematic view, save view arrays
-      components:
-        currentView.type === 'main'
-          ? [...this.context.getComponents()]
-          : [...currentView.components],
-      connections:
-        currentView.type === 'main'
-          ? [...this.context.getConnections()]
-          : [...currentView.connections],
+      components: [...this.context.getCurrentViewComponents()],
+      connections: [...this.context.getCurrentViewConnections()],
     };
     viewStack.push(currentViewState);
 
@@ -92,9 +88,9 @@ export class SchematicViewManager {
         type: 'schematic',
         component: moduleComponent,
         camera: { x: 0, y: 0, zoom: 1 },
-        // Create defensive copies to prevent contamination
-        components: [...(moduleComponent.internalComponents ?? [])],
-        connections: [...(moduleComponent.internalConnections ?? [])],
+        // Reference the module's internal arrays directly — single source of truth
+        components: moduleComponent.internalComponents!,
+        connections: moduleComponent.internalConnections!,
       };
 
       this.context.setCurrentView(newView);
@@ -123,11 +119,7 @@ export class SchematicViewManager {
     const viewNavigationManager = this.context.getViewNavigationManager();
     const uiController = this.context.getUIController();
 
-    // Save current schematic state to the component's internal structure
-    if (currentView.type === 'schematic' && currentView.component) {
-      currentView.component.internalComponents = [...currentView.components];
-      currentView.component.internalConnections = [...currentView.connections];
-    }
+    // No need to save back — currentView.components IS moduleComponent.internalComponents (same reference)
 
     // Restore previous view
     const previousView = viewStack.pop();
@@ -142,29 +134,16 @@ export class SchematicViewManager {
     this.context.setSelectedComponent(null);
 
     viewNavigationManager.animateToMainView(previousView.camera, () => {
-      // Restore the previous view with proper array isolation
+      // Restore the previous view — use its saved references
       const restoredView: ViewState = {
         type: previousView.type,
         component: previousView.component,
         camera: { ...previousView.camera },
-        components: [...(previousView.components || [])], // Use saved components from viewStack
-        connections: [...(previousView.connections || [])], // Use saved connections from viewStack
+        components: previousView.components || [],
+        connections: previousView.connections || [],
       };
 
       this.context.setCurrentView(restoredView);
-
-      // For main view, also sync with global arrays to maintain backward compatibility
-      if (previousView.type === 'main') {
-        // Restore global arrays from the saved state
-        const components = this.context.getComponents();
-        const connections = this.context.getConnections();
-
-        components.length = 0; // Clear existing
-        components.push(...restoredView.components);
-
-        connections.length = 0; // Clear existing
-        connections.push(...restoredView.connections);
-      }
 
       viewportManager.setCamera({ ...previousView.camera });
       this.context.setSelectedComponent(previousView.selectedComponent);
@@ -194,22 +173,14 @@ export class SchematicViewManager {
       // Transition complete
       viewStack.clear();
 
-      const mainView: ViewState = {
-        type: 'main',
-        component: null,
-        camera: { ...mainCamera },
-        components: [...this.context.getComponents()],
-        connections: [...this.context.getConnections()],
-      };
-
-      this.context.setCurrentView(mainView);
+      this.context.initializeMainView();
       viewportManager.setCamera({ ...mainCamera });
       this.context.setTransitioning(false);
       uiController.updateBreadcrumbs();
 
       // Emit event for other systems
       eventBus.emit('schematic.view.main.entered', {
-        view: mainView,
+        view: this.context.getCurrentView(),
         timestamp: Date.now(),
       });
     });

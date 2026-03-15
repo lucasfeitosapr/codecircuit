@@ -37,6 +37,8 @@ import {
   ApplicationInitializer,
   createApplicationInitializer,
 } from './core/ApplicationInitializer';
+import { HistoryManager } from './core/HistoryManager';
+import { AutoSaveManager } from './core/AutoSaveManager';
 
 // Legacy imports (to be gradually reduced)
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
@@ -45,11 +47,9 @@ import { RenderScheduler } from './rendering/RenderScheduler';
 import { PerformanceConfig } from './config/FeatureFlagAdapter';
 import { connectionRenderer } from './ui/rendererHelpers';
 import { createFeatureTogglePanel } from './ui/FeatureTogglePanel';
-import './core/RealWorldMovementTest'; // Browser console testing utilities
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { MotherboardReactUI } from './ui/react/App';
-// import { layeredRenderer } from './rendering/LayeredRenderer'; // Unused import
 import RuntimeLayer from './rendering/layers/RuntimeLayer';
 import UILayer from './rendering/layers/UILayer';
 import { RenderProfiler } from './rendering/RenderProfiler';
@@ -96,6 +96,12 @@ export class MotherboardApp {
 
   // Performance optimization modules (Phase 2B)
   private renderScheduler!: RenderScheduler;
+
+  // Undo/redo history
+  private historyManager!: HistoryManager;
+
+  // Auto-save persistence
+  private autoSaveManager!: AutoSaveManager;
 
   // Configuration data
   private componentTypes!: Record<string, Partial<ComponentBase>>;
@@ -221,7 +227,10 @@ export class MotherboardApp {
       this.keyboardShortcutManager = createKeyboardShortcutManager({
         getSelectedComponent: () => this.appStateManager.getSelectedComponent(),
         setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
+        getSelectedComponentIds: () => this.appStateManager.getSelectedComponentIds(),
         getCurrentView: () => this.appStateManager.getCurrentView(),
+        getCurrentViewComponents: () => this.getCurrentViewComponents(),
+        getCurrentViewConnections: () => this.getCurrentViewConnections(),
         isTransitioning: () => this.appStateManager.isInTransition(),
         getViewStackSize: () => ViewStack.getInstance().size(),
         getMainComponents: () => this.appStateManager.getComponents(),
@@ -234,6 +243,9 @@ export class MotherboardApp {
           this.schematicViewManager.enterSchematicView(component as ModuleComponent),
         cancelConnection: () => this.connectionManager.cancelConnection(),
         isConnecting: () => this.connectionManager.getConnectionState().isConnecting,
+        addComponentToCurrentView: component => this.appStateManager.addComponentToCurrentView(component),
+        addConnectionToCurrentView: connection => this.appStateManager.addConnectionToCurrentView(connection),
+        pushHistorySnapshot: () => this.historyManager.pushSnapshot(),
       });
 
       // Initialize schematic view manager
@@ -251,8 +263,11 @@ export class MotherboardApp {
         hideDatasheet: () => hideDatasheetUI(),
         getComponents: () => this.appStateManager.getComponents(),
         getConnections: () => this.appStateManager.getConnections(),
+        getCurrentViewComponents: () => this.appStateManager.getCurrentViewComponents(),
+        getCurrentViewConnections: () => this.appStateManager.getCurrentViewConnections(),
         setComponents: components => this.appStateManager.setComponents(components),
         setConnections: connections => this.appStateManager.setConnections(connections),
+        initializeMainView: () => this.appStateManager.initializeMainView(),
       });
 
       // Initialize InputEventCoordinator
@@ -276,6 +291,11 @@ export class MotherboardApp {
         isTransitioning: this.appStateManager.isInTransition(),
         selectedComponent: this.appStateManager.getSelectedComponent(),
         setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
+        addToSelection: component => this.appStateManager.addToSelection(component),
+        removeFromSelection: componentId => this.appStateManager.removeFromSelection(componentId),
+        clearSelection: () => this.appStateManager.clearSelection(),
+        getSelectedComponentIds: () => this.appStateManager.getSelectedComponentIds(),
+        isComponentSelected: componentId => this.appStateManager.isComponentSelected(componentId),
         connectionManager: this.connectionManager,
         updateConnectionModeUI: this.updateConnectionModeUI.bind(this),
         componentLifecycleManager: this.componentLifecycleManager,
@@ -297,9 +317,10 @@ export class MotherboardApp {
           this.appStateManager.setCurrentView(currentView);
         },
         pushView: (view: string) => {
-          this.schematicViewManager.enterSchematicView(
-            this.appStateManager.getComponents().find(c => c.id === view)
-          );
+          const comp = this.appStateManager.getComponents().find(c => c.id === view);
+          if (comp) {
+            this.schematicViewManager.enterSchematicView(comp as ModuleComponent);
+          }
         },
         popView: () => {
           this.schematicViewManager.exitSchematicView();
@@ -307,84 +328,11 @@ export class MotherboardApp {
         requestAnimationFrame: (callback: (time: number) => void) =>
           requestAnimationFrame(callback),
         getComponent: (id: string) => {
-          // Enhanced component lookup that searches across all possible component locations
-          // to fix the deep nesting animation bug
-
-          // 1. First try global components (main view navigation)
-          const globalComponent = this.appStateManager.getComponents().find(c => c.id === id);
-          if (globalComponent) {
-            return globalComponent;
+          const found = this.appStateManager.findComponentDeep(id, ViewStack.getInstance());
+          if (!found) {
+            console.warn(`Component ${id} not found in any location`);
           }
-
-          // 2. Try current view components (schematic view navigation)
-          const currentView = this.appStateManager.getCurrentView();
-          if (currentView.type === 'schematic' && currentView.components) {
-            const currentViewComponent = currentView.components.find(c => c.id === id);
-            if (currentViewComponent) {
-              return currentViewComponent;
-            }
-          }
-
-          // 3. Try internal components of current view's component (nested navigation)
-          if (currentView.type === 'schematic' && currentView.component?.type === 'module-ic') {
-            const moduleComponent = currentView.component as any; // ModuleComponent
-            if (moduleComponent.internalComponents) {
-              const internalComponent = moduleComponent.internalComponents.find((c: any) => c.id === id);
-              if (internalComponent) {
-                return internalComponent;
-              }
-            }
-          }
-
-          // 4. Try components in ViewStack (back navigation scenarios)
-          const viewStack = ViewStack.getInstance();
-          const stackViews = viewStack.serialize();
-          for (const stackView of stackViews) {
-            if (stackView.components) {
-              const stackComponent = stackView.components.find((c: any) => c.id === id);
-              if (stackComponent) {
-                return stackComponent;
-              }
-            }
-          }
-
-          // 5. Deep search in all Module IC internal components (thorough fallback)
-          const searchInModuleICs = (components: ComponentBase[]): ComponentBase | undefined => {
-            for (const component of components) {
-              if (component.type === 'module-ic') {
-                const moduleIC = component as any; // ModuleComponent
-                if (moduleIC.internalComponents) {
-                  const found = moduleIC.internalComponents.find((c: any) => c.id === id);
-                  if (found) {
-                    return found;
-                  }
-                  // Recursive search in nested Module ICs
-                  const deepFound = searchInModuleICs(moduleIC.internalComponents);
-                  if (deepFound) {
-                    return deepFound;
-                  }
-                }
-              }
-            }
-            return undefined;
-          };
-
-          // Search in global components' internal structure
-          const deepGlobalSearch = searchInModuleICs(this.appStateManager.getComponents());
-          if (deepGlobalSearch) {
-            return deepGlobalSearch;
-          }
-
-          // Search in current view components' internal structure
-          if (currentView.components) {
-            const deepCurrentViewSearch = searchInModuleICs(currentView.components);
-            if (deepCurrentViewSearch) {
-              return deepCurrentViewSearch;
-            }
-          }
-
-          console.warn(`Component ${id} not found in any component location (global, current view, ViewStack, or nested)`);
-          return undefined;
+          return found;
         },
       });
 
@@ -430,9 +378,6 @@ export class MotherboardApp {
         componentRegistry: this.componentRegistry,
         componentTypes: this.componentTypes,
         categories: this.categories,
-        // Provide shared layer instances so LayeredRenderer reuses them
-        runtimeLayer: this.runtimeLayer,
-        uiLayer: this.uiLayer,
       });
 
       // Start the application
@@ -475,8 +420,36 @@ export class MotherboardApp {
         RenderProfiler.isRecording()
     );
 
+    // Initialize undo/redo history manager
+    this.historyManager = new HistoryManager(
+      () => ({
+        components: this.getCurrentViewComponents(),
+        connections: this.getCurrentViewConnections(),
+      }),
+      snapshot => {
+        const currentView = this.appStateManager.getCurrentView();
+        if (currentView.type === 'main') {
+          this.appStateManager.setComponents(snapshot.components, false);
+          this.appStateManager.setConnections(snapshot.connections);
+          this.initializeMainView();
+        } else {
+          // Schematic view: restore to current view's component internals
+          currentView.components = [...snapshot.components];
+          currentView.connections = [...snapshot.connections];
+          this.appStateManager.setCurrentView(currentView);
+        }
+        this.appStateManager.setSelectedComponent(null);
+        this.hideDatasheet();
+        this.componentLifecycleManager.rebuildSpatialIndex(snapshot.components);
+      }
+    );
+
     // Setup event handlers (will now be able to call markDirty)
     this.setupEventHandlers();
+
+    // Auto-save/load: restore persisted state or start fresh
+    this.autoSaveManager = new AutoSaveManager();
+    this.initializeAutoSave();
 
     // Start smart rendering (initial render will happen)
     this.renderScheduler.start();
@@ -492,102 +465,87 @@ export class MotherboardApp {
     this.initializeReactUI();
   }
 
+  /**
+   * Phase 4: Wire event handlers via managers' wireAppHandlers methods.
+   * Each manager owns its own event wiring; main.ts just provides the hooks.
+   */
   private setupEventHandlers() {
-    this.setupExportImportEventHandlers();
-    this.setupConnectionManagerEventHandlers();
-    this.setupComponentDeletionEventHandlers();
-    this.setupRenderSchedulerEventHandlers(); // Phase 2B: Mark dirty on changes
+    // RenderScheduler event wiring
+    this.renderScheduler.wireEventHandlers({
+      pushHistorySnapshot: () => this.historyManager.pushSnapshot(),
+      showTemporaryMessage: (msg: string) => this.notificationManager.showTemporaryMessage(msg),
+    });
+
+    // Export/import event wiring
+    this.exportImportManager.wireAppHandlers({
+      getCurrentView: () => this.appStateManager.getCurrentView(),
+      getComponents: () => this.appStateManager.getComponents(),
+      getConnections: () => this.appStateManager.getConnections(),
+      setComponents: components => this.appStateManager.setComponents(components),
+      setConnections: connections => this.appStateManager.setConnections(connections),
+      setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
+      initializeMainView: () => this.initializeMainView(),
+      setCamera: camera => this.viewportManager.setCamera(camera),
+      rebuildSpatialIndex: components => this.componentLifecycleManager.rebuildSpatialIndex(components),
+      pushHistorySnapshot: () => this.historyManager.pushSnapshot(),
+      showError: msg => this.notificationManager.error(msg),
+      showSuccess: msg => this.notificationManager.success(msg),
+    });
+
+    // Connection manager event wiring
+    this.connectionManager.wireAppHandlers({
+      getCurrentViewComponents: () => this.getCurrentViewComponents(),
+      addConnectionToCurrentView: conn => this.appStateManager.addConnectionToCurrentView(conn),
+      getConnections: () => this.appStateManager.getConnections(),
+      updateConnectionModeUI: () => this.updateConnectionModeUI(),
+      clearConnectionIntents: () => this.uiLayer.clearConnectionIntents(),
+      runtimeEnergyFlow: (fx, fy, tx, ty, color) => this.runtimeLayer.energyFlow(fx, fy, tx, ty, color),
+      getCategoryColor: cat => this.categories[cat]?.color || '#00ff88',
+    });
+
+    // Component deletion event wiring
+    this.appStateManager.wireComponentDeletion({
+      removeConnectionFromManager: id => this.connectionManager.removeConnection(id),
+      hideDatasheet: () => this.hideDatasheet(),
+    });
   }
 
   /**
-   * Phase 2B: Setup event handlers for RenderScheduler
-   * Mark dirty when things change to trigger re-render
-   * 
-   * Note: VIEWPORT_CAMERA_UPDATED fires on every mouse move during pan,
-   * so the scheduler will render continuously during panning (expected behavior)
+   * Initialize auto-save: attempt to restore persisted state, then wire
+   * event listeners so every future mutation is saved to localStorage.
    */
-  private setupRenderSchedulerEventHandlers() {
-    // Component changes
-  eventBus.on(Events.ComponentCreated, () => this.renderScheduler.markDirty());
-  eventBus.on(Events.ComponentUpdated, () => this.renderScheduler.markDirty());
-  eventBus.on(Events.ComponentDeleted, () => this.renderScheduler.markDirty());
-  // No explicit constant for status changed/moved in Events; these are emitted via ComponentUpdated
-    
-    // High-frequency interaction updates (dragging, connection preview)
-    // Ensure we render on every drag move so components visually follow the cursor
-    eventBus.on(Events.COMPONENT_DRAG_UPDATED, () => this.renderScheduler.markDirty());
-    // While drawing a connection preview, re-render on mouse move to update the rubber band line
-    eventBus.on('connection.drawing', () => this.renderScheduler.markDirty());
-    
-    // Connection changes
-  eventBus.on(Events.ConnectionCreated, () => this.renderScheduler.markDirty());
-  eventBus.on(Events.ConnectionDeleted, () => this.renderScheduler.markDirty());
-    
-    // Camera/Viewport changes (fires on every mousemove during pan - this is expected!)
-    eventBus.on(Events.VIEWPORT_CAMERA_UPDATED, () => this.renderScheduler.markDirty());
-    eventBus.on(Events.VIEWPORT_ZOOM_REQUESTED, () => this.renderScheduler.markDirty());
-    eventBus.on(Events.VIEWPORT_PAN_REQUESTED, () => this.renderScheduler.markDirty());
-    
-    // View changes
-  // For view/selection changes, use existing events if defined; otherwise rely on ComponentUpdated triggering renders
-    
-    console.log('⚡ RenderScheduler event handlers configured - rendering on demand');
-  }
+  private initializeAutoSave() {
+    const saved = this.autoSaveManager.loadSavedState();
 
-  /**
-   * Handle component deletion requests and cascade-delete related connections
-   * Keeps AppStateManager and ConnectionManager in sync and updates Module IC internals when needed
-   */
-  private setupComponentDeletionEventHandlers(): void {
-    eventBus.on(Events.COMPONENT_DELETE_REQUESTED, (payload: { componentId: string }) => {
-      const componentId = payload.componentId;
-      const currentView = this.appStateManager.getCurrentView();
+    if (saved) {
+      try {
+        // Disable auto-save during restore to avoid redundant write-back
+        this.autoSaveManager.setEnabled(false);
 
-      // Build list of connections to remove (view-aware)
-      const connectionsToRemove = (currentView.type === 'main'
-        ? this.appStateManager.getConnections()
-        : currentView.connections
-      ).filter(
-        conn =>
-          conn.from.component.id === componentId || conn.to.component.id === componentId
-      );
+        this.exportImportManager.importProjectData(saved);
 
-      // Remove connections from both AppState and ConnectionManager
-      for (const conn of connectionsToRemove) {
-        this.appStateManager.removeConnectionFromCurrentView(conn.id);
-        // Keep ConnectionManager's internal store in sync
-        this.connectionManager.removeConnection(conn.id);
+        this.autoSaveManager.setEnabled(true);
+        this.notificationManager.showTemporaryMessage(
+          `Board restored (${saved.components.length} components)`,
+          2000
+        );
+        console.log('💾 AutoSave: state restored successfully');
+      } catch (e) {
+        this.autoSaveManager.setEnabled(true);
+        console.warn('⚠️ AutoSave: failed to restore state, starting fresh', e);
       }
+    }
 
-      // Remove the component (view-aware)
-      this.appStateManager.removeComponentFromCurrentView(componentId);
-
-      // Clear selection and hide datasheet if it was the selected component
-      const selected = this.appStateManager.getSelectedComponent();
-      if (selected && selected.id === componentId) {
-        this.appStateManager.setSelectedComponent(null);
-        this.hideDatasheet();
-      }
-
-      // If we're inside a Module IC schematic, mirror current view arrays to the module internals
-      if (currentView.type === 'schematic' && currentView.component?.type === 'module-ic') {
-        const moduleComponent = currentView.component as ModuleComponent;
-        moduleComponent.internalComponents = [...currentView.components];
-        moduleComponent.internalConnections = [...currentView.connections];
-      }
+    // Wire ongoing auto-save
+    this.autoSaveManager.wireAutoSave({
+      getComponents: () => this.appStateManager.getComponents(),
+      getConnections: () => this.appStateManager.getConnections(),
+      getCurrentView: () => this.appStateManager.getCurrentView(),
     });
   }
 
   private initializeMainView() {
-    const mainView: ViewState = {
-      type: 'main',
-      component: null,
-      camera: { x: 0, y: 0, zoom: 1 },
-      components: [...this.appStateManager.getComponents()],
-      connections: [...this.appStateManager.getConnections()],
-    };
-
-    this.appStateManager.setCurrentView(mainView);
+    this.appStateManager.initializeMainView();
     this.uiController.updateBreadcrumbs();
   }
 
@@ -610,6 +568,7 @@ export class MotherboardApp {
   // Delegated methods - these now primarily delegate to appropriate managers
 
   addComponent(type: string, x: number, y: number): ComponentBase | null {
+    this.historyManager.pushSnapshot();
     const component = this.componentLifecycleManager.createComponent(
       type,
       x,
@@ -643,26 +602,15 @@ export class MotherboardApp {
   }
 
   getCurrentViewComponents(): ComponentBase[] {
-    const currentView = this.appStateManager.getCurrentView();
-    if (currentView.type === 'main') {
-      // Main view: return global components
-      return this.appStateManager.getComponents();
-    } else {
-      // Schematic view: return view-specific components (module internal)
-      return currentView.components;
-    }
+    return this.appStateManager.getCurrentViewComponents();
   }
 
   getCurrentViewConnections(): Connection[] {
-    const currentView = this.appStateManager.getCurrentView();
-    if (currentView.type === 'main') {
-      return this.appStateManager.getConnections();
-    } else {
-      return this.connectionManager.getConnectionsForView(currentView);
-    }
+    return this.appStateManager.getCurrentViewConnections();
   }
 
   createConnection(startPin: PinHit, endPin: PinHit): Connection | null {
+    this.historyManager.pushSnapshot();
     const connection = this.connectionManager.createConnection(startPin, endPin);
     if (connection) {
       this.appStateManager.addConnectionToCurrentView(connection);
@@ -681,6 +629,7 @@ export class MotherboardApp {
   }
 
   toggleComponentStatus(component: ComponentBase): void {
+    this.historyManager.pushSnapshot();
     this.componentLifecycleManager.toggleComponentStatus(component);
 
     // Update datasheet if this is the selected component
@@ -792,103 +741,7 @@ export class MotherboardApp {
     });
   }
 
-  // Event handler setup methods (extracted)
-  private setupExportImportEventHandlers(): void {
-    // Handle requests for current project state
-    eventBus.on(
-      Events.PROJECT_STATE_REQUEST,
-      (payload: { callback: (components: any[], connections: any[]) => void }) => {
-        // Ensure current view state is saved to module internal structure before export
-        const currentView = this.appStateManager.getCurrentView();
-        if (currentView.type === 'schematic' && currentView.component) {
-          currentView.component.internalComponents = [...currentView.components];
-          currentView.component.internalConnections = [...currentView.connections];
-        }
-
-        payload.callback(
-          this.appStateManager.getComponents(),
-          this.appStateManager.getConnections()
-        );
-      }
-    );
-
-    // Handle project import completion
-    eventBus.on(Events.PROJECT_IMPORTED, (payload: { components: any[]; connections: any[] }) => {
-      this.appStateManager.setComponents(payload.components);
-      this.appStateManager.setConnections(payload.connections);
-      this.appStateManager.setSelectedComponent(null);
-      this.initializeMainView();
-      this.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
-
-      // Rebuild spatial index so imported components can be selected/moved
-      this.componentLifecycleManager.rebuildSpatialIndex(payload.components);
-    });
-
-    // Handle import errors
-    eventBus.on(Events.PROJECT_IMPORT_ERROR, (payload: { error: string }) => {
-      this.notificationManager.error(`Import Error: ${payload.error}`);
-    });
-
-    // Handle export completion
-    eventBus.on(
-      Events.PROJECT_EXPORTED,
-      (payload: { componentCount: number; connectionCount: number }) => {
-        this.notificationManager.success(
-          `Project exported: ${payload.componentCount} components, ${payload.connectionCount} connections`
-        );
-      }
-    );
-  }
-
-  private setupConnectionManagerEventHandlers(): void {
-    // Handle connection creation requests from UI
-    eventBus.on(Events.CONNECTION_CREATE_REQUESTED, (payload: any) => {
-      const pinHit = this.connectionManager.getPinAt(
-        payload.x,
-        payload.y,
-        this.getCurrentViewComponents()
-      );
-      if (pinHit) {
-        if (this.connectionManager.getConnectionState().isConnecting) {
-          this.connectionManager.endConnection(pinHit);
-        } else {
-          this.connectionManager.startConnection(pinHit);
-        }
-      }
-    });
-
-    // Handle connection state changes for UI updates
-    eventBus.on('connection.start', () => {
-      this.updateConnectionModeUI();
-    });
-
-    eventBus.on('connection.cancelled', () => {
-      this.updateConnectionModeUI();
-      this.uiLayer.clearConnectionIntents();
-    });
-
-    // Handle successful connection creation
-    eventBus.on(Events.ConnectionCreated, (payload: any) => {
-      if (
-        payload.connection &&
-        !this.appStateManager.getConnections().find(c => c.id === payload.connection.id)
-      ) {
-        this.appStateManager.addConnectionToCurrentView(payload.connection);
-      }
-
-      // Add runtime effects for new connection
-      const categoryColor = this.categories[payload.type ?? 'frontend']?.color || '#00ff88';
-      this.runtimeLayer.energyFlow(
-        payload.from.x,
-        payload.from.y,
-        payload.to.x,
-        payload.to.y,
-        categoryColor
-      );
-
-      this.updateConnectionModeUI();
-    });
-  }
+  // Phase 4: Event handler setup methods moved to their respective managers via wireAppHandlers().
 
   // Utility methods
   generateId(): string {

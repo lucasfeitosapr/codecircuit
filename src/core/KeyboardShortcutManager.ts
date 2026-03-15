@@ -11,7 +11,10 @@ import { hideDatasheet as hideDatasheetUI } from '../datasheet';
 export interface KeyboardShortcutManagerContext {
   getSelectedComponent: () => ComponentBase | null;
   setSelectedComponent: (component: ComponentBase | null) => void;
+  getSelectedComponentIds: () => Set<string>;
   getCurrentView: () => ViewState;
+  getCurrentViewComponents: () => ComponentBase[];
+  getCurrentViewConnections: () => any[];
   isTransitioning: () => boolean;
   getViewStackSize: () => number;
   getMainComponents: () => ComponentBase[];
@@ -21,11 +24,15 @@ export interface KeyboardShortcutManagerContext {
   enterSchematicView: (component: ComponentBase) => void;
   cancelConnection: () => void;
   isConnecting: () => boolean;
+  addComponentToCurrentView: (component: ComponentBase) => void;
+  addConnectionToCurrentView: (connection: any) => void;
+  pushHistorySnapshot: () => void;
 }
 
 export class KeyboardShortcutManager {
   private context: KeyboardShortcutManagerContext;
   private shortcuts: Map<string, (event: KeyboardEvent) => void> = new Map();
+  private clipboard: { components: ComponentBase[]; connections: any[] } | null = null;
 
   constructor(context: KeyboardShortcutManagerContext) {
     this.context = context;
@@ -70,17 +77,31 @@ export class KeyboardShortcutManager {
       this.handleDeleteKey();
     });
 
-    // Ctrl+Z: Undo (if implemented)
+    // Ctrl+Z: Undo
     this.shortcuts.set('z', event => {
       if (event.ctrlKey || event.metaKey) {
         this.handleUndoKey();
       }
     });
 
-    // Ctrl+Y or Ctrl+Shift+Z: Redo (if implemented)
+    // Ctrl+Y or Ctrl+Shift+Z: Redo
     this.shortcuts.set('y', event => {
       if (event.ctrlKey || event.metaKey) {
         this.handleRedoKey();
+      }
+    });
+
+    // Ctrl+C: Copy
+    this.shortcuts.set('c', event => {
+      if (event.ctrlKey || event.metaKey) {
+        this.handleCopyKey();
+      }
+    });
+
+    // Ctrl+V: Paste
+    this.shortcuts.set('v', event => {
+      if (event.ctrlKey || event.metaKey) {
+        this.handlePasteKey();
       }
     });
   }
@@ -120,7 +141,7 @@ export class KeyboardShortcutManager {
       if (
         shortcutKeys.includes(event.key) ||
         (event.key === '?' && event.shiftKey) ||
-        ((event.key === 'z' || event.key === 'y') && (event.ctrlKey || event.metaKey))
+        ((event.key === 'z' || event.key === 'y' || event.key === 'c' || event.key === 'v') && (event.ctrlKey || event.metaKey))
       ) {
         event.preventDefault();
       }
@@ -232,43 +253,128 @@ export class KeyboardShortcutManager {
   }
 
   private handleDeleteKey() {
-    // Delete selected component
-    const selectedComponent = this.context.getSelectedComponent();
+    const selectedIds = this.context.getSelectedComponentIds();
 
-    if (selectedComponent && selectedComponent.type !== 'power-core') {
-      // Emit delete request
+    if (selectedIds.size === 0) {
+      this.context.showTemporaryMessage('Select a component to delete');
+      return;
+    }
+
+    // Check if any selected component is a power-core
+    const allComponents = this.context.getCurrentViewComponents();
+    const toDelete = allComponents.filter(
+      c => selectedIds.has(c.id) && c.type !== 'power-core'
+    );
+
+    if (toDelete.length === 0) {
+      this.context.showTemporaryMessage('Power core cannot be deleted');
+      return;
+    }
+
+    this.context.pushHistorySnapshot();
+
+    for (const comp of toDelete) {
       eventBus.emit(Events.COMPONENT_DELETE_REQUESTED, {
-        componentId: selectedComponent.id,
+        componentId: comp.id,
         timestamp: Date.now(),
       });
-
-      this.context.setSelectedComponent(null);
-      hideDatasheetUI();
-
-      this.context.showTemporaryMessage(`Deleted ${selectedComponent.type}`);
-    } else if (!selectedComponent) {
-      this.context.showTemporaryMessage('Select a component to delete');
-    } else {
-      this.context.showTemporaryMessage('Power core cannot be deleted');
     }
+
+    this.context.setSelectedComponent(null);
+    hideDatasheetUI();
+
+    this.context.showTemporaryMessage(
+      `Deleted ${toDelete.length} component${toDelete.length !== 1 ? 's' : ''}`
+    );
   }
 
   private handleUndoKey() {
-    // Undo last action
     eventBus.emit(Events.UNDO_REQUESTED, {
       timestamp: Date.now(),
     });
-
-    this.context.showTemporaryMessage('Undo requested');
   }
 
   private handleRedoKey() {
-    // Redo last undone action
     eventBus.emit(Events.REDO_REQUESTED, {
       timestamp: Date.now(),
     });
+  }
 
-    this.context.showTemporaryMessage('Redo requested');
+  private handleCopyKey() {
+    const selectedIds = this.context.getSelectedComponentIds();
+    if (selectedIds.size === 0) {
+      this.context.showTemporaryMessage('Select components to copy');
+      return;
+    }
+
+    const allComponents = this.context.getCurrentViewComponents();
+    const allConnections = this.context.getCurrentViewConnections();
+
+    // Copy selected components
+    const copiedComponents = allComponents.filter(c => selectedIds.has(c.id));
+
+    // Copy connections that exist entirely within the selection
+    const copiedConnections = allConnections.filter(
+      (conn: any) =>
+        selectedIds.has(conn.from?.component?.id) && selectedIds.has(conn.to?.component?.id)
+    );
+
+    this.clipboard = {
+      components: JSON.parse(JSON.stringify(copiedComponents)),
+      connections: JSON.parse(JSON.stringify(copiedConnections)),
+    };
+
+    this.context.showTemporaryMessage(
+      `Copied ${copiedComponents.length} component${copiedComponents.length !== 1 ? 's' : ''}`
+    );
+  }
+
+  private handlePasteKey() {
+    if (!this.clipboard || this.clipboard.components.length === 0) {
+      this.context.showTemporaryMessage('Nothing to paste');
+      return;
+    }
+
+    this.context.pushHistorySnapshot();
+
+    const PASTE_OFFSET = 30;
+    const idMap = new Map<string, string>();
+
+    // Generate new IDs and offset positions
+    for (const comp of this.clipboard.components) {
+      const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+      idMap.set(comp.id, newId);
+      comp.id = newId;
+      comp.x += PASTE_OFFSET;
+      comp.y += PASTE_OFFSET;
+      if (comp.title) {
+        comp.title = comp.title + ' (copy)';
+      }
+      this.context.addComponentToCurrentView(comp);
+    }
+
+    // Remap connection references and add
+    for (const conn of this.clipboard.connections) {
+      conn.id = Date.now().toString(36) + Math.random().toString(36).substr(2);
+      if (conn.from?.component?.id) {
+        const newFromId = idMap.get(conn.from.component.id);
+        if (newFromId) conn.from.component.id = newFromId;
+      }
+      if (conn.to?.component?.id) {
+        const newToId = idMap.get(conn.to.component.id);
+        if (newToId) conn.to.component.id = newToId;
+      }
+      this.context.addConnectionToCurrentView(conn);
+    }
+
+    // Deep clone clipboard again so it can be pasted multiple times
+    this.clipboard = JSON.parse(JSON.stringify(this.clipboard));
+    // Reset IDs in clipboard to original (they were mutated)
+    // Actually, re-clone from the already-offset versions - next paste will offset again
+
+    this.context.showTemporaryMessage(
+      `Pasted ${this.clipboard.components.length} component${this.clipboard.components.length !== 1 ? 's' : ''}`
+    );
   }
 
   // Public methods for dynamic shortcut management

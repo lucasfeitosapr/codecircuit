@@ -47,6 +47,11 @@ export interface InputEventCoordinatorDependencies {
   // Selection and interaction state
   selectedComponent: ComponentBase | null;
   setSelectedComponent: (component: ComponentBase | null) => void;
+  addToSelection: (component: ComponentBase) => void;
+  removeFromSelection: (componentId: string) => void;
+  clearSelection: () => void;
+  getSelectedComponentIds: () => Set<string>;
+  isComponentSelected: (componentId: string) => boolean;
 
   // Connection management
   connectionManager: any; // ConnectionManager type
@@ -74,6 +79,7 @@ export class InputEventCoordinator {
   private dragOffset: { x: number; y: number } = { x: 0, y: 0 };
   private panStart: { x: number; y: number } = { x: 0, y: 0 };
   private draggedComponent: ComponentBase | null = null; // Store dragged component locally
+  private multiDragOffsets: Map<string, { dx: number; dy: number }> = new Map();
   // RAF coalescing for high-frequency emits
   private rafScheduled: number | null = null;
   private pendingDragPayload: { componentId: string; x: number; y: number; timestamp: number } | null = null;
@@ -338,8 +344,18 @@ export class InputEventCoordinator {
           this.dependencies.toggleComponentStatus(clickedComponent);
         }
       } else {
-        // Single click - select
-        this.dependencies.setSelectedComponent(clickedComponent);
+        // Single click - select (Shift+click for multi-select)
+        if (e.shiftKey) {
+          // Shift+click: toggle in multi-selection
+          if (this.dependencies.isComponentSelected(clickedComponent.id)) {
+            this.dependencies.removeFromSelection(clickedComponent.id);
+          } else {
+            this.dependencies.addToSelection(clickedComponent);
+          }
+        } else {
+          // Normal click: replace selection
+          this.dependencies.setSelectedComponent(clickedComponent);
+        }
         this.dependencies.showDatasheet(clickedComponent);
         this.isDragging = true;
         this.draggedComponent = clickedComponent; // Store locally for dragging
@@ -347,6 +363,28 @@ export class InputEventCoordinator {
           x: mouseX - clickedComponent.x,
           y: mouseY - clickedComponent.y,
         };
+
+        // Capture drag offsets for all selected components (multi-drag)
+        this.multiDragOffsets.clear();
+        const selectedIds = this.dependencies.getSelectedComponentIds();
+        if (selectedIds.size > 1) {
+          const allComponents = this.dependencies.getCurrentViewComponents();
+          for (const comp of allComponents) {
+            if (selectedIds.has(comp.id) && comp.id !== clickedComponent.id) {
+              this.multiDragOffsets.set(comp.id, {
+                dx: comp.x - clickedComponent.x,
+                dy: comp.y - clickedComponent.y,
+              });
+            }
+          }
+        }
+
+        eventBus.emit(Events.COMPONENT_DRAG_STARTED, {
+          componentId: clickedComponent.id,
+          x: clickedComponent.x,
+          y: clickedComponent.y,
+          timestamp: Date.now(),
+        });
 
         // Add selection box and alignment guides (if features are enabled)
         if (isFeatureEnabled('ENABLE_SELECTION_HANDLES')) {
@@ -363,7 +401,7 @@ export class InputEventCoordinator {
         }
       }
     } else {
-      this.dependencies.setSelectedComponent(null);
+      this.dependencies.clearSelection();
       this.dependencies.hideDatasheet();
       this.dependencies.uiLayer.clearSelectionBoxes();
       this.dependencies.uiLayer.clearGuideLines();
@@ -408,6 +446,18 @@ export class InputEventCoordinator {
     if (this.isDragging && this.draggedComponent) {
       this.draggedComponent.x = mouseX - this.dragOffset.x;
       this.draggedComponent.y = mouseY - this.dragOffset.y;
+
+      // Move other selected components (multi-drag)
+      if (this.multiDragOffsets.size > 0) {
+        const allComponents = this.dependencies.getCurrentViewComponents();
+        for (const comp of allComponents) {
+          const offset = this.multiDragOffsets.get(comp.id);
+          if (offset) {
+            comp.x = this.draggedComponent.x + offset.dx;
+            comp.y = this.draggedComponent.y + offset.dy;
+          }
+        }
+      }
 
       // Coalesce drag update via RAF
       this.pendingDragPayload = {
@@ -473,6 +523,24 @@ export class InputEventCoordinator {
 
     // Emit drag completed event if we were dragging
     if (this.isDragging && this.draggedComponent) {
+      // Snap to grid on drag end
+      if (isFeatureEnabled('ENABLE_ALIGNMENT_GUIDES')) {
+        const SNAP_SIZE = 10;
+        this.draggedComponent.x = Math.round(this.draggedComponent.x / SNAP_SIZE) * SNAP_SIZE;
+        this.draggedComponent.y = Math.round(this.draggedComponent.y / SNAP_SIZE) * SNAP_SIZE;
+
+        // Snap multi-selected components too
+        if (this.multiDragOffsets.size > 0) {
+          const allComponents = this.dependencies.getCurrentViewComponents();
+          for (const comp of allComponents) {
+            if (this.multiDragOffsets.has(comp.id)) {
+              comp.x = Math.round(comp.x / SNAP_SIZE) * SNAP_SIZE;
+              comp.y = Math.round(comp.y / SNAP_SIZE) * SNAP_SIZE;
+            }
+          }
+        }
+      }
+
       eventBus.emit(Events.COMPONENT_DRAG_COMPLETED, {
         componentId: this.draggedComponent.id,
         x: this.draggedComponent.x,
@@ -483,6 +551,7 @@ export class InputEventCoordinator {
 
     this.isDragging = false;
     this.draggedComponent = null; // Clear local drag state
+    this.multiDragOffsets.clear();
   }
 
   /**
