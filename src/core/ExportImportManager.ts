@@ -26,6 +26,7 @@ export interface ExportImportAppHooks {
   getCurrentView: () => { type: string; component?: any; components: any[]; connections: any[] };
   getComponents: () => ComponentBase[];
   getConnections: () => Connection[];
+  findComponentDeep: (id: string) => ComponentBase | undefined;
   setComponents: (components: ComponentBase[], emitEvents?: boolean) => void;
   setConnections: (connections: Connection[]) => void;
   setSelectedComponent: (component: ComponentBase | null) => void;
@@ -566,8 +567,12 @@ export class ExportImportManager {
   ): Connection[] {
     return connectionsData
       .map(data => {
-        const fromComponent = this.findComponentById(data.from.componentId, components);
-        const toComponent = this.findComponentById(data.to.componentId, components);
+        const fromComponent =
+          this.hooks?.findComponentDeep(data.from.componentId) ||
+          this.findComponentById(data.from.componentId, components);
+        const toComponent =
+          this.hooks?.findComponentDeep(data.to.componentId) ||
+          this.findComponentById(data.to.componentId, components);
 
         if (!fromComponent || !toComponent) {
           console.warn('Warning: Could not find component for connection', data.id);
@@ -628,7 +633,9 @@ export class ExportImportManager {
   }
 
   /**
-   * Helper to find component by ID recursively
+   * @deprecated Import-only fallback for resolving freshly deserialized
+   * components that are not yet present in AppStateManager. Prefer
+   * AppStateManager.findComponentDeep() via hooks.findComponentDeep.
    */
   private findComponentById(id: string, components: ComponentBase[]): ComponentBase | null {
     for (const component of components) {

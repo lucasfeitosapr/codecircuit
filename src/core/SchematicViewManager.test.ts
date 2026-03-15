@@ -198,6 +198,29 @@ describe('SchematicViewManager', () => {
       // Should not crash and should not start animation
       expect(mockViewNavigationManager.animateToMainView).not.toHaveBeenCalled();
     });
+
+    it('should recover to main view when schematic invariant is violated', async () => {
+      const malformedModule = createMockModuleIC('malformed-module', 'Malformed Module');
+      (malformedModule as any).internalComponents = { bad: true };
+      (malformedModule as any).internalConnections = { bad: true };
+
+      appStateManager.addComponentToCurrentView(malformedModule);
+      const initMainSpy = vi.spyOn(appStateManager, 'initializeMainView');
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      schematicViewManager.enterSchematicView(malformedModule);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(initMainSpy).toHaveBeenCalled();
+      expect(appStateManager.getCurrentView().type).toBe('main');
+      expect(appStateManager.isInTransition()).toBe(false);
+      expect(mockUIController.updateBreadcrumbs).toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        '[SchematicViewManager] Invariant violated: invalid schematic view state; recovering to main'
+      );
+
+      errorSpy.mockRestore();
+    });
   });
 
   describe('Deep Nesting Navigation', () => {
@@ -280,6 +303,69 @@ describe('SchematicViewManager', () => {
       const currentView = appStateManager.getCurrentView();
       expect(currentView.component).toBe(level1);
       expect(viewStack.size()).toBe(1); // At level1, stack contains main view
+    });
+
+    it('should restore main view after nested back navigation (back, back)', async () => {
+      const level1 = createMockModuleIC('nested-level1', 'Nested Level 1');
+      const level2 = createMockModuleIC('nested-level2', 'Nested Level 2');
+      level1.internalComponents = [level2];
+      appStateManager.addComponentToCurrentView(level1);
+
+      schematicViewManager.enterSchematicView(level1);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      schematicViewManager.enterSchematicView(level2);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(appStateManager.getCurrentView().type).toBe('schematic');
+      expect(viewStack.size()).toBe(2);
+
+      schematicViewManager.exitSchematicView();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(appStateManager.getCurrentView().type).toBe('schematic');
+      expect((appStateManager.getCurrentView().component as any)?.id).toBe('nested-level1');
+
+      schematicViewManager.exitSchematicView();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(appStateManager.getCurrentView().type).toBe('main');
+      expect(viewStack.size()).toBe(0);
+    });
+
+    it('should navigate to main when breadcrumb level 0 is clicked', async () => {
+      const level1 = createMockModuleIC('crumb-main-level1', 'Crumb Main Level 1');
+      appStateManager.addComponentToCurrentView(level1);
+
+      schematicViewManager.enterSchematicView(level1);
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(appStateManager.getCurrentView().type).toBe('schematic');
+
+      schematicViewManager.navigateToBreadcrumbLevel(0);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(appStateManager.getCurrentView().type).toBe('main');
+      expect(viewStack.size()).toBe(0);
+    });
+
+    it('should navigate to intermediate level when breadcrumb is clicked', async () => {
+      const level1 = createMockModuleIC('crumb-mid-level1', 'Crumb Mid Level 1');
+      const level2 = createMockModuleIC('crumb-mid-level2', 'Crumb Mid Level 2');
+      level1.internalComponents = [level2];
+      appStateManager.addComponentToCurrentView(level1);
+
+      schematicViewManager.enterSchematicView(level1);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      schematicViewManager.enterSchematicView(level2);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(viewStack.size()).toBe(2);
+      expect((appStateManager.getCurrentView().component as any)?.id).toBe('crumb-mid-level2');
+
+      schematicViewManager.navigateToBreadcrumbLevel(1);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect((appStateManager.getCurrentView().component as any)?.id).toBe('crumb-mid-level1');
+      expect(viewStack.size()).toBe(1);
     });
   });
 
