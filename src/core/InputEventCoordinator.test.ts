@@ -57,20 +57,20 @@ describe('InputEventCoordinator', () => {
       showTemporaryMessage: vi.fn(),
 
       // View management
-      currentView: {
+      getCurrentView: vi.fn().mockReturnValue({
         type: 'main',
         component: null,
         camera: { x: 0, y: 0, zoom: 1 },
         components: [],
         connections: [],
-      },
+      }),
       enterSchematicView: vi.fn(),
       exitSchematicView: vi.fn(),
       viewStack: { size: vi.fn().mockReturnValue(0) },
-      isTransitioning: false,
+      getIsTransitioning: vi.fn().mockReturnValue(false),
 
       // Selection and interaction state
-      selectedComponent: null,
+      getSelectedComponent: vi.fn().mockReturnValue(null),
       setSelectedComponent: vi.fn(),
       addToSelection: vi.fn(),
       removeFromSelection: vi.fn(),
@@ -100,8 +100,8 @@ describe('InputEventCoordinator', () => {
       runtimeLayer: {},
 
       // Component types and state
-      components: [],
-      connections: [],
+      getComponents: vi.fn().mockReturnValue([]),
+      getConnections: vi.fn().mockReturnValue([]),
       // Component lifecycle manager stub
       componentLifecycleManager: { createComponent: vi.fn() },
     };
@@ -192,14 +192,12 @@ describe('InputEventCoordinator', () => {
       };
 
       // Test the logic directly rather than DOM events
-      mockDependencies.selectedComponent = component;
+      mockDependencies.getSelectedComponent = vi.fn().mockReturnValue(component);
 
       // Simulate the space key handler logic
-      if (
-        mockDependencies.selectedComponent &&
-        mockDependencies.selectedComponent.type !== 'power-core'
-      ) {
-        mockDependencies.toggleComponentStatus(mockDependencies.selectedComponent);
+      const selected = mockDependencies.getSelectedComponent();
+      if (selected && selected.type !== 'power-core') {
+        mockDependencies.toggleComponentStatus(selected);
       }
 
       expect(mockDependencies.toggleComponentStatus).toHaveBeenCalledWith(component);
@@ -291,7 +289,7 @@ describe('InputEventCoordinator', () => {
 
       // Set up component selection and dragging state
       mockDependencies.getComponentAt = vi.fn().mockReturnValue(component);
-      mockDependencies.selectedComponent = component;
+      mockDependencies.getSelectedComponent = vi.fn().mockReturnValue(component);
 
       // Simulate mouse down to start dragging
       const mouseDownEvent = new MouseEvent('mousedown', { clientX: 150, clientY: 120, button: 0 });
@@ -332,7 +330,7 @@ describe('InputEventCoordinator', () => {
 
       // Set up component selection and ensure getComponentAt returns the component
       mockDependencies.getComponentAt = vi.fn().mockReturnValue(component);
-      mockDependencies.selectedComponent = component;
+      mockDependencies.getSelectedComponent = vi.fn().mockReturnValue(component);
 
       // Simulate mouse down to start dragging
       const mouseDownEvent = new MouseEvent('mousedown', { clientX: 150, clientY: 120, button: 0 });

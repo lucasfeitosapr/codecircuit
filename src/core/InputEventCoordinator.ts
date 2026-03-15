@@ -37,15 +37,15 @@ export interface InputEventCoordinatorDependencies {
   hideDatasheet: () => void;
   showTemporaryMessage: (message: string, duration?: number) => void;
 
-  // View management
-  currentView: any; // View type from main.ts
+  // View management (live getters — no stale snapshots)
+  getCurrentView: () => any; // Returns current ViewState
   enterSchematicView: (component: ModuleComponent) => void;
   exitSchematicView: () => void;
   viewStack: any; // ViewStack type
-  isTransitioning: boolean;
+  getIsTransitioning: () => boolean;
 
-  // Selection and interaction state
-  selectedComponent: ComponentBase | null;
+  // Selection and interaction state (live getters)
+  getSelectedComponent: () => ComponentBase | null;
   setSelectedComponent: (component: ComponentBase | null) => void;
   addToSelection: (component: ComponentBase) => void;
   removeFromSelection: (componentId: string) => void;
@@ -64,9 +64,9 @@ export interface InputEventCoordinatorDependencies {
   uiLayer: any; // UILayer type
   runtimeLayer: any; // RuntimeLayer type
 
-  // Component types and state
-  components: ComponentBase[];
-  connections: any[];
+  // Component types and state (live getters)
+  getComponents: () => ComponentBase[];
+  getConnections: () => any[];
 }
 
 export class InputEventCoordinator {
@@ -130,7 +130,7 @@ export class InputEventCoordinator {
           type,
           x,
           y,
-          this.dependencies.currentView
+          this.dependencies.getCurrentView()
         );
       },
     };
@@ -564,14 +564,14 @@ export class InputEventCoordinator {
     }
 
     // Priority 3: Clear component selection
-    if (this.dependencies.selectedComponent) {
+    if (this.dependencies.getSelectedComponent()) {
       this.dependencies.setSelectedComponent(null);
       hideDatasheetUI();
       return;
     }
 
     // Priority 4: Exit schematic view if in one
-    if (this.dependencies.currentView.type === 'schematic') {
+    if (this.dependencies.getCurrentView().type === 'schematic') {
       this.dependencies.exitSchematicView();
       return;
     }
@@ -581,7 +581,7 @@ export class InputEventCoordinator {
    * Handle Tab key - cycle between views
    */
   private handleTabKey(shiftPressed: boolean): void {
-    if (this.dependencies.isTransitioning) return;
+    if (this.dependencies.getIsTransitioning()) return;
 
     const viewStackSize = this.dependencies.viewStack.size();
 
@@ -591,14 +591,14 @@ export class InputEventCoordinator {
 
     if (shiftPressed) {
       // Shift+Tab: Go back one level
-      if (this.dependencies.currentView.type === 'schematic') {
+      if (this.dependencies.getCurrentView().type === 'schematic') {
         this.dependencies.exitSchematicView();
       }
     } else {
       // Tab: Navigate deeper or cycle through Module ICs
-      if (this.dependencies.currentView.type === 'main') {
+      if (this.dependencies.getCurrentView().type === 'main') {
         // Find first Module IC and enter it
-        const moduleICs = this.dependencies.components.filter(c => c.type === 'module-ic');
+        const moduleICs = this.dependencies.getComponents().filter(c => c.type === 'module-ic');
         if (moduleICs.length > 0) {
           this.dependencies.enterSchematicView(moduleICs[0] as ModuleComponent);
         }
@@ -619,7 +619,7 @@ export class InputEventCoordinator {
    * Handle Space key - toggle component status
    */
   private handleSpaceKey(): void {
-    const selectedComponent = this.dependencies.selectedComponent;
+    const selectedComponent = this.dependencies.getSelectedComponent();
     if (selectedComponent && selectedComponent.type !== 'power-core') {
       this.dependencies.toggleComponentStatus(selectedComponent);
 
