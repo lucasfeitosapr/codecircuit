@@ -89,7 +89,7 @@ export class AppStateManager {
   }
 
   getCurrentView(): ViewState {
-    return this.state.currentView;
+    return { ...this.state.currentView };
   }
 
   isInTransition(): boolean {
@@ -250,6 +250,11 @@ export class AppStateManager {
 
   setCurrentView(view: ViewState) {
     this.state.currentView = view;
+
+    eventBus.emit('view.changed', {
+      view,
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -420,11 +425,14 @@ export class AppStateManager {
   }
 
   /**
-   * Subscribe to state changes. Kept for test compatibility.
-   * Production code should use EventBus instead.
+   * @deprecated No-op stub. Use EventBus events instead:
+   *   - components → Events.ComponentCreated / Events.ComponentDeleted / Events.ComponentUpdated
+   *   - selectedComponent → 'component.selection.changed'
+   *   - currentView → 'view.changed'
+   *   - connections → Events.ConnectionCreated / Events.ConnectionDeleted
    */
   subscribe<K extends keyof AppState>(_key: K, _callback: (value: AppState[K]) => void) {
-    // No-op — listener system removed. Use EventBus events instead.
+    // No-op — listener system removed in Phase 1 (EventBus-first).
     return () => {};
   }
 }

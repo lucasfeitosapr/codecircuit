@@ -453,28 +453,33 @@ describe('AppStateManager', () => {
     });
   });
 
-  describe('State Subscription System', () => {
-    it('should notify subscribers when components change', () => {
+  describe('State Change Notifications (EventBus-first)', () => {
+    it('should emit ComponentCreated when components change', () => {
       const listener = vi.fn();
-      stateManager.subscribe('components', listener);
+      eventBus.on(Events.ComponentCreated, listener);
 
       stateManager.addComponent(mockComponent);
 
-      expect(listener).toHaveBeenCalledWith([mockComponent]);
+      expect(listener).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'test-comp-1',
+        model: mockComponent,
+      }));
     });
 
-    it('should notify subscribers when selection changes', () => {
+    it('should emit selection changed when selection changes', () => {
       const listener = vi.fn();
-      stateManager.subscribe('selectedComponent', listener);
+      eventBus.on('component.selection.changed', listener);
 
       stateManager.setSelectedComponent(mockComponent);
 
-      expect(listener).toHaveBeenCalledWith(mockComponent);
+      expect(listener).toHaveBeenCalledWith(expect.objectContaining({
+        component: mockComponent,
+      }));
     });
 
-    it('should notify subscribers when view changes', () => {
+    it('should emit view.changed when view changes', () => {
       const listener = vi.fn();
-      stateManager.subscribe('currentView', listener);
+      eventBus.on('view.changed', listener);
 
       const newView: ViewState = {
         type: 'schematic',
@@ -486,28 +491,30 @@ describe('AppStateManager', () => {
 
       stateManager.setCurrentView(newView);
 
-      expect(listener).toHaveBeenCalled();
+      expect(listener).toHaveBeenCalledWith(expect.objectContaining({
+        view: newView,
+      }));
     });
 
-    it('should allow unsubscribing', () => {
+    it('should allow unsubscribing via EventBus.off', () => {
       const listener = vi.fn();
-      const unsubscribe = stateManager.subscribe('components', listener);
+      eventBus.on(Events.ComponentCreated, listener);
 
       stateManager.addComponent(mockComponent);
       expect(listener).toHaveBeenCalledTimes(1);
 
-      unsubscribe();
+      eventBus.off(Events.ComponentCreated, listener);
       stateManager.addComponent({ ...mockComponent, id: 'test-comp-2' });
 
       expect(listener).toHaveBeenCalledTimes(1); // Not called again
     });
 
-    it('should support multiple subscribers', () => {
+    it('should support multiple subscribers via EventBus', () => {
       const listener1 = vi.fn();
       const listener2 = vi.fn();
 
-      stateManager.subscribe('components', listener1);
-      stateManager.subscribe('components', listener2);
+      eventBus.on(Events.ComponentCreated, listener1);
+      eventBus.on(Events.ComponentCreated, listener2);
 
       stateManager.addComponent(mockComponent);
 
@@ -529,19 +536,16 @@ describe('AppStateManager', () => {
       expect(component.status).toBe('done');
     });
 
-    it('should notify listeners when component updated via event', () => {
-      const listener = vi.fn();
-      stateManager.subscribe('components', listener);
+    it('should update component in place when ComponentUpdated fires', () => {
       stateManager.addComponent(mockComponent);
-
-      listener.mockClear();
 
       eventBus.emit(Events.ComponentUpdated, {
         id: 'test-comp-1',
         changes: { x: 200 },
       });
 
-      expect(listener).toHaveBeenCalled();
+      const updated = stateManager.getComponents().find(c => c.id === 'test-comp-1');
+      expect(updated?.x).toBe(200);
     });
   });
 
@@ -561,20 +565,17 @@ describe('AppStateManager', () => {
       expect(stateManager.getCurrentView().type).toBe('main');
     });
 
-    it('should notify all listeners when clearing state', () => {
-      const componentsListener = vi.fn();
-      const connectionsListener = vi.fn();
-      const selectionListener = vi.fn();
-
-      stateManager.subscribe('components', componentsListener);
-      stateManager.subscribe('connections', connectionsListener);
-      stateManager.subscribe('selectedComponent', selectionListener);
+    it('should reset state when clearing', () => {
+      stateManager.addComponent(mockComponent);
+      stateManager.addConnection(mockConnection);
+      stateManager.setSelectedComponent(mockComponent);
 
       stateManager.clearState();
 
-      expect(componentsListener).toHaveBeenCalledWith([]);
-      expect(connectionsListener).toHaveBeenCalledWith([]);
-      expect(selectionListener).toHaveBeenCalledWith(null);
+      expect(stateManager.getComponents()).toEqual([]);
+      expect(stateManager.getConnections()).toEqual([]);
+      expect(stateManager.getSelectedComponent()).toBeNull();
+      expect(stateManager.getCurrentView().type).toBe('main');
     });
 
     it('should create state snapshot', () => {
@@ -619,16 +620,15 @@ describe('AppStateManager', () => {
 
   describe('Edge Cases', () => {
     it('should handle updating non-existent component', () => {
-      const listener = vi.fn();
-      stateManager.subscribe('components', listener);
+      stateManager.addComponent(mockComponent);
 
       eventBus.emit(Events.ComponentUpdated, {
         id: 'non-existent',
         changes: { status: 'done' },
       });
 
-      // Should not notify listeners
-      expect(listener).not.toHaveBeenCalled();
+      // Original component should be unchanged
+      expect(stateManager.getComponents()[0].status).toBe('defined');
     });
 
     it('should handle removing non-existent component', () => {
