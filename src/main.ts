@@ -40,6 +40,7 @@ import {
 import { HistoryManager } from './core/HistoryManager';
 import { AutoSaveManager } from './core/AutoSaveManager';
 import { bootstrapDOM } from './core/DOMBootstrap';
+import { wireEventHandlers } from './core/EventHandlerWiring';
 
 // Legacy imports (to be gradually reduced)
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
@@ -468,45 +469,38 @@ export class MotherboardApp {
    * Each manager owns its own event wiring; main.ts just provides the hooks.
    */
   private setupEventHandlers() {
-    // RenderScheduler event wiring
-    this.renderScheduler.wireEventHandlers({
-      pushHistorySnapshot: () => this.historyManager.pushSnapshot(),
-      showTemporaryMessage: (msg: string) => this.notificationManager.showTemporaryMessage(msg),
-    });
+    // Phase 3 (CC-12): Event handler wiring extracted to EventHandlerWiring module
+    wireEventHandlers(this.buildAppContext());
+  }
 
-    // Export/import event wiring
-    this.exportImportManager.wireAppHandlers({
-      getCurrentView: () => this.appStateManager.getCurrentView(),
-      getComponents: () => this.appStateManager.getComponents(),
-      getConnections: () => this.appStateManager.getConnections(),
-      findComponentDeep: id => this.appStateManager.findComponentDeep(id, ViewStack.getInstance()),
-      setComponents: components => this.appStateManager.setComponents(components),
-      setConnections: connections => this.appStateManager.setConnections(connections),
-      setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
-      initializeMainView: () => this.initializeMainView(),
-      setCamera: camera => this.viewportManager.setCamera(camera),
-      rebuildSpatialIndex: components => this.componentLifecycleManager.rebuildSpatialIndex(components),
-      pushHistorySnapshot: () => this.historyManager.pushSnapshot(),
-      showError: msg => this.notificationManager.error(msg),
-      showSuccess: msg => this.notificationManager.success(msg),
-    });
-
-    // Connection manager event wiring
-    this.connectionManager.wireAppHandlers({
-      getCurrentViewComponents: () => this.getCurrentViewComponents(),
-      addConnectionToCurrentView: conn => this.appStateManager.addConnectionToCurrentView(conn),
-      getConnections: () => this.appStateManager.getConnections(),
-      updateConnectionModeUI: () => this.updateConnectionModeUI(),
-      clearConnectionIntents: () => this.uiLayer.clearConnectionIntents(),
-      runtimeEnergyFlow: (fx, fy, tx, ty, color) => this.runtimeLayer.energyFlow(fx, fy, tx, ty, color),
-      getCategoryColor: cat => this.categories[cat]?.color || '#00ff88',
-    });
-
-    // Component deletion event wiring
-    this.appStateManager.wireComponentDeletion({
-      removeConnectionFromManager: id => this.connectionManager.removeConnection(id),
-      hideDatasheet: () => this.hideDatasheet(),
-    });
+  /**
+   * Build AppContext from current manager instances for event wiring.
+   */
+  private buildAppContext() {
+    return {
+      appStateManager: this.appStateManager,
+      viewportManager: this.viewportManager,
+      notificationManager: this.notificationManager,
+      connectionManager: this.connectionManager,
+      componentLifecycleManager: this.componentLifecycleManager,
+      schematicViewManager: this.schematicViewManager,
+      keyboardShortcutManager: this.keyboardShortcutManager,
+      historyManager: this.historyManager,
+      inputEventCoordinator: this.inputEventCoordinator,
+      exportImportManager: this.exportImportManager,
+      applicationInitializer: this.applicationInitializer,
+      autoSaveManager: this.autoSaveManager,
+      componentRegistry: this.componentRegistry,
+      uiController: this.uiController,
+      partsTrayRenderer: this.partsTrayRenderer,
+      viewNavigationManager: this.viewNavigationManager,
+      renderScheduler: this.renderScheduler,
+      runtimeLayer: this.runtimeLayer,
+      uiLayer: this.uiLayer,
+      componentTypes: this.componentTypes,
+      categories: this.categories,
+      viewStack: ViewStack.getInstance(),
+    };
   }
 
   /**
@@ -535,12 +529,7 @@ export class MotherboardApp {
       }
     }
 
-    // Wire ongoing auto-save
-    this.autoSaveManager.wireAutoSave({
-      getComponents: () => this.appStateManager.getComponents(),
-      getConnections: () => this.appStateManager.getConnections(),
-      getCurrentView: () => this.appStateManager.getCurrentView(),
-    });
+    // Auto-save wiring now handled by EventHandlerWiring module
   }
 
   private initializeMainView() {
