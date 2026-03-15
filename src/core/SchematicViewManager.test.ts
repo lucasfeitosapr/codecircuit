@@ -198,6 +198,29 @@ describe('SchematicViewManager', () => {
       // Should not crash and should not start animation
       expect(mockViewNavigationManager.animateToMainView).not.toHaveBeenCalled();
     });
+
+    it('should recover to main view when schematic invariant is violated', async () => {
+      const malformedModule = createMockModuleIC('malformed-module', 'Malformed Module');
+      (malformedModule as any).internalComponents = { bad: true };
+      (malformedModule as any).internalConnections = { bad: true };
+
+      appStateManager.addComponentToCurrentView(malformedModule);
+      const initMainSpy = vi.spyOn(appStateManager, 'initializeMainView');
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      schematicViewManager.enterSchematicView(malformedModule);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(initMainSpy).toHaveBeenCalled();
+      expect(appStateManager.getCurrentView().type).toBe('main');
+      expect(appStateManager.isInTransition()).toBe(false);
+      expect(mockUIController.updateBreadcrumbs).toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        '[SchematicViewManager] Invariant violated: invalid schematic view state; recovering to main'
+      );
+
+      errorSpy.mockRestore();
+    });
   });
 
   describe('Deep Nesting Navigation', () => {

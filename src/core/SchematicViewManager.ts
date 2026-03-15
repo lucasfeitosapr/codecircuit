@@ -61,13 +61,22 @@ export class SchematicViewManager {
     const uiController = this.context.getUIController();
 
     // Save current view state — snapshot copies for the viewStack
+    const shouldPreserveSchematicRefs =
+      currentView.type === 'schematic' && currentView.component?.type === 'module-ic';
+    const currentModule = shouldPreserveSchematicRefs
+      ? (currentView.component as ModuleComponent)
+      : null;
     const currentViewState = {
       type: currentView.type,
       component: currentView.component,
       camera: { ...viewportManager.camera },
       selectedComponent: this.context.getSelectedComponent(),
-      components: [...this.context.getCurrentViewComponents()],
-      connections: [...this.context.getCurrentViewConnections()],
+      components: shouldPreserveSchematicRefs
+        ? currentModule?.internalComponents || []
+        : [...this.context.getCurrentViewComponents()],
+      connections: shouldPreserveSchematicRefs
+        ? currentModule?.internalConnections || []
+        : [...this.context.getCurrentViewConnections()],
     };
     viewStack.push(currentViewState);
 
@@ -92,6 +101,17 @@ export class SchematicViewManager {
         components: moduleComponent.internalComponents!,
         connections: moduleComponent.internalConnections!,
       };
+
+      if (!this.assertSchematicViewInvariant(newView, moduleComponent)) {
+        console.error(
+          '[SchematicViewManager] Invariant violated: invalid schematic view state; recovering to main'
+        );
+        this.context.initializeMainView();
+        viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
+        this.context.setTransitioning(false);
+        uiController.updateBreadcrumbs();
+        return;
+      }
 
       this.context.setCurrentView(newView);
 
@@ -142,6 +162,25 @@ export class SchematicViewManager {
         components: previousView.components || [],
         connections: previousView.connections || [],
       };
+
+      if (restoredView.type === 'schematic' && restoredView.component?.type === 'module-ic') {
+        const moduleComponent = restoredView.component as ModuleComponent;
+        moduleComponent.internalComponents = moduleComponent.internalComponents || [];
+        moduleComponent.internalConnections = moduleComponent.internalConnections || [];
+        restoredView.components = moduleComponent.internalComponents;
+        restoredView.connections = moduleComponent.internalConnections;
+
+        if (!this.assertSchematicViewInvariant(restoredView, moduleComponent)) {
+          console.error(
+            '[SchematicViewManager] Invariant violated: invalid restored schematic view state; recovering to main'
+          );
+          this.context.initializeMainView();
+          viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
+          this.context.setTransitioning(false);
+          uiController.updateBreadcrumbs();
+          return;
+        }
+      }
 
       this.context.setCurrentView(restoredView);
 
@@ -260,6 +299,20 @@ export class SchematicViewManager {
     }
 
     return path;
+  }
+
+  // Helper method to check if a component is internal to any Module IC
+  private assertSchematicViewInvariant(
+    view: ViewState,
+    moduleComponent: ModuleComponent
+  ): boolean {
+    const hasValidComponent = view.component?.type === 'module-ic';
+    const hasArrayState = Array.isArray(view.components) && Array.isArray(view.connections);
+    const hasReferenceConsistency =
+      view.components === moduleComponent.internalComponents &&
+      view.connections === moduleComponent.internalConnections;
+
+    return view.type === 'schematic' && hasValidComponent && hasArrayState && hasReferenceConsistency;
   }
 
   // Helper method to check if a component is internal to any Module IC
