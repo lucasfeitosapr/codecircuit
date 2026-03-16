@@ -101,6 +101,12 @@ function wireComponentDeletion(ctx: AppContext): void {
  * Wire AutoSaveManager event handlers for state persistence.
  */
 function wireAutoSave(ctx: AppContext): void {
+  if (!ctx.autoSaveManager) {
+    throw new Error(
+      'wireAutoSave: ctx.autoSaveManager is undefined. ' +
+      'Ensure AutoSaveManager is instantiated before setupEventHandlers() in start().'
+    );
+  }
   ctx.autoSaveManager.wireAutoSave({
     getComponents: () => ctx.appStateManager.getComponents(),
     getConnections: () => ctx.appStateManager.getConnections(),
