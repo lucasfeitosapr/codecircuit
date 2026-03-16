@@ -419,6 +419,10 @@ export class MotherboardApp {
         RenderProfiler.isRecording()
     );
 
+    // Initialize AutoSaveManager BEFORE setupEventHandlers so ctx.autoSaveManager
+    // is defined when wireAutoSave() runs inside wireEventHandlers().
+    this.autoSaveManager = new AutoSaveManager();
+
     // Initialize undo/redo history manager
     this.historyManager = new HistoryManager(
       () => ({
@@ -447,7 +451,6 @@ export class MotherboardApp {
     this.setupEventHandlers();
 
     // Auto-save/load: restore persisted state or start fresh
-    this.autoSaveManager = new AutoSaveManager();
     this.initializeAutoSave();
 
     // Start smart rendering (initial render will happen)
