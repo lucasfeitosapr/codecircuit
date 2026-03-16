@@ -17,6 +17,7 @@ import type { HistoryManager } from './HistoryManager';
 import type { InputEventCoordinator } from './InputEventCoordinator';
 import type { ExportImportManager } from './ExportImportManager';
 import type { ApplicationInitializer } from './ApplicationInitializer';
+import type { AutoSaveManager } from './AutoSaveManager';
 import type { ComponentRegistry } from '../components/ComponentRegistry';
 import type { UIController } from '../ui/UIController';
 import type { PartsTrayRenderer } from '../ui/PartsTrayRenderer';
@@ -46,6 +47,7 @@ export interface AppContext {
   inputEventCoordinator: InputEventCoordinator;
   exportImportManager: ExportImportManager;
   applicationInitializer: ApplicationInitializer;
+  autoSaveManager: AutoSaveManager;
 
   // UI
   componentRegistry: ComponentRegistry;

@@ -39,14 +39,14 @@ import {
 } from './core/ApplicationInitializer';
 import { HistoryManager } from './core/HistoryManager';
 import { AutoSaveManager } from './core/AutoSaveManager';
+import { bootstrapDOM } from './core/DOMBootstrap';
+import { wireEventHandlers } from './core/EventHandlerWiring';
 
 // Legacy imports (to be gradually reduced)
 import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } from './datasheet';
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
 import { RenderScheduler } from './rendering/RenderScheduler';
 import { PerformanceConfig } from './config/FeatureFlagAdapter';
-import { connectionRenderer } from './ui/rendererHelpers';
-import { createFeatureTogglePanel } from './ui/FeatureTogglePanel';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { MotherboardReactUI } from './ui/react/App';
@@ -169,8 +169,7 @@ export class MotherboardApp {
           this.viewportManager = getViewportManager();
         } else {
           throw new Error(
-            `Failed to initialize ViewportManager: ${
-              error instanceof Error ? error.message : 'Unknown error'
+            `Failed to initialize ViewportManager: ${error instanceof Error ? error.message : 'Unknown error'
             }`
           );
         }
@@ -352,13 +351,13 @@ export class MotherboardApp {
         hideDatasheet: () => this.hideDatasheet(),
         navigateToBreadcrumbLevel: level =>
           this.schematicViewManager.navigateToBreadcrumbLevel(level),
-        handleKeyboardShortcut: () => {}, // Now handled by KeyboardShortcutManager
+        handleKeyboardShortcut: () => { }, // Now handled by KeyboardShortcutManager
         addComponent: this.addComponent.bind(this),
         onMouseDown: this.onMouseDown.bind(this),
         onMouseMove: this.onMouseMove.bind(this),
         onMouseUp: this.onMouseUp.bind(this),
         onWheel: this.onWheel.bind(this),
-  // setMousePos is not part of UIControllerContext; mouse position updates are handled via InputEventCoordinator
+        // setMousePos is not part of UIControllerContext; mouse position updates are handled via InputEventCoordinator
       });
 
       // Initialize PartsTrayRenderer (Phase 4 - Dynamic Parts Tray)
@@ -453,10 +452,10 @@ export class MotherboardApp {
 
     // Start smart rendering (initial render will happen)
     this.renderScheduler.start();
-    
+
     console.log('🚀 MotherboardApp started successfully');
     console.log('⚡ Performance optimizations enabled - render on demand');
-    
+
     // Force an initial render to show the board
     this.renderScheduler.markDirty();
     console.log('🎨 Initial render triggered');
@@ -470,45 +469,38 @@ export class MotherboardApp {
    * Each manager owns its own event wiring; main.ts just provides the hooks.
    */
   private setupEventHandlers() {
-    // RenderScheduler event wiring
-    this.renderScheduler.wireEventHandlers({
-      pushHistorySnapshot: () => this.historyManager.pushSnapshot(),
-      showTemporaryMessage: (msg: string) => this.notificationManager.showTemporaryMessage(msg),
-    });
+    // Phase 3 (CC-12): Event handler wiring extracted to EventHandlerWiring module
+    wireEventHandlers(this.buildAppContext());
+  }
 
-    // Export/import event wiring
-    this.exportImportManager.wireAppHandlers({
-      getCurrentView: () => this.appStateManager.getCurrentView(),
-      getComponents: () => this.appStateManager.getComponents(),
-      getConnections: () => this.appStateManager.getConnections(),
-      findComponentDeep: id => this.appStateManager.findComponentDeep(id, ViewStack.getInstance()),
-      setComponents: components => this.appStateManager.setComponents(components),
-      setConnections: connections => this.appStateManager.setConnections(connections),
-      setSelectedComponent: component => this.appStateManager.setSelectedComponent(component),
-      initializeMainView: () => this.initializeMainView(),
-      setCamera: camera => this.viewportManager.setCamera(camera),
-      rebuildSpatialIndex: components => this.componentLifecycleManager.rebuildSpatialIndex(components),
-      pushHistorySnapshot: () => this.historyManager.pushSnapshot(),
-      showError: msg => this.notificationManager.error(msg),
-      showSuccess: msg => this.notificationManager.success(msg),
-    });
-
-    // Connection manager event wiring
-    this.connectionManager.wireAppHandlers({
-      getCurrentViewComponents: () => this.getCurrentViewComponents(),
-      addConnectionToCurrentView: conn => this.appStateManager.addConnectionToCurrentView(conn),
-      getConnections: () => this.appStateManager.getConnections(),
-      updateConnectionModeUI: () => this.updateConnectionModeUI(),
-      clearConnectionIntents: () => this.uiLayer.clearConnectionIntents(),
-      runtimeEnergyFlow: (fx, fy, tx, ty, color) => this.runtimeLayer.energyFlow(fx, fy, tx, ty, color),
-      getCategoryColor: cat => this.categories[cat]?.color || '#00ff88',
-    });
-
-    // Component deletion event wiring
-    this.appStateManager.wireComponentDeletion({
-      removeConnectionFromManager: id => this.connectionManager.removeConnection(id),
-      hideDatasheet: () => this.hideDatasheet(),
-    });
+  /**
+   * Build AppContext from current manager instances for event wiring.
+   */
+  private buildAppContext() {
+    return {
+      appStateManager: this.appStateManager,
+      viewportManager: this.viewportManager,
+      notificationManager: this.notificationManager,
+      connectionManager: this.connectionManager,
+      componentLifecycleManager: this.componentLifecycleManager,
+      schematicViewManager: this.schematicViewManager,
+      keyboardShortcutManager: this.keyboardShortcutManager,
+      historyManager: this.historyManager,
+      inputEventCoordinator: this.inputEventCoordinator,
+      exportImportManager: this.exportImportManager,
+      applicationInitializer: this.applicationInitializer,
+      autoSaveManager: this.autoSaveManager,
+      componentRegistry: this.componentRegistry,
+      uiController: this.uiController,
+      partsTrayRenderer: this.partsTrayRenderer,
+      viewNavigationManager: this.viewNavigationManager,
+      renderScheduler: this.renderScheduler,
+      runtimeLayer: this.runtimeLayer,
+      uiLayer: this.uiLayer,
+      componentTypes: this.componentTypes,
+      categories: this.categories,
+      viewStack: ViewStack.getInstance(),
+    };
   }
 
   /**
@@ -537,12 +529,7 @@ export class MotherboardApp {
       }
     }
 
-    // Wire ongoing auto-save
-    this.autoSaveManager.wireAutoSave({
-      getComponents: () => this.appStateManager.getComponents(),
-      getConnections: () => this.appStateManager.getConnections(),
-      getCurrentView: () => this.appStateManager.getCurrentView(),
-    });
+    // Auto-save wiring now handled by EventHandlerWiring module
   }
 
   private initializeMainView() {
@@ -558,8 +545,8 @@ export class MotherboardApp {
       return;
     }
     try {
-  const root = createRoot(rootEl);
-  root.render(React.createElement(MotherboardReactUI));
+      const root = createRoot(rootEl);
+      root.render(React.createElement(MotherboardReactUI));
       console.log('⚛️ React UI initialized');
     } catch (e) {
       console.error('Failed to initialize React UI', e);
@@ -774,7 +761,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
-  } catch {}
+  } catch {
+    // Ignore localStorage errors
+  }
 
   const app = new MotherboardApp();
 
@@ -786,125 +775,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Make app globally accessible for debugging
   (window as any).app = app;
-  // Initialize FX panel and bind toggles
-  try {
-    const panel = document.getElementById('fx-panel');
-    const btn = document.getElementById('fx-btn');
-    if (panel && btn) {
-      btn.addEventListener('click', () => {
-        panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'block' : 'none';
-      });
 
-      // Sync initial checkbox states from PerformanceConfig
-      const inputs = panel.querySelectorAll('input[type="checkbox"][data-flag]');
-      inputs.forEach(input => {
-        const key = (input as HTMLInputElement).dataset.flag as keyof typeof PerformanceConfig;
-        if (key && key in PerformanceConfig) {
-          (input as HTMLInputElement).checked = !!(PerformanceConfig as any)[key];
-        }
-        input.addEventListener('change', () => {
-          const k = (input as HTMLInputElement).dataset.flag as string;
-          const val = (input as HTMLInputElement).checked;
-          if (k in PerformanceConfig) {
-            (PerformanceConfig as any)[k] = val;
-            // Persist a subset of flags
-            try {
-              const raw = localStorage.getItem('mb_performance_flags');
-              const obj = raw ? JSON.parse(raw) : {};
-              obj[k] = val;
-              localStorage.setItem('mb_performance_flags', JSON.stringify(obj));
-            } catch {}
-            // Request a re-render so changes apply immediately
-            (app as any).renderScheduler?.markDirty?.();
-          }
-        });
-      });
-
-      // Reset to defaults button (clears stored overrides and reapplies defaults)
-      const resetBtn = document.getElementById('fx-reset');
-      resetBtn?.addEventListener('click', () => {
-        try {
-          localStorage.removeItem('mb_performance_flags');
-        } catch {}
-        // Re-sync inputs from current PerformanceConfig (which reflects defaults when not overridden)
-        inputs.forEach(input => {
-          const key = (input as HTMLInputElement).dataset.flag as keyof typeof PerformanceConfig;
-          if (key && key in PerformanceConfig) {
-            (input as HTMLInputElement).checked = !!(PerformanceConfig as any)[key];
-          }
-        });
-        // Trigger a render
-        (app as any).renderScheduler?.markDirty?.();
-      });
-    }
-  } catch {}
-  // Invalidate optimized connection cache on relevant events
-  eventBus.on(Events.ConnectionCreated, (payload: any) => {
-    try { if (payload?.connection) connectionRenderer.invalidateConnection(payload.connection); } catch {}
-  });
-  eventBus.on(Events.ConnectionDeleted, (payload: any) => {
-    try { if (payload?.connection) connectionRenderer.invalidateConnection(payload.connection); } catch {}
-  });
-  eventBus.on('connections.component_updated', (payload: any) => {
-    try { if (payload?.componentId) connectionRenderer.markComponentMoved(payload.componentId); } catch {}
-  });
-  // Expose profiling API for profiling.html integration
-  (window as any).renderProfiler = RenderProfiler.publicAPI();
-
-  // While profiling is active, keep the scheduler ticking so FPS updates
-  try {
-    const rp: any = (window as any).renderProfiler;
-    if (rp && !rp.__wrappedForScheduler) {
-      const originalStart = rp.startRecording?.bind(rp);
-      const originalStop = rp.stopRecording?.bind(rp);
-
-      let rafId: number | null = null;
-      const tick = () => {
-        // Mark dirty to force a render frame and profiler sample
-        (app as any).renderScheduler?.markDirty?.();
-        rafId = requestAnimationFrame(tick);
-      };
-
-      rp.startRecording = () => {
-        originalStart?.();
-        // Kick the scheduler once immediately
-        (app as any).renderScheduler?.markDirty?.();
-        if (rafId == null) rafId = requestAnimationFrame(tick);
-      };
-
-      rp.stopRecording = () => {
-        const result = originalStop?.();
-        if (rafId != null) {
-          cancelAnimationFrame(rafId);
-          rafId = null;
-        }
-        // One last render to flush final stats
-        (app as any).renderScheduler?.markDirty?.();
-        return result;
-      };
-
-      rp.__wrappedForScheduler = true;
-    }
-  } catch (e) {
-    // non-fatal; profiling wrapper is best-effort
-    console.warn('Profiler scheduler wrapper failed', e);
-  }
-
-  // Initialize Feature Toggle Panel for main board
-  try {
-    createFeatureTogglePanel({
-      containerId: 'fx-panel',
-      toggleButtonId: 'fx-btn',
-      storageKey: 'mb_main_performance_flags',
-      panelOpenKey: 'mb_main_panel_open',
-      onApply: () => {
-        try {
-          (app as any).renderScheduler?.markDirty?.();
-        } catch {}
-      },
+  // Phase 3 (CC-15): Bootstrap DOM-dependent features
+  // Skip in test environments to avoid EventBus listener overhead in performance tests
+  if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+    bootstrapDOM({
+      renderScheduler: (app as any).renderScheduler,
     });
-  } catch (e) {
-    console.warn('FeatureTogglePanel initialization failed:', e);
   }
 });
 
