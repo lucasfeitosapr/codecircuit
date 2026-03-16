@@ -35,25 +35,30 @@ export interface SerializedComponent {
 }
 
 export class ComponentSerializer {
-  // Instance variable to track visited components (preserves existing bug for now)
-  private visitedComponents: Set<string> = new Set();
-
   /**
    * Serialize components including internal structures.
    * Phase 2B: Added circular reference detection and depth limiting.
-   * 
-   * Note: This method currently has a bug where visitedComponents persists
-   * across multiple calls. This will be fixed in the next commit.
+   * Phase 4 (CC-21): Fixed visitedComponents persistence bug by using stateless design.
    */
   serialize(components: ComponentBase[]): SerializedComponent[] {
-    return this.serializeComponents(components, 0);
+    // Create fresh visited set for each serialization to prevent false positives
+    const visited = new Set<string>();
+    return this.serializeComponents(components, 0, visited);
   }
 
   /**
    * Internal recursive serialization method.
    * Extracted from ExportImportManager.serializeComponents()
+   * 
+   * @param components - Components to serialize
+   * @param depth - Current nesting depth
+   * @param visited - Set of visited component IDs to detect circular references
    */
-  private serializeComponents(components: ComponentBase[], depth: number): SerializedComponent[] {
+  private serializeComponents(
+    components: ComponentBase[],
+    depth: number,
+    visited: Set<string>
+  ): SerializedComponent[] {
     // Prevent infinite recursion on deep nesting (Phase 2B)
     if (depth > ExportConfig.MAX_NESTING_DEPTH) {
       if (ExportConfig.VERBOSE_LOGGING) {
@@ -67,8 +72,8 @@ export class ComponentSerializer {
         // Filter out null/undefined components
         if (!component || !component.id) return false;
 
-        // Check for circular references (Phase 2B)
-        if (ExportConfig.DETECT_CIRCULAR_REFS && this.visitedComponents.has(component.id)) {
+        // Check for circular references (Phase 2B, fixed in CC-21)
+        if (ExportConfig.DETECT_CIRCULAR_REFS && visited.has(component.id)) {
           console.warn(`⚠️ Circular reference detected for component: ${component.id}, skipping to prevent stack overflow`);
           return false;
         }
@@ -76,8 +81,8 @@ export class ComponentSerializer {
         return true;
       })
       .map(component => {
-        // Mark as visited (Phase 2B)
-        this.visitedComponents.add(component.id);
+        // Mark as visited (Phase 2B, fixed in CC-21)
+        visited.add(component.id);
 
         const serialized: SerializedComponent = {
           id: component.id,
@@ -102,10 +107,11 @@ export class ComponentSerializer {
           const moduleComponent = component as ModuleComponent;
 
           if (moduleComponent.internalComponents) {
-            // Recursively serialize with depth tracking (Phase 2B)
+            // Recursively serialize with depth tracking (Phase 2B, fixed in CC-21)
             serialized.internalComponents = this.serializeComponents(
               moduleComponent.internalComponents,
-              depth + 1
+              depth + 1,
+              visited
             );
           }
 
@@ -126,10 +132,10 @@ export class ComponentSerializer {
 
   /**
    * Clear visited components tracking.
-   * This should be called before each new serialization to prevent false positives.
-   * Currently not called automatically (preserves existing bug).
+   * @deprecated No longer needed - serialize() creates fresh visited set automatically.
+   * Kept for backward compatibility with ExportImportManager.
    */
   clearVisited(): void {
-    this.visitedComponents.clear();
+    // No-op: visited set is now created fresh in serialize()
   }
 }
