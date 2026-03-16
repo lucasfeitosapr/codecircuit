@@ -2,6 +2,7 @@ import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import { ExportConfig } from '../config/exportConfig';
 import type { ComponentBase, Connection, ModuleComponent } from '../types';
+import { ComponentSerializer } from '../serialization/ComponentSerializer';
 
 /**
  * ExportImportManager - Phase 5 Legacy Code Extraction
@@ -41,7 +42,7 @@ export interface ExportImportAppHooks {
 export class ExportImportManager {
   private projectName: string = 'Motherboard Project';
   private projectVersion: string = '1.0.0';
-  private visitedComponents: Set<string> = new Set();
+  private componentSerializer: ComponentSerializer = new ComponentSerializer();
   private hooks: ExportImportAppHooks | null = null;
 
   constructor() {
@@ -161,8 +162,8 @@ export class ExportImportManager {
    */
   public exportProjectData(components: ComponentBase[], connections: Connection[]): any {
     // Reset visited set before each export (Phase 2B)
-    this.visitedComponents.clear();
-    
+    this.componentSerializer.clearVisited();
+
     try {
       // Validate input parameters
       if (!Array.isArray(components)) {
@@ -172,7 +173,7 @@ export class ExportImportManager {
         throw new Error('Connections must be an array');
       }
 
-      const serializedComponents = this.serializeComponents(components);
+      const serializedComponents = this.serializeComponentsWithConnections(components);
       const serializedConnections = this.serializeConnections(connections);
 
       const projectData = {
@@ -209,78 +210,32 @@ export class ExportImportManager {
   }
 
   /**
-   * Serialize components including internal structures
-   * Phase 2B: Added circular reference detection and depth limiting
+   * Serialize components including internal structures.
+   * Delegated to ComponentSerializer (Phase 4, CC-21).
+   * 
+   * Note: We still need to handle connection serialization here since
+   * ComponentSerializer doesn't have access to serializeConnections().
    */
-  private serializeComponents(components: ComponentBase[], depth = 0): any[] {
-    // Prevent infinite recursion on deep nesting (Phase 2B)
-    if (depth > ExportConfig.MAX_NESTING_DEPTH) {
-      if (ExportConfig.VERBOSE_LOGGING) {
-        console.warn(`⚠️ Maximum nesting depth (${ExportConfig.MAX_NESTING_DEPTH}) reached, truncating deeper levels`);
+  private serializeComponentsWithConnections(components: ComponentBase[]): any[] {
+    const serialized = this.componentSerializer.serialize(components);
+
+    // Post-process to serialize internal connections recursively
+    const processComponent = (component: any): any => {
+      if (component.type === 'module-ic') {
+        if (component.internalConnections) {
+          component.internalConnections = this.serializeConnections(
+            component.internalConnections as any[]
+          );
+        }
+        // Recursively process nested modules
+        if (component.internalComponents) {
+          component.internalComponents = component.internalComponents.map(processComponent);
+        }
       }
-      return [];
-    }
+      return component;
+    };
 
-    return components
-      .filter(component => {
-        // Filter out null/undefined components
-        if (!component || !component.id) return false;
-        
-        // Check for circular references (Phase 2B)
-        if (ExportConfig.DETECT_CIRCULAR_REFS && this.visitedComponents.has(component.id)) {
-          console.warn(`⚠️ Circular reference detected for component: ${component.id}, skipping to prevent stack overflow`);
-          return false;
-        }
-        
-        return true;
-      })
-      .map(component => {
-        // Mark as visited (Phase 2B)
-        this.visitedComponents.add(component.id);
-        
-        const serialized: any = {
-          id: component.id,
-          type: component.type,
-          x: component.x,
-          y: component.y,
-          width: component.width,
-          height: component.height,
-          name: component.name,
-          title: component.title,
-          icon: component.icon,
-          color: component.color,
-          pins: component.pins,
-          status: component.status,
-          category: component.category,
-          description: component.description,
-          createdAt: component.createdAt,
-        };
-
-        // Handle Module IC internal structures
-        if (component.type === 'module-ic') {
-          const moduleComponent = component as ModuleComponent;
-
-          if (moduleComponent.internalComponents) {
-            // Recursively serialize with depth tracking (Phase 2B)
-            serialized.internalComponents = this.serializeComponents(
-              moduleComponent.internalComponents,
-              depth + 1
-            );
-          }
-
-          if (moduleComponent.internalConnections) {
-            serialized.internalConnections = this.serializeConnections(
-              moduleComponent.internalConnections
-            );
-          }
-
-          if (moduleComponent.pinMap) {
-            serialized.pinMap = moduleComponent.pinMap;
-          }
-        }
-
-        return serialized;
-      });
+    return serialized.map(processComponent);
   }
 
   /**
@@ -297,18 +252,18 @@ export class ExportImportManager {
           }
           return false;
         }
-        
+
         // Validate component references exist (Phase 2B)
         if (!connection.from.component || !connection.from.component.id) {
           console.warn('⚠️ Skipping connection with invalid from component');
           return false;
         }
-        
+
         if (!connection.to.component || !connection.to.component.id) {
           console.warn('⚠️ Skipping connection with invalid to component');
           return false;
         }
-        
+
         return true;
       })
       .map(connection => ({
@@ -319,19 +274,19 @@ export class ExportImportManager {
           pinIndex: connection.from.pinIndex,
           x: connection.from.x,
           y: connection.from.y,
-        category: connection.from.category,
-      },
-      to: {
-        componentId: connection.to.component.id,
-        pinType: connection.to.pinType,
-        pinIndex: connection.to.pinIndex,
-        x: connection.to.x,
-        y: connection.to.y,
-        category: connection.to.category,
-      },
-      category: connection.category,
-      createdAt: connection.createdAt,
-    }));
+          category: connection.from.category,
+        },
+        to: {
+          componentId: connection.to.component.id,
+          pinType: connection.to.pinType,
+          pinIndex: connection.to.pinIndex,
+          x: connection.to.x,
+          y: connection.to.y,
+          category: connection.to.category,
+        },
+        category: connection.category,
+        createdAt: connection.createdAt,
+      }));
   }
 
   /**
@@ -339,9 +294,8 @@ export class ExportImportManager {
    */
   private downloadProjectFile(projectData: any, filename?: string): void {
     try {
-      const defaultFilename = `${this.projectName.toLowerCase().replace(/\s+/g, '-')}-${
-        new Date().toISOString().split('T')[0]
-      }.json`;
+      const defaultFilename = `${this.projectName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]
+        }.json`;
       const finalFilename = filename || defaultFilename;
 
       const dataStr = JSON.stringify(projectData, null, 2);
