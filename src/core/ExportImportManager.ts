@@ -285,7 +285,9 @@ export class ExportImportManager {
           category: connection.to.category,
         },
         category: connection.category,
-        createdAt: connection.createdAt,
+        createdAt: connection.createdAt instanceof Date
+          ? connection.createdAt.toISOString()
+          : connection.createdAt,
       }));
   }
 

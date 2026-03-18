@@ -99,7 +99,9 @@ export class ComponentSerializer {
           status: component.status,
           category: component.category,
           description: component.description,
-          createdAt: component.createdAt,
+          createdAt: component.createdAt instanceof Date
+            ? component.createdAt.toISOString()
+            : component.createdAt,
         };
 
         // Handle Module IC internal structures
