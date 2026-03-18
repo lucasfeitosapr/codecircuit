@@ -583,4 +583,97 @@ describe('ExportImportManager', () => {
       expect(mockEventEmit).toHaveBeenCalledWith(Events.PROJECT_IMPORTED, expect.any(Object));
     });
   });
+
+  describe('Round-Trip Regression (COD-8)', () => {
+    it('should preserve component properties through export → JSON → import', () => {
+      // Step 1: Export
+      const exported = manager.exportProjectData(mockComponents, mockConnections);
+
+      // Step 2: Simulate file round-trip (JSON stringify + parse)
+      const json = JSON.stringify(exported);
+      const reimported = JSON.parse(json);
+
+      // Step 3: Import
+      manager.importProjectData(reimported);
+
+      const importCall = mockEventEmit.mock.calls.find(
+        call => call[0] === Events.PROJECT_IMPORTED
+      );
+      const components = importCall[1].components;
+
+      // Step 4: Verify component properties survived
+      expect(components).toHaveLength(2);
+
+      const comp1 = components.find((c: ComponentBase) => c.id === 'comp1');
+      expect(comp1.type).toBe('power-core');
+      expect(comp1.x).toBe(100);
+      expect(comp1.y).toBe(100);
+      expect(comp1.width).toBe(120);
+      expect(comp1.height).toBe(60);
+      expect(comp1.name).toBe('Test Power Core');
+      expect(comp1.status).toBe('done');
+      expect(comp1.category).toBe('backend');
+      expect(comp1.description).toBe('Test component');
+      expect(comp1.pins).toEqual({
+        output: [{ x: 0, y: 0, type: 'energy', label: 'Energy Out' }],
+      });
+
+      // createdAt should survive as a Date (reconstructed from ISO string)
+      expect(comp1.createdAt).toBeInstanceOf(Date);
+      expect(comp1.createdAt.getTime()).toBe(new Date('2024-01-01').getTime());
+    });
+
+    it('should preserve connection references through export → JSON → import', () => {
+      const exported = manager.exportProjectData(mockComponents, mockConnections);
+      const json = JSON.stringify(exported);
+      const reimported = JSON.parse(json);
+
+      manager.importProjectData(reimported);
+
+      const importCall = mockEventEmit.mock.calls.find(
+        call => call[0] === Events.PROJECT_IMPORTED
+      );
+      const connections = importCall[1].connections;
+      const components = importCall[1].components;
+
+      expect(connections).toHaveLength(1);
+
+      const conn = connections[0];
+      // Connection should reference the NEW deserialized component objects
+      expect(conn.from.component).toBe(components.find((c: ComponentBase) => c.id === 'comp1'));
+      expect(conn.to.component).toBe(components.find((c: ComponentBase) => c.id === 'comp2'));
+      expect(conn.from.pinType).toBe('output');
+      expect(conn.to.pinType).toBe('input');
+      expect(conn.category).toBe('energy');
+    });
+
+    it('should preserve Module IC internal structures through round-trip', () => {
+      const moduleComponent = {
+        ...mockComponents[0],
+        id: 'module1',
+        type: 'module-ic' as const,
+        internalComponents: [mockComponents[1]],
+        internalConnections: [] as Connection[],
+        pinMap: { external: 'internal' },
+      };
+
+      const exported = manager.exportProjectData([moduleComponent], []);
+      const json = JSON.stringify(exported);
+      const reimported = JSON.parse(json);
+
+      manager.importProjectData(reimported);
+
+      const importCall = mockEventEmit.mock.calls.find(
+        call => call[0] === Events.PROJECT_IMPORTED
+      );
+      const components = importCall[1].components;
+      const module = components[0];
+
+      expect(module.type).toBe('module-ic');
+      expect(module.internalComponents).toHaveLength(1);
+      expect(module.internalComponents[0].id).toBe('comp2');
+      expect(module.internalComponents[0].type).toBe('task-resistor');
+      expect(module.pinMap).toEqual({ external: 'internal' });
+    });
+  });
 });
