@@ -521,12 +521,14 @@ export class ExportImportManager {
   ): Connection[] {
     return connectionsData
       .map(data => {
+        // Always prefer freshly deserialized components over app state.
+        // hooks.findComponentDeep searches OLD state that hasn't been replaced yet.
         const fromComponent =
-          this.hooks?.findComponentDeep(data.from.componentId) ||
-          this.findComponentById(data.from.componentId, components);
+          this.findComponentById(data.from.componentId, components) ||
+          this.hooks?.findComponentDeep(data.from.componentId);
         const toComponent =
-          this.hooks?.findComponentDeep(data.to.componentId) ||
-          this.findComponentById(data.to.componentId, components);
+          this.findComponentById(data.to.componentId, components) ||
+          this.hooks?.findComponentDeep(data.to.componentId);
 
         if (!fromComponent || !toComponent) {
           console.warn('Warning: Could not find component for connection', data.id);
