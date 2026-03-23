@@ -61,6 +61,7 @@ export function drawConnections(app: AppContext, connections: Connection[] | und
         const enableDashOverlay = !!PerformanceConfig.ENABLE_CONNECTION_DASH_OVERLAY;
         const enablePulse = !!PerformanceConfig.ENABLE_CONNECTION_PULSE;
         const enableMicro = !!PerformanceConfig.ENABLE_CONNECTION_MICRO_PACKETS;
+        const enableParticles = !!PerformanceConfig.ENABLE_CONNECTION_PARTICLES;
         const dashOnly = !!PerformanceConfig.ENABLE_CONNECTION_DASH_ONLY;
 
         const minAnimZoom = (PerformanceConfig.MIN_ANIMATION_ZOOM as number) ?? 0;
@@ -163,6 +164,11 @@ export function drawConnections(app: AppContext, connections: Connection[] | und
               c.shadowBlur = 0;
               rendererDrawOrthogonalTrace(c, fromX, fromY, toX, toY);
               c.restore();
+            }
+
+            // Data flow particles (animated orbs with comet tails)
+            if (enableParticles && animationsBudgetOK && animationsZoomOK) {
+              drawDataFlow(app, conn, fromX, fromY, toX, toY, categoryColor, isPowered);
             }
           }
         }

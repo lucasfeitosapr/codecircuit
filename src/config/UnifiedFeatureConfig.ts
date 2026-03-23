@@ -177,7 +177,7 @@ export const DEFAULT_UNIFIED_CONFIG: UnifiedFeatureConfig = {
 
     // Connection rendering - Visual effects mostly OFF (expensive)
     connectionAnimations: false,      // OFF: Heavy animation overlay
-    connectionParticles: false,       // OFF: Expensive particle system
+    connectionParticles: true,        // ON: Animated data flow orbs along traces
     connectionGradients: false,       // OFF: Heavier than solid colors
     connectionDashOverlay: false,     // OFF: Additional overlay pass
     connectionDashOnly: false,        // OFF: Experimental mode

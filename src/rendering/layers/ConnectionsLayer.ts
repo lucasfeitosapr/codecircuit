@@ -154,13 +154,20 @@ export const ConnectionsLayer = {
               const isPowered = fromStatus === 'done';
               const categoryColor = (categories[(connection as any).category]?.color) || (connection as any)._categoryColor || '#00ff88';
 
-              // Pulse overlay (lightweight glow modulation) - DISABLED to prevent double rendering
-              // The optimized ConnectionRenderer already handles glow effects
-              const allowPulse = false; // Disabled - redundant with optimized renderer glow
+              // Pulse overlay (lightweight glow modulation)
+              if (pulseOK && (viewType !== 'schematic' || isPowered)) {
+                c.save();
+                const baseIntensity = isPowered ? 0.8 : 0.55;
+                const p = 1.0 + pulseAmp * Math.sin(Date.now() * pulseRate);
+                c.strokeStyle = categoryColor + '66';
+                c.lineWidth = isPowered ? 2.4 : 2.0;
+                c.shadowColor = categoryColor;
+                c.shadowBlur = 7 * baseIntensity * p;
+                strokeOrthogonalSimple(c, fromX, fromY, toX, toY);
+                c.restore();
+              }
 
-              // Animated dash overlay - Only render if DASH_OVERLAY is explicitly enabled
-              // When dashOnly mode is active, the optimized renderer skips base strokes, so overlay should render
-              // Otherwise, skip to avoid double rendering (optimized renderer already drew the connection)
+              // Animated dash overlay
               const allowDashOverlay = (enableDashOverlay || dashOnly) && animationsBudgetOK && animationsZoomOK && (viewType !== 'schematic' || isPowered);
               if (allowDashOverlay && (dashOnly || enableDashOverlay)) {
                 c.save();
@@ -178,20 +185,23 @@ export const ConnectionsLayer = {
                 c.restore();
               }
 
-              // Micro packets (ultra-light dashed pass) - Keep this as it's subtle by design
-              // Only render when explicitly enabled AND not redundant with optimized renderer
+              // Micro packets (ultra-light dashed pass)
               if (microOK && enableMicroPackets) {
                 c.save();
                 c.setLineDash(microDash);
                 const t2 = Date.now() * microSpeed * (isPowered ? 1.2 : 1);
                 const period = microDash.reduce((a, b) => a + b, 0);
                 c.lineDashOffset = -(t2 % period);
-                // Keep this light - it's meant to be a subtle packet effect
-                c.lineWidth = Math.max(0.8, microWidth * 0.7); // Thinner to be more subtle
-                c.strokeStyle = `rgba(${hexToRgb(categoryColor)}, ${Math.min(0.4, microAlpha * 0.7)})`; // Lower opacity
+                c.lineWidth = microWidth;
+                c.strokeStyle = `rgba(${hexToRgb(categoryColor)}, ${microAlpha})`;
                 c.shadowBlur = 0;
                 strokeOrthogonalSimple(c, fromX, fromY, toX, toY);
                 c.restore();
+              }
+
+              // Data flow particles (animated orbs with comet tails)
+              if (enableParticles && animationsBudgetOK && animationsZoomOK) {
+                drawDataFlow(c, connection as any, fromX, fromY, toX, toY, categoryColor, isPowered, camera);
               }
             }
           }
