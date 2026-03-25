@@ -57,6 +57,21 @@ export class AppStateManager {
       if (component) {
         Object.assign(component, payload.changes);
       }
+
+      // Propagate category changes to connections so their color updates (COD-72 Bug #3)
+      if (payload.changes?.category) {
+        const newCategory = payload.changes.category;
+        const connections = this.getCurrentViewConnections();
+        for (const conn of connections) {
+          if (conn.from.component.id === payload.id) {
+            conn.from.category = newCategory;
+            conn.category = newCategory;
+          }
+          if (conn.to.component.id === payload.id) {
+            conn.to.category = newCategory;
+          }
+        }
+      }
     });
 
     eventBus.on(Events.COMPONENT_SELECTED, (payload: any) => {
@@ -433,7 +448,7 @@ export class AppStateManager {
    */
   subscribe<K extends keyof AppState>(_key: K, _callback: (value: AppState[K]) => void) {
     // No-op — listener system removed in Phase 1 (EventBus-first).
-    return () => {};
+    return () => { };
   }
 }
 

@@ -44,8 +44,7 @@ export function showDatasheet(app: any, component: ComponentBase) {
   const categoryOptions = Object.entries(app.categories || {})
     .map(
       ([key, cat]: any) =>
-        `<option value="${key}" ${component.category === key ? 'selected' : ''} style="color: ${
-          cat.color
+        `<option value="${key}" ${component.category === key ? 'selected' : ''} style="color: ${cat.color
         }">
       ${cat.name}
     </option>`
@@ -62,21 +61,19 @@ export function showDatasheet(app: any, component: ComponentBase) {
       <label>Status</label>
       <select id="comp-status">
         ${statusOptions
-          .map(
-            status =>
-              `<option value="${status}" ${component.status === status ? 'selected' : ''}>${
-                statusLabels[status]
-              }</option>`
-          )
-          .join('')}
+      .map(
+        status =>
+          `<option value="${status}" ${component.status === status ? 'selected' : ''}>${statusLabels[status]
+          }</option>`
+      )
+      .join('')}
       </select>
     </div>
 
     <div class="form-group">
       <label>Category <span style="font-size: 10px; opacity: 0.7;">(affects pin color)</span></label>
-      <select id="comp-category" style="color: ${
-        app.categories?.[component.category ?? 'frontend']?.color || '#000'
-      };">
+      <select id="comp-category" style="color: ${app.categories?.[component.category ?? 'frontend']?.color || '#000'
+    };">
         ${categoryOptions}
       </select>
     </div>
@@ -90,71 +87,58 @@ export function showDatasheet(app: any, component: ComponentBase) {
       Created: ${new Date(component.createdAt ?? Date.now()).toLocaleString()}
     </div>
 
-    ${
-      component.type === 'gateway'
-        ? `<div class="gateway-config" style="border-top: 1px solid rgba(0,255,136,0.2); padding-top: 14px; margin-top: 14px;">
+    ${component.type === 'gateway'
+      ? `<div class="gateway-config" style="border-top: 1px solid rgba(0,255,136,0.2); padding-top: 14px; margin-top: 14px;">
         <h4 style="color: #9B59B6; margin-bottom: 10px;">⬟ Gateway Configuration</h4>
         
         <div class="form-group">
           <label>External System Type</label>
           <select id="gateway-system-type" style="color: #9B59B6;">
-            <option value="Database" ${
-              (component as any).externalSystem === 'Database' ? 'selected' : ''
-            }>🗄️ Database</option>
-            <option value="REST API" ${
-              (component as any).externalSystem === 'REST API' ? 'selected' : ''
-            }>🌐 REST API</option>
-            <option value="GraphQL API" ${
-              (component as any).externalSystem === 'GraphQL API' ? 'selected' : ''
-            }>📊 GraphQL API</option>
-            <option value="File Storage" ${
-              (component as any).externalSystem === 'File Storage' ? 'selected' : ''
-            }>📁 File Storage</option>
-            <option value="Message Queue" ${
-              (component as any).externalSystem === 'Message Queue' ? 'selected' : ''
-            }>📨 Message Queue</option>
-            <option value="Cache" ${
-              (component as any).externalSystem === 'Cache' ? 'selected' : ''
-            }>⚡ Cache</option>
-            <option value="External Service" ${
-              (component as any).externalSystem === 'External Service' ? 'selected' : ''
-            }>🔗 External Service</option>
+            <option value="Database" ${(component as any).externalSystem === 'Database' ? 'selected' : ''
+      }>🗄️ Database</option>
+            <option value="REST API" ${(component as any).externalSystem === 'REST API' ? 'selected' : ''
+      }>🌐 REST API</option>
+            <option value="GraphQL API" ${(component as any).externalSystem === 'GraphQL API' ? 'selected' : ''
+      }>📊 GraphQL API</option>
+            <option value="File Storage" ${(component as any).externalSystem === 'File Storage' ? 'selected' : ''
+      }>📁 File Storage</option>
+            <option value="Message Queue" ${(component as any).externalSystem === 'Message Queue' ? 'selected' : ''
+      }>📨 Message Queue</option>
+            <option value="Cache" ${(component as any).externalSystem === 'Cache' ? 'selected' : ''
+      }>⚡ Cache</option>
+            <option value="External Service" ${(component as any).externalSystem === 'External Service' ? 'selected' : ''
+      }>🔗 External Service</option>
           </select>
         </div>
 
         <div class="form-group">
           <label>Connection URL</label>
           <input type="text" id="gateway-connection-url" value="${escapeHtml(
-            (component as any).connectionUrl ?? ''
-          )}" 
+        (component as any).connectionUrl ?? ''
+      )}" 
                  placeholder="e.g., postgresql://localhost:5432/db, https://api.example.com" 
                  style="font-family: 'Courier New', monospace; font-size: 11px;" />
         </div>
 
         <div class="form-group">
           <label>Timeout (ms)</label>
-          <input type="number" id="gateway-timeout" value="${
-            (component as any).timeout ?? 5000
-          }" min="1000" max="30000" step="1000" />
+          <input type="number" id="gateway-timeout" value="${(component as any).timeout ?? 5000
+      }" min="1000" max="30000" step="1000" />
         </div>
 
         <div class="form-group">
           <label>Health State</label>
           <select id="gateway-health-state" style="color: ${getHealthStateColor(
-            (component as any).healthState ?? 'unknown'
-          )};">
-            <option value="unknown" ${
-              (component as any).healthState === 'unknown' ? 'selected' : ''
-            }>🟤 Unknown</option>
-            <option value="healthy" ${
-              (component as any).healthState === 'healthy' ? 'selected' : ''
-            }>🟢 Healthy</option>
-            <option value="degraded" ${
-              (component as any).healthState === 'degraded' ? 'selected' : ''
-            }>🟡 Degraded</option>
-            <option value="failed" ${
-              (component as any).healthState === 'failed' ? 'selected' : ''
-            }>🔴 Failed</option>
+        (component as any).healthState ?? 'unknown'
+      )};">
+            <option value="unknown" ${(component as any).healthState === 'unknown' ? 'selected' : ''
+      }>🟤 Unknown</option>
+            <option value="healthy" ${(component as any).healthState === 'healthy' ? 'selected' : ''
+      }>🟢 Healthy</option>
+            <option value="degraded" ${(component as any).healthState === 'degraded' ? 'selected' : ''
+      }>🟡 Degraded</option>
+            <option value="failed" ${(component as any).healthState === 'failed' ? 'selected' : ''
+      }>🔴 Failed</option>
           </select>
         </div>
 
@@ -162,15 +146,14 @@ export function showDatasheet(app: any, component: ComponentBase) {
           🔍 Test Connection
         </button>
       </div>`
-        : ''
+      : ''
     }
 
-    ${
-      component.type === 'module-ic'
-        ? `<button class="control-btn" id="configure-pins" style="width: 100%; margin-top: 14px; background: rgba(0,136,255,0.08); border-color: #0088ff;">
+    ${component.type === 'module-ic'
+      ? `<button class="control-btn" id="configure-pins" style="width: 100%; margin-top: 14px; background: rgba(0,136,255,0.08); border-color: #0088ff;">
         🔌 Configure Pins
       </button>`
-        : ''
+      : ''
     }
 
     <button class="control-btn" id="delete-component" style="width: 100%; margin-top: 14px; background: rgba(255,0,0,0.08); border-color: #ff4444;">
@@ -186,10 +169,20 @@ export function showDatasheet(app: any, component: ComponentBase) {
     component.status = (el as HTMLSelectElement).value;
   });
   attachSelectHandler('#comp-category', el => {
-    component.category = (el as HTMLSelectElement).value;
+    const newCategory = (el as HTMLSelectElement).value;
+    const oldCategory = component.category;
+    component.category = newCategory;
     // update select color inline
     (el as HTMLSelectElement).style.color =
       app.categories?.[component.category ?? 'frontend']?.color || '#000';
+    // Emit ComponentUpdated so connections and other systems react (COD-72 Bug #3)
+    if (oldCategory !== newCategory) {
+      eventBus.emit(Events.ComponentUpdated, {
+        id: component.id,
+        changes: { category: newCategory },
+        timestamp: Date.now(),
+      });
+    }
   });
   attachInputHandler('#comp-description', el => {
     component.description = (el as HTMLTextAreaElement).value;

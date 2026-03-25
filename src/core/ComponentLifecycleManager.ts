@@ -22,6 +22,7 @@ export class ComponentLifecycleManager {
   private componentTypes: Record<string, any>;
   private categories: Record<string, any>;
   private spatialIndex: SpatialIndex | null = null;
+  private typeCounters: Map<string, number> = new Map();
 
   constructor(
     private eventBus: EventBus,
@@ -129,7 +130,7 @@ export class ComponentLifecycleManager {
       icon: template.icon,
       color: template.color,
       status: 'defined', // default to defined instead of 'todo'
-      title: `${template.name ?? type} ${components.length + 1}`,
+      title: `${template.name ?? type} ${this.nextTypeCounter(type)}`,
       description: '',
       category: 'frontend', // Default category
       createdAt: new Date(),
@@ -294,6 +295,17 @@ export class ComponentLifecycleManager {
   }
 
   /**
+   * Return the next monotonic counter value for a given component type.
+   * Prevents name collisions across different nesting levels (COD-72 Bug #4).
+   */
+  private nextTypeCounter(type: string): number {
+    const current = this.typeCounters.get(type) ?? 0;
+    const next = current + 1;
+    this.typeCounters.set(type, next);
+    return next;
+  }
+
+  /**
    * Emit component created event
    */
   private emitComponentCreated(component: ComponentBase): void {
@@ -322,7 +334,7 @@ export class ComponentLifecycleManager {
 
       // Update spatial index if component moved
       if (PerformanceConfig.ENABLE_SPATIAL_INDEXING && this.spatialIndex &&
-          (changes.x !== undefined || changes.y !== undefined || changes.width !== undefined || changes.height !== undefined)) {
+        (changes.x !== undefined || changes.y !== undefined || changes.width !== undefined || changes.height !== undefined)) {
         this.spatialIndex.remove(component);
         this.spatialIndex.insert(component);
       }

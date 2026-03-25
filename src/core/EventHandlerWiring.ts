@@ -43,7 +43,7 @@ function wireExportImport(ctx: AppContext): void {
     getComponents: () => ctx.appStateManager.getComponents(),
     getConnections: () => ctx.appStateManager.getConnections(),
     findComponentDeep: id => ctx.appStateManager.findComponentDeep(id, ViewStack.getInstance()),
-    setComponents: components => ctx.appStateManager.setComponents(components),
+    setComponents: (components, emitEvents) => ctx.appStateManager.setComponents(components, emitEvents),
     setConnections: connections => ctx.appStateManager.setConnections(connections),
     setSelectedComponent: component => ctx.appStateManager.setSelectedComponent(component),
     initializeMainView: () => {

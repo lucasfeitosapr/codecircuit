@@ -568,7 +568,9 @@ export class MotherboardApp {
     );
 
     if (component) {
-      this.appStateManager.addComponentToCurrentView(component);
+      // Note: createComponent() already pushes into currentView.components and emits
+      // ComponentCreated. Do NOT call addComponentToCurrentView here — that would
+      // double-push the same component (root cause of COD-72 Bug #1).
       this.appStateManager.setSelectedComponent(component);
       this.showDatasheet(component);
     }

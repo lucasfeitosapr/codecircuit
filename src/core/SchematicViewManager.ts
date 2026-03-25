@@ -230,21 +230,57 @@ export class SchematicViewManager {
     if (this.context.isTransitioning()) return;
 
     const viewStack = this.context.getViewStack();
-    const currentView = this.context.getCurrentView();
     const currentDepth = this.getViewDepth();
+    const viewportManager = this.context.getViewportManager();
+    const uiController = this.context.getUIController();
 
     if (targetIndex === 0) {
       // Navigate to main board
       this.exitToMainBoard();
     } else if (targetIndex < currentDepth) {
-      // Navigate to intermediate level by exiting the right number of levels
+      // Pop the stack down to the target level and restore that view directly.
+      // Previous approach called exitSchematicView() in a sync loop which raced
+      // with animation callbacks, corrupting state (COD-72 Bug #6).
       const levelsToExit = currentDepth - targetIndex;
 
-      // For now, just exit one level at a time
-      // TODO: Implement batch exit for better UX
+      this.context.setTransitioning(true);
+      this.context.hideDatasheet();
+      this.context.setSelectedComponent(null);
+
+      // Pop excess levels off the stack
+      let restoredView: any = null;
       for (let i = 0; i < levelsToExit; i++) {
-        this.exitSchematicView();
+        restoredView = viewStack.pop();
       }
+
+      if (!restoredView) {
+        this.context.setTransitioning(false);
+        return;
+      }
+
+      // Restore the target level's view
+      const targetView: ViewState = {
+        type: restoredView.type,
+        component: restoredView.component,
+        camera: { ...restoredView.camera },
+        components: restoredView.components || [],
+        connections: restoredView.connections || [],
+      };
+
+      // Re-bind Module IC internal arrays for reference consistency
+      if (targetView.type === 'schematic' && targetView.component?.type === 'module-ic') {
+        const mod = targetView.component as ModuleComponent;
+        mod.internalComponents = mod.internalComponents || [];
+        mod.internalConnections = mod.internalConnections || [];
+        targetView.components = mod.internalComponents;
+        targetView.connections = mod.internalConnections;
+      }
+
+      this.context.setCurrentView(targetView);
+      viewportManager.setCamera({ ...restoredView.camera });
+      this.context.setSelectedComponent(restoredView.selectedComponent ?? null);
+      this.context.setTransitioning(false);
+      uiController.updateBreadcrumbs();
     }
   }
 
