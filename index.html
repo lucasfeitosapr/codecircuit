@@ -1,641 +1,645 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Project: Motherboard MVP</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project: Motherboard MVP</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: radial-gradient(ellipse at center, #0a0a0a 0%, #000 100%);
+      color: #00ff88;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .app-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(0, 0, 0, 0.8);
+      border-bottom: 2px solid #00ff88;
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00ff88;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 18px;
+      color: #00ff88;
+    }
+
+    .breadcrumb-item {
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .breadcrumb-item:hover {
+      background: rgba(0, 255, 136, 0.1);
+      text-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
+    }
+
+    .breadcrumb-item.current {
+      background: rgba(0, 255, 136, 0.2);
+      font-weight: bold;
+      cursor: default;
+    }
+
+    .breadcrumb-separator {
+      color: #666;
+      font-weight: bold;
+    }
+
+    .depth-indicator {
+      display: inline-block;
+      margin-right: 4px;
+      opacity: 0.7;
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .control-btn {
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid #00ff88;
+      color: #00ff88;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+
+    .control-btn:hover {
+      background: rgba(0, 255, 136, 0.2);
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    }
+
+    /* FX panel */
+    .fx-panel {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      width: 260px;
+      background: rgba(0, 0, 0, 0.92);
+      border: 2px solid #00ff88;
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 1200;
+      display: none;
+      backdrop-filter: blur(10px);
+    }
+
+    .fx-panel h4 {
+      margin-bottom: 8px;
+      color: #00ff88;
+    }
+
+    .fx-panel label {
+      display: block;
+      margin: 6px 0;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .fx-panel .hint {
+      color: #888;
+      font-size: 10px;
+      margin-top: 6px;
+      display: block;
+    }
+
+    .parts-tray {
+      position: fixed;
+      left: 20px;
+      top: 80px;
+      width: 200px;
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #00ff88;
+      border-radius: 8px;
+      padding: 15px;
+      z-index: 500;
+      backdrop-filter: blur(10px);
+    }
+
+    .parts-tray h3 {
+      margin-bottom: 15px;
+      color: #00ff88;
+      text-align: center;
+    }
+
+    .connection-mode-indicator {
+      background: rgba(255, 0, 255, 0.2);
+      border: 1px solid #ff00ff;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-size: 12px;
+      animation: pulse 1.5s ease-in-out infinite alternate;
+    }
+
+    .category-legend {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #00ff88;
+    }
+
+    .category-legend h4 {
+      font-size: 12px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .category-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+
+    .category-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      box-shadow: 0 0 5px currentColor;
+    }
+
+    .component-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      margin-bottom: 8px;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid #00ff88;
+      border-radius: 6px;
+      cursor: grab;
+      transition: all 0.3s ease;
+    }
+
+    .component-item:hover {
+      background: rgba(0, 255, 136, 0.2);
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+      transform: translateX(5px);
+    }
+
+    .component-item:active {
+      cursor: grabbing;
+    }
+
+    .component-item.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: rgba(100, 100, 100, 0.1);
+      border-color: #666;
+    }
+
+    .component-item.disabled:hover {
+      background: rgba(100, 100, 100, 0.1);
+      box-shadow: none;
+      transform: none;
+    }
+
+    .component-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .context-hint {
+      font-size: 9px;
+      color: #888;
+      display: block;
+      margin-top: 2px;
+      line-height: 1.2;
+    }
+
+    .component-item.disabled .context-hint {
+      color: #555;
+    }
+
+    .workbench {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
+      height: calc(100vh - 60px);
+      background: radial-gradient(circle at 25% 25%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(0, 200, 255, 0.1) 0%, transparent 50%),
+        linear-gradient(45deg, transparent 49%, rgba(0, 255, 136, 0.02) 50%, transparent 51%);
+      background-size: 100px 100px, 150px 150px, 20px 20px;
+    }
+
+    .circuit-board {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      position: relative;
+      z-index: 150;
+    }
+
+    .circuit-board:active {
+      cursor: grabbing;
+    }
+
+    .datasheet-panel {
+      position: fixed;
+      right: 20px;
+      top: 80px;
+      width: 300px;
+      max-height: 60vh;
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #00ff88;
+      border-radius: 8px;
+      padding: 15px;
+      z-index: 500;
+      backdrop-filter: blur(10px);
+      display: none;
+    }
+
+    .datasheet-panel.active {
+      display: block;
+    }
+
+    .datasheet-panel h3 {
+      color: #00ff88;
+      margin-bottom: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      color: #00ff88;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid #00ff88;
+      color: #00ff88;
+      padding: 8px;
+      border-radius: 4px;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-todo {
+      border: 2px solid #666;
+      background: transparent;
+    }
+
+    .status-in-progress {
+      background: #ff00ff;
+      box-shadow: 0 0 10px rgba(255, 0, 255, 0.6);
+      animation: pulse 1.5s ease-in-out infinite alternate;
+    }
+
+    .status-done {
+      background: #00ff88;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+    }
+
+    @keyframes pulse {
+      from {
+        opacity: 0.6;
       }
 
-      body {
-        font-family: 'Courier New', monospace;
-        background: radial-gradient(ellipse at center, #0a0a0a 0%, #000 100%);
-        color: #00ff88;
-        overflow: hidden;
-        user-select: none;
+      to {
+        opacity: 1;
       }
+    }
 
-      .app-container {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
+    .help-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
 
-      .header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 60px;
-        background: rgba(0, 0, 0, 0.8);
-        border-bottom: 2px solid #00ff88;
-        backdrop-filter: blur(10px);
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 20px;
-      }
+    .help-overlay.active {
+      display: flex;
+    }
 
-      .logo {
-        font-size: 24px;
-        font-weight: bold;
-        color: #00ff88;
-        text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
-      }
+    .help-content {
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
 
-      .breadcrumb-nav {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 18px;
-        color: #00ff88;
-      }
+    .help-content h2 {
+      color: #00ff88;
+      margin-bottom: 20px;
+      text-align: center;
+    }
 
-      .breadcrumb-item {
-        cursor: pointer;
-        transition: all 0.3s ease;
-        padding: 4px 8px;
-        border-radius: 4px;
-      }
+    .help-content h4 {
+      color: #00ff88;
+      margin: 15px 0 10px 0;
+    }
 
-      .breadcrumb-item:hover {
-        background: rgba(0, 255, 136, 0.1);
-        text-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
-      }
+    .help-content p {
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
 
-      .breadcrumb-item.current {
-        background: rgba(0, 255, 136, 0.2);
-        font-weight: bold;
-        cursor: default;
-      }
+    .help-content kbd {
+      background: rgba(0, 255, 136, 0.2);
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid #00ff88;
+    }
 
-      .breadcrumb-separator {
-        color: #666;
-        font-weight: bold;
-      }
+    #fps-counter {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      color: #00ff88;
+      font-size: 12px;
+      z-index: 1001;
+    }
+  </style>
+</head>
 
-      .depth-indicator {
-        display: inline-block;
-        margin-right: 4px;
-        opacity: 0.7;
-      }
+<body>
+  <div class="app-container">
+    <header class="header">
+      <nav class="breadcrumb-nav" id="breadcrumb-nav">
+        <span class="breadcrumb-item current" data-view-index="0">
+          <span class="depth-indicator">⚡</span>
+          Project: Motherboard
+        </span>
+      </nav>
+      <div class="controls">
+        <button class="control-btn" id="back-btn" style="display: none">← Back</button>
+        <button class="control-btn" id="help-btn">Help</button>
+        <button class="control-btn" id="fx-btn">FX</button>
+        <button class="control-btn" id="reset-btn">Reset Board</button>
+        <button class="control-btn" id="import-btn">Import</button>
+        <button class="control-btn" id="export-btn">Export</button>
+      </div>
+    </header>
 
-      .controls {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-      }
+    <div id="fps-counter">FPS: 0</div>
 
-      .control-btn {
-        background: rgba(0, 255, 136, 0.1);
-        border: 1px solid #00ff88;
-        color: #00ff88;
-        padding: 8px 16px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border-radius: 4px;
-        font-family: inherit;
-      }
+    <div class="parts-tray">
+      <h3>🛠️ Parts Tray</h3>
 
-      .control-btn:hover {
-        background: rgba(0, 255, 136, 0.2);
-        box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
-      }
-
-      /* FX panel */
-      .fx-panel {
-        position: fixed;
-        top: 70px;
-        right: 20px;
-        width: 260px;
-        background: rgba(0, 0, 0, 0.92);
-        border: 2px solid #00ff88;
-        border-radius: 8px;
-        padding: 12px;
-        z-index: 1200;
-        display: none;
-        backdrop-filter: blur(10px);
-      }
-      .fx-panel h4 {
-        margin-bottom: 8px;
-        color: #00ff88;
-      }
-      .fx-panel label {
-        display: block;
-        margin: 6px 0;
-        font-size: 12px;
-        cursor: pointer;
-      }
-      .fx-panel .hint {
-        color: #888;
-        font-size: 10px;
-        margin-top: 6px;
-        display: block;
-      }
-
-      .parts-tray {
-        position: fixed;
-        left: 20px;
-        top: 80px;
-        width: 200px;
-        background: rgba(0, 0, 0, 0.9);
-        border: 2px solid #00ff88;
-        border-radius: 8px;
-        padding: 15px;
-        z-index: 500;
-        backdrop-filter: blur(10px);
-      }
-
-      .parts-tray h3 {
-        margin-bottom: 15px;
-        color: #00ff88;
-        text-align: center;
-      }
-
-      .connection-mode-indicator {
-        background: rgba(255, 0, 255, 0.2);
-        border: 1px solid #ff00ff;
-        border-radius: 6px;
-        padding: 8px;
-        margin-bottom: 15px;
-        text-align: center;
-        font-size: 12px;
-        animation: pulse 1.5s ease-in-out infinite alternate;
-      }
-
-      .category-legend {
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 1px solid #00ff88;
-      }
-
-      .category-legend h4 {
-        font-size: 12px;
-        margin-bottom: 8px;
-        text-align: center;
-      }
-
-      .category-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 10px;
-        margin-bottom: 4px;
-      }
-
-      .category-color {
-        width: 12px;
-        height: 12px;
-        border-radius: 2px;
-        box-shadow: 0 0 5px currentColor;
-      }
-
-      .component-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px;
-        margin-bottom: 8px;
-        background: rgba(0, 255, 136, 0.1);
-        border: 1px solid #00ff88;
-        border-radius: 6px;
-        cursor: grab;
-        transition: all 0.3s ease;
-      }
-
-      .component-item:hover {
-        background: rgba(0, 255, 136, 0.2);
-        box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
-        transform: translateX(5px);
-      }
-
-      .component-item:active {
-        cursor: grabbing;
-      }
-
-      .component-item.disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-        background: rgba(100, 100, 100, 0.1);
-        border-color: #666;
-      }
-
-      .component-item.disabled:hover {
-        background: rgba(100, 100, 100, 0.1);
-        box-shadow: none;
-        transform: none;
-      }
-
-      .component-icon {
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .context-hint {
-        font-size: 9px;
-        color: #888;
-        display: block;
-        margin-top: 2px;
-        line-height: 1.2;
-      }
-
-      .component-item.disabled .context-hint {
-        color: #555;
-      }
-
-      .workbench {
-        position: absolute;
-        top: 60px;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: radial-gradient(circle at 25% 25%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 75% 75%, rgba(0, 200, 255, 0.1) 0%, transparent 50%),
-          linear-gradient(45deg, transparent 49%, rgba(0, 255, 136, 0.02) 50%, transparent 51%);
-        background-size: 100px 100px, 150px 150px, 20px 20px;
-      }
-
-      .circuit-board {
-        width: 100%;
-        height: 100%;
-        cursor: grab;
-      }
-
-      .circuit-board:active {
-        cursor: grabbing;
-      }
-
-      .datasheet-panel {
-        position: fixed;
-        right: 20px;
-        top: 80px;
-        width: 300px;
-        max-height: 60vh;
-        background: rgba(0, 0, 0, 0.9);
-        border: 2px solid #00ff88;
-        border-radius: 8px;
-        padding: 15px;
-        z-index: 500;
-        backdrop-filter: blur(10px);
-        display: none;
-      }
-
-      .datasheet-panel.active {
-        display: block;
-      }
-
-      .datasheet-panel h3 {
-        color: #00ff88;
-        margin-bottom: 15px;
-      }
-
-      .form-group {
-        margin-bottom: 15px;
-      }
-
-      .form-group label {
-        display: block;
-        color: #00ff88;
-        margin-bottom: 5px;
-        font-size: 14px;
-      }
-
-      .form-group input,
-      .form-group textarea,
-      .form-group select {
-        width: 100%;
-        background: rgba(0, 255, 136, 0.1);
-        border: 1px solid #00ff88;
-        color: #00ff88;
-        padding: 8px;
-        border-radius: 4px;
-        font-family: inherit;
-        resize: vertical;
-      }
-
-      .form-group input:focus,
-      .form-group textarea:focus,
-      .form-group select:focus {
-        outline: none;
-        box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
-      }
-
-      .status-indicator {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-right: 8px;
-      }
-
-      .status-todo {
-        border: 2px solid #666;
-        background: transparent;
-      }
-
-      .status-in-progress {
-        background: #ff00ff;
-        box-shadow: 0 0 10px rgba(255, 0, 255, 0.6);
-        animation: pulse 1.5s ease-in-out infinite alternate;
-      }
-
-      .status-done {
-        background: #00ff88;
-        box-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
-      }
-
-      @keyframes pulse {
-        from {
-          opacity: 0.6;
-        }
-        to {
-          opacity: 1;
-        }
-      }
-
-      .help-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.8);
-        backdrop-filter: blur(5px);
-        z-index: 2000;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 40px;
-      }
-
-      .help-overlay.active {
-        display: flex;
-      }
-
-      .help-content {
-        background: rgba(0, 0, 0, 0.9);
-        border: 2px solid #00ff88;
-        border-radius: 12px;
-        padding: 30px;
-        max-width: 600px;
-        max-height: 80vh;
-        overflow-y: auto;
-      }
-
-      .help-content h2 {
-        color: #00ff88;
-        margin-bottom: 20px;
-        text-align: center;
-      }
-
-      .help-content h4 {
-        color: #00ff88;
-        margin: 15px 0 10px 0;
-      }
-
-      .help-content p {
-        margin-bottom: 10px;
-        line-height: 1.4;
-      }
-
-      .help-content kbd {
-        background: rgba(0, 255, 136, 0.2);
-        padding: 2px 6px;
-        border-radius: 3px;
-        border: 1px solid #00ff88;
-      }
-
-      #fps-counter {
-        position: fixed;
-        top: 70px;
-        right: 20px;
-        color: #00ff88;
-        font-size: 12px;
-        z-index: 1001;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="app-container">
-      <header class="header">
-        <nav class="breadcrumb-nav" id="breadcrumb-nav">
-          <span class="breadcrumb-item current" data-view-index="0">
-            <span class="depth-indicator">⚡</span>
-            Project: Motherboard
-          </span>
-        </nav>
-        <div class="controls">
-          <button class="control-btn" id="back-btn" style="display: none">← Back</button>
-          <button class="control-btn" id="help-btn">Help</button>
-          <button class="control-btn" id="fx-btn">FX</button>
-          <button class="control-btn" id="reset-btn">Reset Board</button>
-          <button class="control-btn" id="import-btn">Import</button>
-          <button class="control-btn" id="export-btn">Export</button>
-        </div>
-      </header>
-
-      <div id="fps-counter">FPS: 0</div>
-
-      <div class="parts-tray">
-        <h3>🛠️ Parts Tray</h3>
-
-        <div id="connection-mode" class="connection-mode-indicator" style="display: none">
-          ⚡ Connection Mode<br />
-          <small>Click pins to connect</small>
-        </div>
-
-        <!-- Component items dynamically populated by PartsTrayRenderer -->
-        <div id="parts-tray-components">
-          <!-- Components will be inserted here by PartsTrayRenderer -->
-        </div>
-
-        <div class="category-legend">
-          <h4>🎨 Categories</h4>
-          <div class="category-item">
-            <div class="category-color" style="background: #00ff88; color: #00ff88"></div>
-            <span>Frontend</span>
-          </div>
-          <div class="category-item">
-            <div class="category-color" style="background: #4488ff; color: #4488ff"></div>
-            <span>Backend</span>
-          </div>
-          <div class="category-item">
-            <div class="category-color" style="background: #ffaa00; color: #ffaa00"></div>
-            <span>Database</span>
-          </div>
-          <div class="category-item">
-            <div class="category-color" style="background: #ff0088; color: #ff0088"></div>
-            <span>Security</span>
-          </div>
-          <div class="category-item">
-            <div class="category-color" style="background: #88ff00; color: #88ff00"></div>
-            <span>Testing</span>
-          </div>
-          <div class="category-item">
-            <div class="category-color" style="background: #ff8800; color: #ff8800"></div>
-            <span>DevOps</span>
-          </div>
-          <div class="category-item">
-            <div class="category-color" style="background: #aa44ff; color: #aa44ff"></div>
-            <span>Design</span>
-          </div>
-          <div class="category-item">
-            <div class="category-color" style="background: #00aaff; color: #00aaff"></div>
-            <span>Research</span>
-          </div>
-        </div>
+      <div id="connection-mode" class="connection-mode-indicator" style="display: none">
+        ⚡ Connection Mode<br />
+        <small>Click pins to connect</small>
       </div>
 
-      <div class="workbench">
-        <canvas id="circuit-board" class="circuit-board"></canvas>
-        <!-- React UI root -->
-        <div id="react-ui-root"></div>
+      <!-- Component items dynamically populated by PartsTrayRenderer -->
+      <div id="parts-tray-components">
+        <!-- Components will be inserted here by PartsTrayRenderer -->
       </div>
 
-      <div class="datasheet-panel" id="datasheet-panel">
-        <h3 id="datasheet-title">Component Properties</h3>
-        <div id="datasheet-content">
-          <!-- Dynamic content will be inserted here -->
+      <div class="category-legend">
+        <h4>🎨 Categories</h4>
+        <div class="category-item">
+          <div class="category-color" style="background: #00ff88; color: #00ff88"></div>
+          <span>Frontend</span>
         </div>
-      </div>
-
-      <!-- FX Toggle Panel (Main Board) - Content injected by FeatureTogglePanel.ts -->
-      <div class="fx-panel" id="fx-panel">
-        <!-- Panel content will be populated by FeatureTogglePanel component -->
-      </div>
-
-      <div class="help-overlay" id="help-overlay">
-        <div class="help-content">
-          <h2>Project: Motherboard - Help</h2>
-
-          <h4>🎯 Core Concept</h4>
-          <p>
-            Build your projects like electronic circuits. Drag components from the Parts Tray onto
-            the workbench, connect them with traces, and watch energy flow through your completed
-            work.
-          </p>
-
-          <h4>🧩 Components</h4>
-          <p>
-            <strong>✨ Power Core:</strong> Your user stories - the energy source that powers
-            everything
-          </p>
-          <p>
-            <strong>⬛ Module IC:</strong> Features or services - black boxes with defined
-            interfaces
-          </p>
-          <p><strong>▬▬ Task Resistor:</strong> Individual tasks - the atomic units of work</p>
-
-          <h4>🎮 Controls</h4>
-          <p><kbd>Drag</kbd> components from the Parts Tray to place them</p>
-          <p><kbd>Click</kbd> components to edit their properties</p>
-          <p><kbd>Double-click Module ICs</kbd> to enter their internal schematic view</p>
-          <p><kbd>Double-click Task Resistors</kbd> to cycle through status</p>
-          <p><kbd>Click</kbd> pins to start/end connections (⚡ Smart Soldering Iron)</p>
-          <p><kbd>Right-click + Drag</kbd> to pan the workbench</p>
-          <p><kbd>Mouse Wheel</kbd> to zoom in/out</p>
-
-          <h4>⌨️ Keyboard Shortcuts</h4>
-          <p><kbd>ESC</kbd> Exit schematic view, clear selection, or close modals</p>
-          <p><kbd>TAB</kbd> Navigate deeper into Module ICs</p>
-          <p><kbd>Shift + TAB</kbd> Navigate back one level</p>
-          <p><kbd>SPACE</kbd> Toggle status of selected component</p>
-          <p><kbd>F1</kbd> or <kbd>?</kbd> Show/hide this help panel</p>
-
-          <h4>🏗️ Module IC System</h4>
-          <p>
-            <strong>Hierarchical Design:</strong> Module ICs contain internal circuits with
-            unlimited nesting
-          </p>
-          <p>
-            <strong>Enter Schematic:</strong> Double-click Module ICs to zoom into their internals
-          </p>
-          <p>
-            <strong>Internal Building:</strong> Place Task Resistors and nested Module ICs inside
-            any Module IC
-          </p>
-          <p>
-            <strong>Deep Nesting:</strong> Create sub-systems within sub-systems for complex
-            architectures
-          </p>
-          <p>
-            <strong>Navigation:</strong> Use breadcrumbs to jump to any level or Back button for
-            single steps
-          </p>
-          <p>
-            <strong>State Aggregation:</strong> Module outline reflects internal component status at
-            all levels
-          </p>
-          <p>
-            <strong>Context-Aware Parts Tray:</strong> Shows appropriate components for current
-            nesting level
-          </p>
-
-          <h4>⚡ Connections & Energy Flow</h4>
-          <p>
-            <strong>Smart Soldering Iron:</strong> Click any pin to start a connection, then click
-            another pin to complete it
-          </p>
-          <p>
-            <strong>Data Flow:</strong> IN PROGRESS components send pulsing data packets through
-            traces
-          </p>
-          <p>
-            <strong>Power Flow:</strong> DONE components send steady, bright energy with data bursts
-          </p>
-          <p>
-            <strong>Color-Coded Traces:</strong> Each category has its own color (Frontend=Green,
-            Backend=Blue, etc.)
-          </p>
-          <p>
-            <strong>Pin Activity:</strong> Active pins glow and pulse when transmitting/receiving
-            data
-          </p>
-          <p><strong>Visual Feedback:</strong> Watch data cascade through your project workflow!</p>
-
-          <h4>🎨 Categories</h4>
-          <p>Components have categories that determine pin colors and trace types:</p>
-          <p>
-            <strong
-              >Frontend, Backend, Database, Security, Testing, DevOps, Design, Research</strong
-            >
-          </p>
-
-          <h4>⚡ Status System</h4>
-          <p>
-            <span class="status-indicator status-todo"></span> <strong>TODO:</strong> Outlined in
-            component color
-          </p>
-          <p>
-            <span class="status-indicator status-in-progress"></span>
-            <strong>IN PROGRESS:</strong> Pulsing magenta glow
-          </p>
-          <p>
-            <span class="status-indicator status-done"></span> <strong>DONE:</strong> Solid green,
-            powers output traces
-          </p>
-
-          <button
-            class="control-btn"
-            onclick="document.getElementById('help-overlay').classList.remove('active')"
-            style="margin-top: 20px; width: 100%"
-          >
-            Close
-          </button>
+        <div class="category-item">
+          <div class="category-color" style="background: #4488ff; color: #4488ff"></div>
+          <span>Backend</span>
+        </div>
+        <div class="category-item">
+          <div class="category-color" style="background: #ffaa00; color: #ffaa00"></div>
+          <span>Database</span>
+        </div>
+        <div class="category-item">
+          <div class="category-color" style="background: #ff0088; color: #ff0088"></div>
+          <span>Security</span>
+        </div>
+        <div class="category-item">
+          <div class="category-color" style="background: #88ff00; color: #88ff00"></div>
+          <span>Testing</span>
+        </div>
+        <div class="category-item">
+          <div class="category-color" style="background: #ff8800; color: #ff8800"></div>
+          <span>DevOps</span>
+        </div>
+        <div class="category-item">
+          <div class="category-color" style="background: #aa44ff; color: #aa44ff"></div>
+          <span>Design</span>
+        </div>
+        <div class="category-item">
+          <div class="category-color" style="background: #00aaff; color: #00aaff"></div>
+          <span>Research</span>
         </div>
       </div>
     </div>
 
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+    <div class="workbench">
+      <canvas id="circuit-board" class="circuit-board"></canvas>
+      <!-- React UI root -->
+      <div id="react-ui-root" style="visibility: hidden;"></div>
+    </div>
+
+    <div class="datasheet-panel" id="datasheet-panel">
+      <h3 id="datasheet-title">Component Properties</h3>
+      <div id="datasheet-content">
+        <!-- Dynamic content will be inserted here -->
+      </div>
+    </div>
+
+    <!-- FX Toggle Panel (Main Board) - Content injected by FeatureTogglePanel.ts -->
+    <div class="fx-panel" id="fx-panel">
+      <!-- Panel content will be populated by FeatureTogglePanel component -->
+    </div>
+
+    <div class="help-overlay" id="help-overlay">
+      <div class="help-content">
+        <h2>Project: Motherboard - Help</h2>
+
+        <h4>🎯 Core Concept</h4>
+        <p>
+          Build your projects like electronic circuits. Drag components from the Parts Tray onto
+          the workbench, connect them with traces, and watch energy flow through your completed
+          work.
+        </p>
+
+        <h4>🧩 Components</h4>
+        <p>
+          <strong>✨ Power Core:</strong> Your user stories - the energy source that powers
+          everything
+        </p>
+        <p>
+          <strong>⬛ Module IC:</strong> Features or services - black boxes with defined
+          interfaces
+        </p>
+        <p><strong>▬▬ Task Resistor:</strong> Individual tasks - the atomic units of work</p>
+
+        <h4>🎮 Controls</h4>
+        <p><kbd>Drag</kbd> components from the Parts Tray to place them</p>
+        <p><kbd>Click</kbd> components to edit their properties</p>
+        <p><kbd>Double-click Module ICs</kbd> to enter their internal schematic view</p>
+        <p><kbd>Double-click Task Resistors</kbd> to cycle through status</p>
+        <p><kbd>Click</kbd> pins to start/end connections (⚡ Smart Soldering Iron)</p>
+        <p><kbd>Right-click + Drag</kbd> to pan the workbench</p>
+        <p><kbd>Mouse Wheel</kbd> to zoom in/out</p>
+
+        <h4>⌨️ Keyboard Shortcuts</h4>
+        <p><kbd>ESC</kbd> Exit schematic view, clear selection, or close modals</p>
+        <p><kbd>TAB</kbd> Navigate deeper into Module ICs</p>
+        <p><kbd>Shift + TAB</kbd> Navigate back one level</p>
+        <p><kbd>SPACE</kbd> Toggle status of selected component</p>
+        <p><kbd>F1</kbd> or <kbd>?</kbd> Show/hide this help panel</p>
+
+        <h4>🏗️ Module IC System</h4>
+        <p>
+          <strong>Hierarchical Design:</strong> Module ICs contain internal circuits with
+          unlimited nesting
+        </p>
+        <p>
+          <strong>Enter Schematic:</strong> Double-click Module ICs to zoom into their internals
+        </p>
+        <p>
+          <strong>Internal Building:</strong> Place Task Resistors and nested Module ICs inside
+          any Module IC
+        </p>
+        <p>
+          <strong>Deep Nesting:</strong> Create sub-systems within sub-systems for complex
+          architectures
+        </p>
+        <p>
+          <strong>Navigation:</strong> Use breadcrumbs to jump to any level or Back button for
+          single steps
+        </p>
+        <p>
+          <strong>State Aggregation:</strong> Module outline reflects internal component status at
+          all levels
+        </p>
+        <p>
+          <strong>Context-Aware Parts Tray:</strong> Shows appropriate components for current
+          nesting level
+        </p>
+
+        <h4>⚡ Connections & Energy Flow</h4>
+        <p>
+          <strong>Smart Soldering Iron:</strong> Click any pin to start a connection, then click
+          another pin to complete it
+        </p>
+        <p>
+          <strong>Data Flow:</strong> IN PROGRESS components send pulsing data packets through
+          traces
+        </p>
+        <p>
+          <strong>Power Flow:</strong> DONE components send steady, bright energy with data bursts
+        </p>
+        <p>
+          <strong>Color-Coded Traces:</strong> Each category has its own color (Frontend=Green,
+          Backend=Blue, etc.)
+        </p>
+        <p>
+          <strong>Pin Activity:</strong> Active pins glow and pulse when transmitting/receiving
+          data
+        </p>
+        <p><strong>Visual Feedback:</strong> Watch data cascade through your project workflow!</p>
+
+        <h4>🎨 Categories</h4>
+        <p>Components have categories that determine pin colors and trace types:</p>
+        <p>
+          <strong>Frontend, Backend, Database, Security, Testing, DevOps, Design, Research</strong>
+        </p>
+
+        <h4>⚡ Status System</h4>
+        <p>
+          <span class="status-indicator status-todo"></span> <strong>TODO:</strong> Outlined in
+          component color
+        </p>
+        <p>
+          <span class="status-indicator status-in-progress"></span>
+          <strong>IN PROGRESS:</strong> Pulsing magenta glow
+        </p>
+        <p>
+          <span class="status-indicator status-done"></span> <strong>DONE:</strong> Solid green,
+          powers output traces
+        </p>
+
+        <button class="control-btn" onclick="document.getElementById('help-overlay').classList.remove('active')"
+          style="margin-top: 20px; width: 100%">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
 </html>

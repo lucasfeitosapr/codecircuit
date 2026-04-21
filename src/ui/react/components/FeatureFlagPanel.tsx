@@ -71,7 +71,7 @@ export function FeatureFlagPanel() {
       const obj = raw ? JSON.parse(raw) : {};
       obj[key] = (PerformanceConfig as any)[key];
       localStorage.setItem('mb_performance_flags', JSON.stringify(obj));
-    } catch {}
+    } catch { }
   };
 
   const renderPerfConfigToggles = () => {
@@ -127,8 +127,8 @@ export function FeatureFlagPanel() {
     const categories = activeCategory === 'All'
       ? ['Performance', 'UI', 'System', 'Debug']
       : activeCategory === 'Performance'
-      ? ['Performance']
-      : [activeCategory];
+        ? ['Performance']
+        : [activeCategory];
 
     return categories.map((category) => {
       // Handle Performance category separately
@@ -180,12 +180,13 @@ export function FeatureFlagPanel() {
         background: 'rgba(0, 0, 0, 0.95)',
         borderTop: '2px solid #00ff88',
         backdropFilter: 'blur(10px)',
-        zIndex: 9999,
+        zIndex: 100,
         transition: 'transform 0.3s ease',
         transform: isExpanded ? 'translateY(0)' : 'translateY(calc(100% - 40px))',
         maxHeight: '70vh',
         display: 'flex',
         flexDirection: 'column',
+        visibility: 'visible', // Override parent hidden on initial render
       }}
     >
       {/* Header Bar */}
