@@ -109,3 +109,7 @@ Thumbs.db
 Tasks.md
 
 # End of .gitignore
+
+# Playwright output
+test-results/
+playwright-report/

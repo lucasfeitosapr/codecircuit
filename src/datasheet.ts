@@ -175,7 +175,7 @@ export function showDatasheet(app: any, component: ComponentBase) {
     // update select color inline
     (el as HTMLSelectElement).style.color =
       app.categories?.[component.category ?? 'frontend']?.color || '#000';
-    // Emit ComponentUpdated so connections and other systems react (COD-72 Bug #3)
+    // Emit ComponentUpdated so connections and other systems react
     if (oldCategory !== newCategory) {
       eventBus.emit(Events.ComponentUpdated, {
         id: component.id,

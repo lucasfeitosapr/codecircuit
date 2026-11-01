@@ -8,13 +8,13 @@ import {
 } from './helpers';
 
 /**
- * COD-72: Core interaction bugs — E2E regression tests.
+ * Core interaction bugs — E2E regression tests.
  *
  * These tests verify the 7 bugs reported in the Linear issue are fixed.
  * The app is canvas-based, so we interact via `window.app` global.
  */
 
-test.describe('COD-72: Core interaction bugs', () => {
+test.describe('Core interaction bugs', () => {
   test.beforeEach(async ({ page }) => {
     // Clear corrupted autosave before each test
     await page.goto('/');

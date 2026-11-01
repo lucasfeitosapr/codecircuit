@@ -58,7 +58,7 @@ export class AppStateManager {
         Object.assign(component, payload.changes);
       }
 
-      // Propagate category changes to connections so their color updates (COD-72 Bug #3)
+      // Propagate category changes to connections so their color updates
       if (payload.changes?.category) {
         const newCategory = payload.changes.category;
         const connections = this.getCurrentViewConnections();

@@ -296,7 +296,7 @@ export class ComponentLifecycleManager {
 
   /**
    * Return the next monotonic counter value for a given component type.
-   * Prevents name collisions across different nesting levels (COD-72 Bug #4).
+   * Prevents name collisions across different nesting levels.
    */
   private nextTypeCounter(type: string): number {
     const current = this.typeCounters.get(type) ?? 0;

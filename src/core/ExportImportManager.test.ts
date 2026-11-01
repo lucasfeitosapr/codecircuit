@@ -584,7 +584,7 @@ describe('ExportImportManager', () => {
     });
   });
 
-  describe('Round-Trip Regression (COD-8)', () => {
+  describe('Round-Trip Regression', () => {
     it('should preserve component properties through export → JSON → import', () => {
       // Step 1: Export
       const exported = manager.exportProjectData(mockComponents, mockConnections);

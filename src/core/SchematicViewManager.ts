@@ -240,7 +240,7 @@ export class SchematicViewManager {
     } else if (targetIndex < currentDepth) {
       // Pop the stack down to the target level and restore that view directly.
       // Previous approach called exitSchematicView() in a sync loop which raced
-      // with animation callbacks, corrupting state (COD-72 Bug #6).
+      // with animation callbacks, corrupting state.
       const levelsToExit = currentDepth - targetIndex;
 
       this.context.setTransitioning(true);
