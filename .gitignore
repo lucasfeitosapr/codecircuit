@@ -77,7 +77,7 @@ Desktop.ini
 
 # Bundler / package artifacts
 *.tgz
-package-lock.json
+# package-lock.json  (tracked on purpose for reproducible installs)
 
 # Certificates, keys, secrets
 *.pem
