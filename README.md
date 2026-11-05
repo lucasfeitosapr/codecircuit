@@ -84,6 +84,10 @@ npx playwright install chromium
 - **Plugins.** Component types extend `BaseComponentPlugin` and register once with the component registry, which updates the parts tray and the type list.
 - **Layered rendering.** Rendering is separated from application logic and drawn in layers on a single canvas.
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for what is planned next.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
