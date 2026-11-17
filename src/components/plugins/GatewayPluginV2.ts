@@ -4,6 +4,7 @@
 import { BaseComponentPlugin } from './BaseComponentPlugin';
 import { ComponentBase } from '../../types';
 import { PluginMetadata } from '../../events/eventTypes';
+import { drawPartIcon } from '../icons';
 
 export interface GatewayComponent extends ComponentBase {
   type: 'gateway';
@@ -174,12 +175,8 @@ export function renderGateway(
   canvasCtx.stroke();
   canvasCtx.shadowBlur = 0;
 
-  // Gateway symbol (pentagon with ⬟ character) - follow DecisionPoint pattern
-  canvasCtx.fillStyle = '#2C3E50';
-  canvasCtx.font = `bold ${16 * camera.zoom}px Arial`;
-  canvasCtx.textAlign = 'center';
-  canvasCtx.textBaseline = 'middle';
-  canvasCtx.fillText('⬟', 0, 0);
+  // Gateway symbol (shape from the icon registry) - follow DecisionPoint pattern
+  drawPartIcon(canvasCtx, 'gateway', 0, 0, 14 * camera.zoom, '#2C3E50');
 
   // Title above pentagon - follow DecisionPoint pattern
   if (title && screenSize > 30) {
@@ -264,7 +261,7 @@ export function evaluateGateway(
 export class GatewayPluginV2 extends BaseComponentPlugin {
   type = 'gateway';
   metadata: PluginMetadata = {
-    displayName: 'Gateway ⬟',
+    displayName: 'Gateway',
     icon: '⬟',
     color: '#9B59B6',
     category: 'integration',
@@ -348,7 +345,7 @@ export class GatewayPluginV2 extends BaseComponentPlugin {
  */
 export const GatewayPluginLegacy = {
   id: 'gateway',
-  displayName: 'Gateway ⬟',
+  displayName: 'Gateway',
   render: (ctx: any, frame: any, model: any) => {
     const plugin = new GatewayPluginV2();
     plugin.renderComponent(ctx, frame, model);

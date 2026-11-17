@@ -8,7 +8,7 @@ export function showPinMappingUI(app: any, moduleComponent: any) {
 
   if (!panel || !titleEl || !content) return;
 
-  titleEl.textContent = `🔌 Pin Mapping: ${moduleComponent.title || moduleComponent.name}`;
+  titleEl.textContent = `Pin Mapping: ${moduleComponent.title || moduleComponent.name}`;
 
   // Initialize pinMap if it doesn't exist
   if (!moduleComponent.pinMap) {
@@ -22,7 +22,7 @@ export function showPinMappingUI(app: any, moduleComponent: any) {
   content.innerHTML = `
       <div class="pin-mapping-container">
         <div class="pin-section">
-          <h4>🔵 Input Pins</h4>
+          <h4>Input Pins</h4>
           <div id="input-pins">
             ${inputPins
               .map(
@@ -70,7 +70,7 @@ export function showPinMappingUI(app: any, moduleComponent: any) {
         </div>
 
         <div class="pin-section">
-          <h4>🔴 Output Pins</h4>
+          <h4>Output Pins</h4>
           <div id="output-pins">
             ${outputPins
               .map(

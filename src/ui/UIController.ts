@@ -9,6 +9,9 @@ import { Events } from '../events/eventTypes';
 
 import type { ViewState } from '../types';
 
+/** Breadcrumb level colors (one dot per level; replaces the old emoji icons). */
+const DEPTH_COLORS = ['#00ff88', '#4fc3f7', '#7e57c2', '#42a5f5', '#66bb6a', '#ffee58', '#ffa726', '#ef5350', '#ab47bc', '#9e9e9e', '#eeeeee', '#26c6da'];
+
 export interface UIControllerContext {
   // Getter methods for current state (to avoid stale references)
   getCurrentView(): ViewState;
@@ -161,8 +164,8 @@ export class UIController {
 
       // Add depth indicator
       const depthIndicator = document.createElement('span');
-      depthIndicator.className = 'depth-indicator';
-      depthIndicator.textContent = item.icon;
+      depthIndicator.className = 'depth-indicator depth-dot';
+      depthIndicator.style.background = item.icon; // `icon` holds the level's dot color
       breadcrumbItem.appendChild(depthIndicator);
 
       // Add text content
@@ -238,7 +241,7 @@ export class UIController {
     // Always start with main board
     path.push({
       name: 'Project: Motherboard',
-      icon: '⚡',
+      icon: DEPTH_COLORS[0],
       isCurrent: currentView.type === 'main',
       viewIndex: 0,
     });
@@ -248,8 +251,7 @@ export class UIController {
     stack.forEach((view: any, index: number) => {
       if (view.type === 'schematic' && view.component) {
         const depth = index + 1;
-        const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
-        const icon = depth < depthIcons.length ? depthIcons[depth] : `🔹${depth}`;
+        const icon = DEPTH_COLORS[depth % DEPTH_COLORS.length];
 
         path.push({
           name: view.component.title || `Module ${depth}`,
@@ -263,9 +265,7 @@ export class UIController {
     // Mark current schematic view
     if (currentView.type === 'schematic') {
       const currentDepth = stack.length + 1;
-      const depthIcons = ['⚡', '🔲', '🔳', '🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚫', '⚪', '🔘'];
-      const icon =
-        currentDepth < depthIcons.length ? depthIcons[currentDepth] : `🔹${currentDepth}`;
+      const icon = DEPTH_COLORS[currentDepth % DEPTH_COLORS.length];
 
       path.push({
         name: currentView.component?.title || `Module ${currentDepth}`,

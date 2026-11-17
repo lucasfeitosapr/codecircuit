@@ -26,7 +26,7 @@ describe('Gateway Plugin Integration', () => {
       expect(eventSpy).toHaveBeenCalledWith({
         pluginType: 'gateway',
         metadata: expect.objectContaining({
-          displayName: 'Gateway ⬟',
+          displayName: 'Gateway',
           icon: '⬟',
           color: '#9B59B6',
           category: 'integration',
@@ -41,7 +41,7 @@ describe('Gateway Plugin Integration', () => {
       const registeredPlugin = registry.get('gateway');
       expect(registeredPlugin).toBeDefined();
       expect(registeredPlugin?.type).toBe('gateway');
-      expect(registeredPlugin?.metadata.displayName).toBe('Gateway ⬟');
+      expect(registeredPlugin?.metadata.displayName).toBe('Gateway');
     });
 
     it('should include Gateway in plugin types list', () => {

@@ -9,6 +9,7 @@
 
 import { eventBus } from '../events/EventBus';
 import { Events, PluginRegisteredPayload } from '../events/eventTypes';
+import { partIconSvg } from '../components/icons';
 
 export interface PartsTrayConfig {
   containerSelector: string;  // CSS selector for parts tray container
@@ -83,7 +84,7 @@ export class PartsTrayRenderer {
 
     // Build inner HTML
     item.innerHTML = `
-      <div class="component-icon">${metadata.icon || '📦'}</div>
+      <div class="component-icon">${partIconSvg(type, 18)}</div>
       <span>${metadata.displayName}</span>
       <small class="context-hint">${contextHint}</small>
     `;

@@ -1,6 +1,7 @@
 import { hexToRgb } from '../utils';
 import { getComponentRegistry } from '../components/ComponentRegistry';
 import { PerformanceConfig } from '../config/FeatureFlagAdapter';
+import { drawPartIcon, partIconColor } from '../components/icons';
 
 export type RenderOptions = {
   camera: any;
@@ -22,8 +23,20 @@ export function renderComponent(
     if (plugin) {
       const instructions = plugin.getRenderInstructions(component);
       if (instructions && instructions.length > 0) {
-        // Execute the primary render instruction (avoids protected access)
-        instructions[0].render(c, frame);
+        // Execute the primary render instruction (avoids protected access).
+        // Plugins read categories (icon and pin colors), connections and selection from the
+        // frame, so pass them along; without this every plugin fell back to fixed colors.
+        const pluginFrame = {
+          ...frame,
+          categories: options.categories,
+          payload: {
+            ...(frame as any).payload,
+            categories: options.categories,
+            connections: options.connections ?? [],
+            selectedComponentId: options.selectedComponentId ?? null,
+          },
+        };
+        instructions[0].render(c, pluginFrame as any);
         return;
       }
     }
@@ -119,7 +132,7 @@ export function renderComponent(
 
     const centerX = screenX + screenWidth / 2;
     const centerY = screenY + screenHeight / 2;
-    c.fillText(component.icon ?? '', centerX, centerY - 5 * camera.zoom);
+    drawPartIcon(c, component.type, centerX, centerY - 5 * camera.zoom, 14 * camera.zoom, partIconColor(options, component));
 
     if (screenHeight > 40) {
       if (component.status === 'defined') {

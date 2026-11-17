@@ -7,6 +7,7 @@ import { ComponentBase, PinDef } from '../../types';
 import { RenderFrame } from '../../rendering/LayeredRenderer';
 import { PluginMetadata } from '../../events/eventTypes';
 import { eventBus } from '../../events/EventBus';
+import { drawPartIcon } from '../icons';
 
 export interface DecisionPointComponent extends ComponentBase {
   type: 'decision-point';
@@ -26,7 +27,7 @@ export interface DecisionPointComponent extends ComponentBase {
 export class DecisionPointPluginV2 extends BaseComponentPlugin {
   type = 'decision-point';
   metadata: PluginMetadata = {
-    displayName: 'Decision Point ◆',
+    displayName: 'Decision Point',
     icon: '◆',
     color: '#4ECDC4',
     category: 'flow-control',
@@ -205,12 +206,8 @@ export class DecisionPointPluginV2 extends BaseComponentPlugin {
     canvasCtx.stroke();
     canvasCtx.shadowBlur = 0;
 
-    // Decision symbol (diamond with question mark)
-    canvasCtx.fillStyle = '#2C3E50';
-    canvasCtx.font = `bold ${16 * camera.zoom}px Arial`;
-    canvasCtx.textAlign = 'center';
-    canvasCtx.textBaseline = 'middle';
-    canvasCtx.fillText('◆', 0, 0);
+    // Decision symbol (shape from the icon registry)
+    drawPartIcon(canvasCtx, 'decision-point', 0, 0, 14 * camera.zoom, '#2C3E50');
 
     // Title above diamond
     if (title && screenSize > 30) {

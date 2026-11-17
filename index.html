@@ -88,6 +88,14 @@
       opacity: 0.7;
     }
 
+    .depth-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
     .controls {
       display: flex;
       gap: 15px;
@@ -438,7 +446,7 @@
     <header class="header">
       <nav class="breadcrumb-nav" id="breadcrumb-nav">
         <span class="breadcrumb-item current" data-view-index="0">
-          <span class="depth-indicator">⚡</span>
+          <span class="depth-indicator depth-dot" style="background: #00ff88"></span>
           Project: Motherboard
         </span>
       </nav>
@@ -455,10 +463,10 @@
     <div id="fps-counter">FPS: 0</div>
 
     <div class="parts-tray">
-      <h3>🛠️ Parts Tray</h3>
+      <h3>Parts Tray</h3>
 
       <div id="connection-mode" class="connection-mode-indicator" style="display: none">
-        ⚡ Connection Mode<br />
+        Connection Mode<br />
         <small>Click pins to connect</small>
       </div>
 
@@ -468,7 +476,7 @@
       </div>
 
       <div class="category-legend">
-        <h4>🎨 Categories</h4>
+        <h4>Categories</h4>
         <div class="category-item">
           <div class="category-color" style="background: #00ff88; color: #00ff88"></div>
           <span>Frontend</span>
@@ -526,41 +534,41 @@
       <div class="help-content">
         <h2>Project: Motherboard - Help</h2>
 
-        <h4>🎯 Core Concept</h4>
+        <h4>Core Concept</h4>
         <p>
           Build your projects like electronic circuits. Drag components from the Parts Tray onto
           the workbench, connect them with traces, and watch energy flow through your completed
           work.
         </p>
 
-        <h4>🧩 Components</h4>
+        <h4>Components</h4>
         <p>
-          <strong>✨ Power Core:</strong> Your user stories - the energy source that powers
+          <strong>Power Core:</strong> Your user stories - the energy source that powers
           everything
         </p>
         <p>
-          <strong>⬛ Module IC:</strong> Features or services - black boxes with defined
+          <strong>Module IC:</strong> Features or services - black boxes with defined
           interfaces
         </p>
-        <p><strong>▬▬ Task Resistor:</strong> Individual tasks - the atomic units of work</p>
+        <p><strong>Task Resistor:</strong> Individual tasks - the atomic units of work</p>
 
-        <h4>🎮 Controls</h4>
+        <h4>Controls</h4>
         <p><kbd>Drag</kbd> components from the Parts Tray to place them</p>
         <p><kbd>Click</kbd> components to edit their properties</p>
         <p><kbd>Double-click Module ICs</kbd> to enter their internal schematic view</p>
         <p><kbd>Double-click Task Resistors</kbd> to cycle through status</p>
-        <p><kbd>Click</kbd> pins to start/end connections (⚡ Smart Soldering Iron)</p>
+        <p><kbd>Click</kbd> pins to start/end connections (Smart Soldering Iron)</p>
         <p><kbd>Right-click + Drag</kbd> to pan the workbench</p>
         <p><kbd>Mouse Wheel</kbd> to zoom in/out</p>
 
-        <h4>⌨️ Keyboard Shortcuts</h4>
+        <h4>Keyboard Shortcuts</h4>
         <p><kbd>ESC</kbd> Exit schematic view, clear selection, or close modals</p>
         <p><kbd>TAB</kbd> Navigate deeper into Module ICs</p>
         <p><kbd>Shift + TAB</kbd> Navigate back one level</p>
         <p><kbd>SPACE</kbd> Toggle status of selected component</p>
         <p><kbd>F1</kbd> or <kbd>?</kbd> Show/hide this help panel</p>
 
-        <h4>🏗️ Module IC System</h4>
+        <h4>Module IC System</h4>
         <p>
           <strong>Hierarchical Design:</strong> Module ICs contain internal circuits with
           unlimited nesting
@@ -589,7 +597,7 @@
           nesting level
         </p>
 
-        <h4>⚡ Connections & Energy Flow</h4>
+        <h4>Connections & Energy Flow</h4>
         <p>
           <strong>Smart Soldering Iron:</strong> Click any pin to start a connection, then click
           another pin to complete it
@@ -611,13 +619,13 @@
         </p>
         <p><strong>Visual Feedback:</strong> Watch data cascade through your project workflow!</p>
 
-        <h4>🎨 Categories</h4>
+        <h4>Categories</h4>
         <p>Components have categories that determine pin colors and trace types:</p>
         <p>
           <strong>Frontend, Backend, Database, Security, Testing, DevOps, Design, Research</strong>
         </p>
 
-        <h4>⚡ Status System</h4>
+        <h4>Status System</h4>
         <p>
           <span class="status-indicator status-todo"></span> <strong>TODO:</strong> Outlined in
           component color

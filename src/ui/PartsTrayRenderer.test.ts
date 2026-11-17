@@ -71,7 +71,8 @@ describe('PartsTrayRenderer', () => {
       const item = container.querySelector('[data-component="test-component"]');
       expect(item).not.toBeNull();
       expect(item?.textContent).toContain('Test Component');
-      expect(item?.querySelector('.component-icon')?.textContent).toBe('🧪');
+      // Icons come from the registry by type (an SVG shape), not from metadata.icon
+      expect(item?.querySelector('.component-icon svg.part-icon')).not.toBeNull();
     });
 
     it('should append component to container', () => {

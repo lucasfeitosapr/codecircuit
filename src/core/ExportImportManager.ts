@@ -3,6 +3,7 @@ import { Events } from '../events/eventTypes';
 import { ExportConfig } from '../config/exportConfig';
 import type { ComponentBase, Connection, ModuleComponent } from '../types';
 import { ComponentSerializer } from '../serialization/ComponentSerializer';
+import { getComponentRegistry } from '../components/ComponentRegistry';
 
 /**
  * ExportImportManager - Phase 5 Legacy Code Extraction
@@ -470,20 +471,33 @@ export class ExportImportManager {
   /**
    * Deserialize components and rebuild internal structures
    */
+  /**
+   * Defaults for a part type, from its plugin. Lets a file carry only content
+   * (type, position, title, status...) and get size, pins and color from the app.
+   */
+  private typeDefaults(type: string): any {
+    try {
+      return getComponentRegistry().get(type)?.getMetadata() ?? {};
+    } catch {
+      return {}; // registry not initialized (e.g. unit tests)
+    }
+  }
+
   private deserializeComponents(componentsData: any[]): ComponentBase[] {
     return componentsData.map(data => {
+      const defaults = this.typeDefaults(data.type);
       const component: ComponentBase = {
         id: data.id,
         type: data.type,
         x: data.x || 0,
         y: data.y || 0,
-        width: data.width || 100,
-        height: data.height || 50,
-        name: data.name || data.title || 'Unnamed Component',
-        title: data.title || data.name || 'Unnamed Component',
-        icon: data.icon || '⚡',
-        color: data.color || '#ffaa00',
-        pins: data.pins || {},
+        width: data.width || defaults.width || 100,
+        height: data.height || defaults.height || 50,
+        name: data.name || defaults.displayName || data.title || 'Unnamed Component',
+        title: data.title || data.name || defaults.displayName || 'Unnamed Component',
+        icon: data.icon || '', // not used for drawing: icons come from the registry by type
+        color: data.color || defaults.color || '#ffaa00',
+        pins: data.pins || (defaults.pins ? JSON.parse(JSON.stringify(defaults.pins)) : {}),
         status: data.status || 'defined',
         category: data.category || 'frontend',
         description: data.description || '',
@@ -537,29 +551,33 @@ export class ExportImportManager {
           return null;
         }
 
+        // A file may name only the parts and pin indexes; positions, pin types and
+        // categories then come from the parts themselves (traces run output → input).
+        const fromEnd = this.pinEnd(data.from, fromComponent, 'output');
+        const toEnd = this.pinEnd(data.to, toComponent, 'input');
+
         return {
           id: data.id,
-          from: {
-            component: fromComponent,
-            pinType: data.from.pinType,
-            pinIndex: data.from.pinIndex,
-            x: data.from.x,
-            y: data.from.y,
-            category: data.from.category,
-          },
-          to: {
-            component: toComponent,
-            pinType: data.to.pinType,
-            pinIndex: data.to.pinIndex,
-            x: data.to.x,
-            y: data.to.y,
-            category: data.to.category,
-          },
-          category: data.category,
+          from: { component: fromComponent, ...fromEnd },
+          to: { component: toComponent, ...toEnd },
+          category: data.category ?? fromEnd.category,
           createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
         };
       })
       .filter(conn => conn !== null) as Connection[];
+  }
+
+  /** One end of a trace: values from the file, else derived from the part's pin. */
+  private pinEnd(end: any, component: ComponentBase, side: 'input' | 'output') {
+    const pinIndex = end.pinIndex ?? 0;
+    const pin = (component.pins as any)?.[side]?.[pinIndex];
+    return {
+      pinType: end.pinType ?? pin?.type,
+      pinIndex,
+      x: end.x ?? (pin ? component.x + pin.x : undefined),
+      y: end.y ?? (pin ? component.y + pin.y : undefined),
+      category: end.category ?? component.category,
+    };
   }
 
   /**

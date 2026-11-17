@@ -214,7 +214,7 @@ export function FeatureFlagPanel() {
               textShadow: '0 0 8px rgba(0, 255, 136, 0.5)',
             }}
           >
-            🎛️ FEATURE FLAGS
+            FEATURE FLAGS
           </span>
           {!isExpanded && (
             <span style={{ fontSize: '11px', color: '#666' }}>

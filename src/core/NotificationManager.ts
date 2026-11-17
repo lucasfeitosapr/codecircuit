@@ -28,6 +28,7 @@ export class NotificationManager {
           position: fixed;
           background: rgba(0, 0, 0, 0.9);
           border: 2px solid #00ff88;
+          border-left-width: 6px;
           border-radius: 8px;
           padding: 15px 25px;
           color: #00ff88;
@@ -187,19 +188,19 @@ export class NotificationManager {
 
   // Convenience methods for different notification types
   success(message: string, options: Omit<NotificationOptions, 'type'> = {}): string {
-    return this.show(message, { ...options, type: 'success', icon: options.icon || '✅' });
+    return this.show(message, { ...options, type: 'success', icon: options.icon });
   }
 
   error(message: string, options: Omit<NotificationOptions, 'type'> = {}): string {
-    return this.show(message, { ...options, type: 'error', icon: options.icon || '❌' });
+    return this.show(message, { ...options, type: 'error', icon: options.icon });
   }
 
   warning(message: string, options: Omit<NotificationOptions, 'type'> = {}): string {
-    return this.show(message, { ...options, type: 'warning', icon: options.icon || '⚠️' });
+    return this.show(message, { ...options, type: 'warning', icon: options.icon });
   }
 
   info(message: string, options: Omit<NotificationOptions, 'type'> = {}): string {
-    return this.show(message, { ...options, type: 'info', icon: options.icon || 'ℹ️' });
+    return this.show(message, { ...options, type: 'info', icon: options.icon });
   }
 
   // Special method for temporary status messages (legacy compatibility)

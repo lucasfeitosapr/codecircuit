@@ -6,6 +6,7 @@ import { BaseComponentPlugin } from './BaseComponentPlugin';
 import { ComponentBase } from '../../types';
 import { RenderFrame } from '../../rendering/LayeredRenderer';
 import { PluginMetadata } from '../../events/eventTypes';
+import { drawPartIcon, partIconColor } from '../icons';
 
 export interface TaskResistorComponent extends ComponentBase {
   type: 'task-resistor';
@@ -170,7 +171,7 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('▬▬', centerX, centerY - 5 * camera.zoom);
+      drawPartIcon(ctx, 'task-resistor', centerX, centerY - 5 * camera.zoom, 14 * camera.zoom, partIconColor(frame, component));
 
       if (screenHeight > 40) {
         if (component.status === 'defined') {

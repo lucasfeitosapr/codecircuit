@@ -2,6 +2,13 @@
 // Tests diamond-shaped conditional logic component with custom TRUE/FALSE pins
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { drawPartIcon } from '../icons';
+
+// Icons are covered in icons.test.ts; here we only check which icon a plugin asks for.
+vi.mock('../icons', async importOriginal => ({
+  ...(await importOriginal<typeof import('../icons')>()),
+  drawPartIcon: vi.fn(),
+}));
 import { DecisionPointPluginV2, DecisionPointComponent } from './DecisionPointPluginV2';
 import { eventBus } from '../../events/EventBus';
 
@@ -43,7 +50,7 @@ describe('DecisionPointPluginV2', () => {
     });
 
     it('should have correct metadata', () => {
-      expect(plugin.metadata.displayName).toBe('Decision Point ◆');
+      expect(plugin.metadata.displayName).toBe('Decision Point');
       expect(plugin.metadata.icon).toBe('◆');
       expect(plugin.metadata.color).toBe('#4ECDC4');
       expect(plugin.metadata.category).toBe('flow-control');
@@ -286,14 +293,10 @@ describe('DecisionPointPluginV2', () => {
       );
     });
 
-    it('should render diamond symbol', () => {
+    it('should draw its registry icon', () => {
       plugin.renderComponent(mockCanvasContext, frame, component);
 
-      expect(mockCanvasContext.fillText).toHaveBeenCalledWith(
-        '◆',
-        expect.any(Number),
-        expect.any(Number)
-      );
+      expect(drawPartIcon).toHaveBeenCalledWith(mockCanvasContext, 'decision-point', 0, 0, expect.any(Number), expect.any(String));
     });
 
     it('should render output indicators when size > 40', () => {

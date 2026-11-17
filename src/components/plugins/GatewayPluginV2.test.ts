@@ -2,6 +2,13 @@
 // Phase 2B: Extended Component Architecture
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { drawPartIcon } from '../icons';
+
+// Icons are covered in icons.test.ts; here we only check which icon a plugin asks for.
+vi.mock('../icons', async importOriginal => ({
+  ...(await importOriginal<typeof import('../icons')>()),
+  drawPartIcon: vi.fn(),
+}));
 import {
   GatewayPluginV2,
   createGateway,
@@ -46,7 +53,7 @@ describe('GatewayPluginV2', () => {
     });
 
     it('should have correct metadata', () => {
-      expect(plugin.metadata.displayName).toBe('Gateway ⬟');
+      expect(plugin.metadata.displayName).toBe('Gateway');
       expect(plugin.metadata.icon).toBe('⬟');
       expect(plugin.metadata.color).toBe('#9B59B6');
       expect(plugin.metadata.category).toBe('integration');
@@ -180,8 +187,8 @@ describe('GatewayPluginV2', () => {
     it('should render external system title', () => {
       renderGateway(mockCanvasContext, { timestamp: 0 }, component);
 
-      // Should render gateway symbol first, then title above
-      expect(mockCanvasContext.fillText).toHaveBeenCalledWith('⬟', 0, 0);
+      // Should draw the gateway icon, then the title above
+      expect(drawPartIcon).toHaveBeenCalledWith(mockCanvasContext, 'gateway', 0, 0, expect.any(Number), expect.any(String));
       expect(mockCanvasContext.fillText).toHaveBeenCalledWith('API Gateway', 0, -38);
     });
 

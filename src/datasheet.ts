@@ -1,6 +1,7 @@
 import type { ComponentBase } from './types';
 import { eventBus } from './events/EventBus';
 import { Events } from './events/eventTypes';
+import { partIconSvg } from './components/icons';
 
 /**
  * Datasheet UI module
@@ -31,7 +32,7 @@ export function showDatasheet(app: any, component: ComponentBase) {
 
   if (!panel || !titleEl || !content) return;
 
-  titleEl.textContent = `${component.icon ?? ''} ${component.name ?? component.title ?? ''}`;
+  titleEl.innerHTML = `${partIconSvg(component.type, 16)} ${escapeHtml(component.name ?? component.title ?? '')}`;
 
   const statusOptions = ['defined', 'todo', 'in-progress', 'done'];
   const statusLabels: Record<string, string> = {
@@ -89,25 +90,25 @@ export function showDatasheet(app: any, component: ComponentBase) {
 
     ${component.type === 'gateway'
       ? `<div class="gateway-config" style="border-top: 1px solid rgba(0,255,136,0.2); padding-top: 14px; margin-top: 14px;">
-        <h4 style="color: #9B59B6; margin-bottom: 10px;">⬟ Gateway Configuration</h4>
+        <h4 style="color: #9B59B6; margin-bottom: 10px;">Gateway Configuration</h4>
         
         <div class="form-group">
           <label>External System Type</label>
           <select id="gateway-system-type" style="color: #9B59B6;">
             <option value="Database" ${(component as any).externalSystem === 'Database' ? 'selected' : ''
-      }>🗄️ Database</option>
+      }>Database</option>
             <option value="REST API" ${(component as any).externalSystem === 'REST API' ? 'selected' : ''
-      }>🌐 REST API</option>
+      }>REST API</option>
             <option value="GraphQL API" ${(component as any).externalSystem === 'GraphQL API' ? 'selected' : ''
-      }>📊 GraphQL API</option>
+      }>GraphQL API</option>
             <option value="File Storage" ${(component as any).externalSystem === 'File Storage' ? 'selected' : ''
-      }>📁 File Storage</option>
+      }>File Storage</option>
             <option value="Message Queue" ${(component as any).externalSystem === 'Message Queue' ? 'selected' : ''
-      }>📨 Message Queue</option>
+      }>Message Queue</option>
             <option value="Cache" ${(component as any).externalSystem === 'Cache' ? 'selected' : ''
-      }>⚡ Cache</option>
+      }>Cache</option>
             <option value="External Service" ${(component as any).externalSystem === 'External Service' ? 'selected' : ''
-      }>🔗 External Service</option>
+      }>External Service</option>
           </select>
         </div>
 
@@ -132,18 +133,18 @@ export function showDatasheet(app: any, component: ComponentBase) {
         (component as any).healthState ?? 'unknown'
       )};">
             <option value="unknown" ${(component as any).healthState === 'unknown' ? 'selected' : ''
-      }>🟤 Unknown</option>
+      }>Unknown</option>
             <option value="healthy" ${(component as any).healthState === 'healthy' ? 'selected' : ''
-      }>🟢 Healthy</option>
+      }>Healthy</option>
             <option value="degraded" ${(component as any).healthState === 'degraded' ? 'selected' : ''
-      }>🟡 Degraded</option>
+      }>Degraded</option>
             <option value="failed" ${(component as any).healthState === 'failed' ? 'selected' : ''
-      }>🔴 Failed</option>
+      }>Failed</option>
           </select>
         </div>
 
         <button class="control-btn" id="test-gateway-connection" style="width: 100%; margin-top: 10px; background: rgba(155,89,182,0.1); border-color: #9B59B6;">
-          🔍 Test Connection
+          Test Connection
         </button>
       </div>`
       : ''
@@ -151,7 +152,7 @@ export function showDatasheet(app: any, component: ComponentBase) {
 
     ${component.type === 'module-ic'
       ? `<button class="control-btn" id="configure-pins" style="width: 100%; margin-top: 14px; background: rgba(0,136,255,0.08); border-color: #0088ff;">
-        🔌 Configure Pins
+        Configure Pins
       </button>`
       : ''
     }
@@ -222,7 +223,7 @@ export function showDatasheet(app: any, component: ComponentBase) {
         const systemType = gatewayComponent.externalSystem || 'Unknown';
         const connectionUrl = gatewayComponent.connectionUrl || 'No URL configured';
 
-        testConnectionBtn.textContent = '🔄 Testing...';
+        testConnectionBtn.textContent = 'Testing...';
         testConnectionBtn.disabled = true;
 
         setTimeout(() => {
@@ -231,12 +232,12 @@ export function showDatasheet(app: any, component: ComponentBase) {
 
           if (testPassed) {
             gatewayComponent.healthState = 'healthy';
-            testConnectionBtn.textContent = '✅ Connection OK';
+            testConnectionBtn.textContent = 'Connection OK';
             testConnectionBtn.style.background = 'rgba(39,174,96,0.2)';
             testConnectionBtn.style.borderColor = '#27AE60';
           } else {
             gatewayComponent.healthState = 'failed';
-            testConnectionBtn.textContent = '❌ Connection Failed';
+            testConnectionBtn.textContent = 'Connection Failed';
             testConnectionBtn.style.background = 'rgba(231,76,60,0.2)';
             testConnectionBtn.style.borderColor = '#E74C3C';
           }
@@ -252,7 +253,7 @@ export function showDatasheet(app: any, component: ComponentBase) {
 
           // Reset button after 3 seconds
           setTimeout(() => {
-            testConnectionBtn.textContent = '🔍 Test Connection';
+            testConnectionBtn.textContent = 'Test Connection';
             testConnectionBtn.style.background = 'rgba(155,89,182,0.1)';
             testConnectionBtn.style.borderColor = '#9B59B6';
           }, 3000);
