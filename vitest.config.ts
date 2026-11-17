@@ -7,6 +7,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     exclude: [
       'src/archived/**/*.test.ts', // Exclude archived test files
+      'src/performance-stress.test.ts', // Machine-dependent timings: run with `npm run test:perf` (D-007)
     ],
     setupFiles: ['./src/test-setup.ts'],
     coverage: {

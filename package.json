@@ -12,6 +12,7 @@
         "test:run": "vitest run",
         "test:watch": "vitest --watch",
         "test:coverage": "vitest run --coverage",
+        "test:perf": "vitest run -c vitest.perf.config.ts",
         "lint": "eslint \"src/**/*.{ts,js}\"",
         "format": "prettier --write .",
         "test:e2e": "playwright test",
