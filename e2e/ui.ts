@@ -127,3 +127,55 @@ export async function expectSelectable(page: Page, center: { x: number; y: numbe
   await clickAt(page, center.x, center.y);
   await expect.poll(() => detailsPanelOpen(page), { timeout: 2000 }).toBe(true);
 }
+
+// ── Board actions (M-004) ───────────────────────────────────
+
+/** Select a part by clicking it and press Delete. */
+export async function deleteAt(page: Page, center: { x: number; y: number }) {
+  await clickEmpty(page);
+  await clickAt(page, center.x, center.y);
+  await expect.poll(() => detailsPanelOpen(page), { timeout: 2000 }).toBe(true);
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(300);
+}
+
+/** Click Reset Board and accept its confirm dialog. */
+export async function resetBoard(page: Page) {
+  page.once('dialog', dialog => dialog.accept());
+  await page.click('#reset-btn');
+  await page.waitForTimeout(300);
+}
+
+/** Click Export and return the downloaded file's path and parsed JSON. */
+export async function exportProject(page: Page): Promise<{ path: string; data: any }> {
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#export-btn')]);
+  const path = await download.path();
+  if (!path) throw new Error('Export produced no file');
+  await waitForNotifications(page);
+  const fs = await import('node:fs/promises');
+  return { path, data: JSON.parse(await fs.readFile(path, 'utf-8')) };
+}
+
+/** Click Import and choose a project file. */
+export async function importProject(page: Page, filePath: string) {
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#import-btn')]);
+  await chooser.setFiles(filePath);
+  await page.waitForTimeout(300);
+  await waitForNotifications(page);
+}
+
+/** Wait until on-screen notifications are gone. They sit over the canvas center and catch clicks. */
+export async function waitForNotifications(page: Page) {
+  await expect(page.locator('.notification')).toHaveCount(0, { timeout: 5000 });
+}
+
+/** Title shown in the details panel for the part at `center`. */
+export async function titleAt(page: Page, center: { x: number; y: number }): Promise<string> {
+  await expectSelectable(page, center);
+  return page.inputValue('#comp-title');
+}
+
+/** IDs of the parts in the current view (read-only; ids aren't shown in the UI). */
+export async function componentIdsInView(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as any).app.getCurrentViewComponents().map((c: any) => c.id));
+}
