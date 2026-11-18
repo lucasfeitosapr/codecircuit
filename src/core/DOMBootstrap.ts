@@ -7,7 +7,6 @@
 
 import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
-import { PerformanceConfig } from '../config/FeatureFlagAdapter';
 import { connectionRenderer } from '../ui/rendererHelpers';
 import { RenderProfiler } from '../rendering/RenderProfiler';
 import { createFeatureTogglePanel } from '../ui/FeatureTogglePanel';
@@ -18,67 +17,11 @@ import type { AppContext } from './AppContext';
  * Call this from DOMContentLoaded after MotherboardApp is constructed.
  */
 export function bootstrapDOM(ctx: Partial<AppContext>): void {
-  setupFeaturePanel(ctx);
+  // B-012: the FX button is owned by FeatureTogglePanel alone. A second click handler
+  // (old setupFeaturePanel) toggled it back closed on every click.
   setupConnectionCacheInvalidation();
   setupProfilerAPI(ctx);
   setupFeatureTogglePanel(ctx);
-}
-
-/**
- * Initialize FX panel and bind performance flag toggles.
- */
-function setupFeaturePanel(ctx: Partial<AppContext>): void {
-  try {
-    const panel = document.getElementById('fx-panel');
-    const btn = document.getElementById('fx-btn');
-    if (!panel || !btn) return;
-
-    btn.addEventListener('click', () => {
-      panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'block' : 'none';
-    });
-
-    // Sync initial checkbox states from PerformanceConfig
-    const inputs = panel.querySelectorAll('input[type="checkbox"][data-flag]');
-    inputs.forEach(input => {
-      const key = (input as HTMLInputElement).dataset.flag as keyof typeof PerformanceConfig;
-      if (key && key in PerformanceConfig) {
-        (input as HTMLInputElement).checked = !!(PerformanceConfig as any)[key];
-      }
-      input.addEventListener('change', () => {
-        const k = (input as HTMLInputElement).dataset.flag as string;
-        const val = (input as HTMLInputElement).checked;
-        if (k in PerformanceConfig) {
-          (PerformanceConfig as any)[k] = val;
-          // Persist a subset of flags
-          try {
-            const raw = localStorage.getItem('mb_performance_flags');
-            const obj = raw ? JSON.parse(raw) : {};
-            obj[k] = val;
-            localStorage.setItem('mb_performance_flags', JSON.stringify(obj));
-          } catch {}
-          // Request a re-render so changes apply immediately
-          ctx.renderScheduler?.markDirty?.();
-        }
-      });
-    });
-
-    // Reset to defaults button (clears stored overrides and reapplies defaults)
-    const resetBtn = document.getElementById('fx-reset');
-    resetBtn?.addEventListener('click', () => {
-      try {
-        localStorage.removeItem('mb_performance_flags');
-      } catch {}
-      // Re-sync inputs from current PerformanceConfig (which reflects defaults when not overridden)
-      inputs.forEach(input => {
-        const key = (input as HTMLInputElement).dataset.flag as keyof typeof PerformanceConfig;
-        if (key && key in PerformanceConfig) {
-          (input as HTMLInputElement).checked = !!(PerformanceConfig as any)[key];
-        }
-      });
-      // Trigger a render
-      ctx.renderScheduler?.markDirty?.();
-    });
-  } catch {}
 }
 
 /**

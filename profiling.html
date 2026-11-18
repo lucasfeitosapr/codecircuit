@@ -247,6 +247,7 @@
     import { RenderProfiler } from '/src/rendering/RenderProfiler.ts';
     import { getViewportManager } from '/src/core/ViewportManager.ts';
     import { createFeatureTogglePanel } from '/src/ui/FeatureTogglePanel.ts';
+    import { PerformanceConfig, getFeatureFlagManager } from '/src/config/FeatureFlagAdapter.ts'; // B-013: used by Export CSV
 
     // Ensure profiling API exists (main.ts also sets it)
     window.renderProfiler = window.renderProfiler || RenderProfiler.publicAPI();
@@ -535,7 +536,7 @@
         // Append configuration snapshot as a second CSV section
         const perfEntries = Object.entries(PerformanceConfig)
           .filter(([k, v]) => typeof v === 'boolean' || typeof v === 'number' || typeof v === 'string');
-        const ffEntries = Object.entries(ffm.getFlags());
+        const ffEntries = Object.entries(getFeatureFlagManager().getFlags());
         const metaHeader = ['meta_section','key','value'].join(',');
         const metaRows = [metaHeader]
           .concat(perfEntries.map(([k, v]) => ['perf', k, String(v)].join(',')))
@@ -548,7 +549,7 @@
         a.href = url;
         a.download = `performance-profile-${Date.now()}.csv`;
         a.click();
-        URL.revokeObjectURL(url);
+        setTimeout(() => URL.revokeObjectURL(url), 1000); // revoking at once can cancel the download
         console.log('✅ CSV with configuration snapshot exported');
       }
     });
