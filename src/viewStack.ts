@@ -58,6 +58,11 @@ export class ViewStack {
     return this.stack.length;
   }
 
+  /** IDs of the modules on the stack, outermost first (the main board has none). */
+  moduleIds(): string[] {
+    return this.stack.filter(v => v.type === 'schematic' && v.component).map(v => v.component!.id);
+  }
+
   // helpers for schematic workflows
   saveSchematicState(currentView: ViewState) {
     // Replace top of stack with updated state if matches

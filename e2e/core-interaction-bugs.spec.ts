@@ -84,7 +84,6 @@ test.describe('Core interaction bugs', () => {
 
   test('Bug #5: board reset works cleanly', { tag: ['@B-016', '@D-006'] }, async ({ page }) => {
     // The old window.app version cleared localStorage by hand, which hid this.
-    test.fail(true, 'B-016 open: Reset Board does not update the autosave, so reload restores the old board');
 
     await dropFromTray(page, 'power-core', 400, 200);
     await dropFromTray(page, 'task-resistor', 600, 200);

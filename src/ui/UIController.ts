@@ -88,10 +88,9 @@ export class UIController {
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         if (confirm('Reset the entire board? This cannot be undone.')) {
-          this.context.setComponents([]);
-          this.context.setConnections([]);
-          this.context.setSelectedComponent(null);
           this.context.hideDatasheet();
+          // One handler clears every copy of board state (EventHandlerWiring.wireBoardReset).
+          eventBus.emit(Events.PROJECT_RESET_REQUESTED, { timestamp: Date.now() });
         }
       });
     }

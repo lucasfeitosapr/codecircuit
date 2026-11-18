@@ -13,7 +13,7 @@ import type { Reporter, TestCase, TestResult, FullResult } from '@playwright/tes
  * line in the test that called it.
  */
 const TEST_CALL = /\btest\(\s*['"`]/;
-const ASSERTION = /\bexpect\w*\(/;
+const ASSERTION = /\bexpect\w*(\.\w+)?\(/; // expect(, expect.poll(, expectSelectable(
 
 function lastAssertionLine(file: string, startLine: number): number | null {
   const lines = readFileSync(file, 'utf-8').split(/\r?\n/);

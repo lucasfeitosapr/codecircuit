@@ -46,6 +46,7 @@ export const Events = {
   MOUSE_POSITION_UPDATED: 'input.mouse.position.updated',
 
   PROJECT_RESET_REQUESTED: 'input.project.reset.requested',
+  BOARD_RESET: 'project.board.reset',
   UNDO_REQUESTED: 'input.undo.requested',
   REDO_REQUESTED: 'input.redo.requested',
 

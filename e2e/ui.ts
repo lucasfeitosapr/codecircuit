@@ -99,6 +99,8 @@ export async function reloadPage(page: Page) {
   await page.reload();
   await waitForApp(page);
   await page.waitForTimeout(300);
+  // "Board restored" toast sits over the canvas center and catches clicks.
+  await waitForNotifications(page);
 }
 
 /** Autosave is debounced by 1 s. Wait past it so the next step happens after a save. */

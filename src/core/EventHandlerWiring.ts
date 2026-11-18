@@ -25,6 +25,28 @@ export function wireEventHandlers(ctx: AppContext): void {
   wireComponentDeletion(ctx);
   wireAutoSave(ctx);
   wireSpatialIndex(ctx);
+  wireBoardReset(ctx);
+}
+
+/**
+ * Reset Board from any level (COD-274, debt map D-006).
+ *
+ * Reset used to clear the root lists only. Inside a module, the current view, the view stack
+ * and the click index kept their own copies (B-008), and nothing told autosave (B-016).
+ * Name counters are kept on purpose (see the pending "reuse numbers" card).
+ */
+function wireBoardReset(ctx: AppContext): void {
+  eventBus.on(Events.PROJECT_RESET_REQUESTED, () => {
+    ViewStack.getInstance().clear();
+    ctx.appStateManager.setSelectedComponent(null);
+    ctx.appStateManager.setComponents([], false);
+    ctx.appStateManager.setConnections([]);
+    ctx.appStateManager.initializeMainView();
+    ctx.viewportManager.setCamera({ x: 0, y: 0, zoom: 1 });
+    ctx.componentLifecycleManager.rebuildSpatialIndex([]);
+    ctx.uiController.updateBreadcrumbs();
+    eventBus.emit(Events.BOARD_RESET, { timestamp: Date.now() }); // autosave + re-render
+  });
 }
 
 /**
@@ -139,5 +161,10 @@ function wireAutoSave(ctx: AppContext): void {
     getComponents: () => ctx.appStateManager.getComponents(),
     getConnections: () => ctx.appStateManager.getConnections(),
     getCurrentView: () => ctx.appStateManager.getCurrentView(),
+    getViewPath: () => {
+      const view = ctx.appStateManager.getCurrentView();
+      if (view.type !== 'schematic' || !view.component) return [];
+      return [...ViewStack.getInstance().moduleIds(), view.component.id];
+    },
   });
 }

@@ -144,6 +144,7 @@ export class RenderScheduler {
     eventBus.on(Events.ComponentCreated, () => this.markDirty());
     eventBus.on(Events.ComponentUpdated, () => this.markDirty());
     eventBus.on(Events.ComponentDeleted, () => this.markDirty());
+    eventBus.on(Events.BOARD_RESET, () => this.markDirty());
 
     // Push undo snapshot when a drag begins (before position changes)
     eventBus.on(Events.COMPONENT_DRAG_STARTED, () => hooks.pushHistorySnapshot());

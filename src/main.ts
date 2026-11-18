@@ -526,6 +526,8 @@ export class MotherboardApp {
           `Board restored (${saved.components.length} components)`,
           2000
         );
+        // Reopen the level the user was on, after start-up finishes (B-007).
+        setTimeout(() => this.restoreViewPath(saved.viewPath), 0);
         console.log('💾 AutoSave: state restored successfully');
       } catch (e) {
         this.autoSaveManager.setEnabled(true);
@@ -534,6 +536,24 @@ export class MotherboardApp {
     }
 
     // Auto-save wiring now handled by EventHandlerWiring module
+  }
+
+  /**
+   * Enter each saved module in turn, waiting for one transition before the next (B-007).
+   * Stops quietly where the path no longer matches the board.
+   */
+  private restoreViewPath(path: string[] | undefined) {
+    if (!path || path.length === 0) return;
+    const enterNext = (i: number) => {
+      if (i >= path.length) return;
+      const mod = this.appStateManager
+        .getCurrentViewComponents()
+        .find(c => c.id === path[i] && c.type === 'module-ic');
+      if (!mod) return;
+      eventBus.once('schematic.view.entered', () => enterNext(i + 1));
+      eventBus.emit(Events.VIEW_ENTER_SCHEMATIC_REQUESTED, { component: mod });
+    };
+    enterNext(0);
   }
 
   private initializeMainView() {

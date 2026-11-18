@@ -21,12 +21,16 @@ export interface AutoSaveHooks {
   getComponents: () => ComponentBase[];
   getConnections: () => Connection[];
   getCurrentView: () => { type: string; component?: any; components: any[]; connections: any[] };
+  /** Module IDs from the main board down to the current level; empty on the main board. */
+  getViewPath?: () => string[];
 }
 
 export interface SavedProjectData {
   components: any[];
   connections: any[];
   savedAt: string;
+  /** Where the user was (B-007). Optional, so older saves and exports still load. */
+  viewPath?: string[];
 }
 
 export class AutoSaveManager {
@@ -51,11 +55,32 @@ export class AutoSaveManager {
       Events.ConnectionUpdated,
       Events.COMPONENT_DRAG_COMPLETED,
       Events.PROJECT_IMPORTED,
+      Events.BOARD_RESET,
+      // Navigation changes the saved view path (B-007)
+      'schematic.view.entered',
+      'schematic.view.exited',
+      'schematic.view.main.entered',
     ];
 
     for (const event of dirtyEvents) {
       eventBus.on(event, () => this.scheduleSave());
     }
+
+    // A save still waiting on the debounce is written before the page goes away (B-006).
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', () => this.flushPendingSave());
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') this.flushPendingSave();
+      });
+    }
+  }
+
+  /** Write a save that is waiting on the debounce, now. No-op when nothing is pending. */
+  flushPendingSave(): void {
+    if (this.debounceTimer === null) return;
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = null;
+    if (this.enabled) this.performSave();
   }
 
   /**
@@ -154,6 +179,7 @@ export class AutoSaveManager {
         components: this.serializeComponents(components),
         connections: this.serializeConnections(connections),
         savedAt: new Date().toISOString(),
+        viewPath: this.hooks.getViewPath?.() ?? [],
       };
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));

@@ -162,12 +162,18 @@ export function showDatasheet(app: any, component: ComponentBase) {
     </button>
   `;
 
+  // Every edit goes through the update event, so autosave and the renderer hear it (B-005, D-003).
+  const changed = (changes: Record<string, unknown>) =>
+    eventBus.emit(Events.ComponentUpdated, { id: component.id, changes, timestamp: Date.now() });
+
   // Attach listeners (idempotent: remove previous handlers by cloning)
   attachInputHandler('#comp-title', el => {
     component.title = (el as HTMLInputElement).value;
+    changed({ title: component.title });
   });
   attachSelectHandler('#comp-status', el => {
     component.status = (el as HTMLSelectElement).value;
+    changed({ status: component.status });
   });
   attachSelectHandler('#comp-category', el => {
     const newCategory = (el as HTMLSelectElement).value;
@@ -187,6 +193,7 @@ export function showDatasheet(app: any, component: ComponentBase) {
   });
   attachInputHandler('#comp-description', el => {
     component.description = (el as HTMLTextAreaElement).value;
+    changed({ description: component.description });
   });
 
   // Gateway-specific handlers
@@ -196,20 +203,24 @@ export function showDatasheet(app: any, component: ComponentBase) {
       component.title = (component as any).externalSystem; // Update title to match system type
       const titleInput = document.getElementById('comp-title') as HTMLInputElement;
       if (titleInput) titleInput.value = component.title || '';
+      changed({ externalSystem: (component as any).externalSystem, title: component.title });
     });
 
     attachInputHandler('#gateway-connection-url', el => {
       (component as any).connectionUrl = (el as HTMLInputElement).value;
+      changed({ connectionUrl: (component as any).connectionUrl });
     });
 
     attachInputHandler('#gateway-timeout', el => {
       (component as any).timeout = parseInt((el as HTMLInputElement).value) || 5000;
+      changed({ timeout: (component as any).timeout });
     });
 
     attachSelectHandler('#gateway-health-state', el => {
       (component as any).healthState = (el as HTMLSelectElement).value;
       // Update select color to match health state
       (el as HTMLSelectElement).style.color = getHealthStateColor((component as any).healthState);
+      changed({ healthState: (component as any).healthState });
     });
 
     // Test connection button

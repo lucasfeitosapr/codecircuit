@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   openFreshBoard, dropFromTray, enterModule, pressBack, reloadPage, waitForAutosave,
   dragOnCanvas, clickAt, clickEmpty, expectSelectable, componentsInView, detailsPanelOpen,
-  moduleContentCount, countsPerLevel,
+  moduleContentCount, countsPerLevel, titleAt, resetBoard,
 } from './ui';
 
 /**
@@ -169,5 +169,60 @@ test.describe('Known bugs (debt map)', () => {
     expect(await componentsInView(page)).toBe(1);
 
     await expectSelectable(page, inner);
+  });
+});
+
+test.describe('Persistence and Reset (COD-274)', () => {
+  test.beforeEach(async ({ page }) => {
+    await openFreshBoard(page);
+  });
+
+  test('a rename survives reload without moving the part', { tag: ['@B-005', '@D-003'] }, async ({ page }) => {
+    const part = await dropFromTray(page, 'task-resistor', 500, 300);
+    await waitForAutosave(page);
+    await clickEmpty(page);
+    await clickAt(page, part.x, part.y);
+    await waitForAutosave(page); // selecting counts as a zero-length drag and saves; rename after that save
+    await page.fill('#comp-title', 'Renamed part');
+    await waitForAutosave(page);
+
+    await reloadPage(page);
+    expect(await titleAt(page, part)).toBe('Renamed part');
+  });
+
+  test('a status change survives an immediate reload', { tag: ['@B-006', '@D-004'] }, async ({ page }) => {
+    const part = await dropFromTray(page, 'task-resistor', 500, 300);
+    await waitForAutosave(page);
+    await clickEmpty(page);
+    await clickAt(page, part.x, part.y);
+    await page.selectOption('#comp-status', 'done');
+
+    await reloadPage(page); // no wait: the reload lands inside the autosave debounce
+    await expectSelectable(page, part);
+    expect(await page.inputValue('#comp-status')).toBe('done');
+  });
+
+  test('reload inside a module reopens that module', { tag: ['@B-007', '@D-005'] }, async ({ page }) => {
+    const mod = await dropFromTray(page, 'module-ic', 700, 300);
+    await enterModule(page, mod);
+    await dropFromTray(page, 'task-resistor', 450, 200);
+    await waitForAutosave(page);
+
+    await reloadPage(page);
+    const viewType = () => page.evaluate(() => (window as any).app.appStateManager.getCurrentView().type);
+    await expect.poll(viewType, { timeout: 5000 }).toBe('schematic');
+  });
+
+  test('Reset inside a module clears the board and returns to main', { tag: ['@B-008', '@D-006'] }, async ({ page }) => {
+    const mod = await dropFromTray(page, 'module-ic', 700, 300);
+    await enterModule(page, mod);
+    await dropFromTray(page, 'task-resistor', 450, 200);
+
+    await resetBoard(page);
+    const view = await page.evaluate(() => {
+      const v = (window as any).app.appStateManager.getCurrentView();
+      return { type: v.type, parts: v.components.length };
+    });
+    expect(view).toEqual({ type: 'main', parts: 0 });
   });
 });
