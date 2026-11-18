@@ -58,6 +58,8 @@ export class EventBus {
   }
 
   private handleHandlerError(err: any, event: string) {
+    // B-022: always leave a trace. 'system.error' is forwarded below, but nothing may listen to it.
+    console.error(`EventBus: a handler for "${event}" threw`, err);
     try {
       if (this.emittingSystemError) {
         console.error('EventBus handler error while handling system.error:', err);
