@@ -343,6 +343,20 @@ describe('ComponentLifecycleManager', () => {
       expect(foundComponent).toBe(component2);
     });
 
+    it('a click on overlapping parts picks the one placed last, even on a quadrant border @B-023', () => {
+      // The index's root splits at x = 0. 'lower' crosses that line; 'upper' (placed later) ends exactly on it.
+      const lower = componentLifecycleManager.createComponent('module-ic', -60, 1000, currentView)!; // x -60..40
+      const upper = componentLifecycleManager.createComponent('module-ic', -100, 1010, currentView)!; // x -100..0
+      for (let i = 0; i < 14; i++) componentLifecycleManager.createComponent('task-resistor', 100 + i * 70, 3000, currentView);
+      // Every point where the two overlap must return the upper part (placed later = drawn on top).
+      for (let x = -60; x <= 0; x += 5) {
+        for (let y = 1010; y <= 1060; y += 5) {
+          expect(componentLifecycleManager.getComponentAt(x, y, currentView)).toBe(upper);
+        }
+      }
+      expect(lower.width).toBe(100);
+    });
+
     it('should handle edge coordinates correctly, with the spatial index on @B-011', () => {
       // B-011 (fixed): the index now uses the same closed edges as the linear search.
       // Test exact corners and edges (component at x:100, y:50, w:80, h:40)

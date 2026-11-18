@@ -103,35 +103,23 @@ export class BatchedComponentRenderer {
   }
 
   /**
-   * Group components by type to minimize state changes
+   * Split components into batches of consecutive parts of the same type.
+   * B-023: draw order is placement order (later = on top). Batching used to group every part
+   * of a type together and draw the biggest group first, so stacking depended on counts.
+   * Consecutive runs keep the order and still batch the common case of same-type neighbours.
    */
   private groupComponentsByType(components: ComponentBase[]): ComponentBatch[] {
-    const typeGroups = new Map<string, ComponentBase[]>();
-
-    // Group by type
-    for (const component of components) {
-      const type = component.type;
-      if (!typeGroups.has(type)) {
-        typeGroups.set(type, []);
-      }
-      typeGroups.get(type)!.push(component);
-    }
-
-    // Convert to batches and sort by size (largest first for better cache usage)
     const batches: ComponentBatch[] = [];
-    for (const [type, components] of typeGroups) {
-      batches.push({
-        type,
-        components,
-        count: components.length,
-      });
-
-      this.stats.batchSizes[type] = components.length;
+    for (const component of components) {
+      const last = batches[batches.length - 1];
+      if (last && last.type === component.type) {
+        last.components.push(component);
+        last.count++;
+      } else {
+        batches.push({ type: component.type, components: [component], count: 1 });
+      }
+      this.stats.batchSizes[component.type] = (this.stats.batchSizes[component.type] ?? 0) + 1;
     }
-
-    // Sort by count descending (render larger batches first)
-    batches.sort((a, b) => b.count - a.count);
-
     return batches;
   }
 

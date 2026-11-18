@@ -184,19 +184,21 @@ export class ComponentLifecycleManager {
     if (PerformanceConfig.ENABLE_SPATIAL_INDEXING && this.spatialIndex) {
       const candidates = this.spatialIndex.queryPoint(x, y);
 
-      // Filter to current view and check precise hit testing
+      // B-023: the index returns candidates in tree order (and may list a part twice), so pick
+      // the hit that comes last in the view's array: placement order, the same order as drawing.
       const viewComponents = this.getCurrentViewComponents(currentView);
-      const viewComponentSet = new Set(viewComponents);
-
-      // Iterate from top to bottom (last drawn = topmost)
-      for (let i = candidates.length - 1; i >= 0; i--) {
-        const comp = candidates[i];
-        if (viewComponentSet.has(comp) && this.isPointInComponent(x, y, comp)) {
-          return comp;
+      const order = new Map(viewComponents.map((c, i) => [c, i] as const));
+      let best: ComponentBase | null = null;
+      let bestIndex = -1;
+      for (const comp of candidates) {
+        const index = order.get(comp);
+        if (index !== undefined && index > bestIndex && this.isPointInComponent(x, y, comp)) {
+          best = comp;
+          bestIndex = index;
         }
       }
 
-      return null;
+      return best;
     }
 
     // Fallback to linear search
