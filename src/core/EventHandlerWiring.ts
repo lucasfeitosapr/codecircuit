@@ -11,6 +11,8 @@
 
 import type { AppContext } from './AppContext';
 import { ViewStack } from '../viewStack';
+import { eventBus } from '../events/EventBus';
+import { Events } from '../events/eventTypes';
 
 /**
  * Wire all event handlers for manager-to-manager coordination.
@@ -22,6 +24,32 @@ export function wireEventHandlers(ctx: AppContext): void {
   wireConnectionManager(ctx);
   wireComponentDeletion(ctx);
   wireAutoSave(ctx);
+  wireSpatialIndex(ctx);
+}
+
+/**
+ * Keep the click index (spatial index) matching the current view (COD-280, debt map D-001).
+ *
+ * The quadtree finds entries by position, so a part moved by writing x/y directly can't be
+ * removed from its old cell. Instead of patching single entries, rebuild from the current
+ * view's parts whenever the view changes or a path that bypasses the lifecycle manager
+ * changes its contents. getComponentAt already filters hits to the current view.
+ *
+ * Covers: drag end (B-002), paste (B-003), entering/leaving a module or jumping to a level,
+ * including after reload (B-004) and after an undo inside a module (B-018).
+ */
+function wireSpatialIndex(ctx: AppContext): void {
+  const syncToView = () =>
+    ctx.componentLifecycleManager.rebuildSpatialIndex(ctx.appStateManager.getCurrentViewComponents());
+
+  eventBus.on(Events.COMPONENT_DRAG_COMPLETED, syncToView);
+  eventBus.on('schematic.view.entered', syncToView);
+  eventBus.on('schematic.view.exited', syncToView);
+  eventBus.on('schematic.view.main.entered', syncToView);
+  // Paste adds through appStateManager.addComponentToCurrentView ('view-aware'), not the lifecycle manager.
+  eventBus.on(Events.ComponentCreated, (payload: { source?: string }) => {
+    if (payload?.source === 'view-aware') syncToView();
+  });
 }
 
 /**

@@ -103,8 +103,6 @@ test.describe('Known bugs (debt map)', () => {
   });
 
   test('a module stays enterable after an undo inside it', { tag: ['@B-018', '@D-001'] }, async ({ page }) => {
-    test.fail(true, 'B-018 open: undo inside a module leaves the main board out of the spatial index');
-
     const mod = await dropFromTray(page, 'module-ic', 700, 300);
     await enterModule(page, mod);
     await dropFromTray(page, 'task-resistor', 450, 200);
@@ -120,9 +118,17 @@ test.describe('Known bugs (debt map)', () => {
     expect(await page.evaluate(() => (window as any).app.appStateManager.getCurrentView().type)).toBe('schematic');
   });
 
-  test('a moved component stays selectable on a busy board', { tag: ['@B-002', '@D-001'] }, async ({ page }) => {
-    test.fail(true, 'B-002 open: drag does not update the spatial index');
+  test('parts stay selectable after an undo on the main board', { tag: ['@B-018', '@D-001'] }, async ({ page }) => {
+    const first = await dropFromTray(page, 'task-resistor', 450, 300);
+    await dropFromTray(page, 'task-resistor', 650, 300);
+    await clickEmpty(page);
+    await page.keyboard.press('Control+z');
+    expect(await componentsInView(page)).toBe(1);
 
+    await expectSelectable(page, first);
+  });
+
+  test('a moved component stays selectable on a busy board', { tag: ['@B-002', '@D-001'] }, async ({ page }) => {
     // More than 10 components so the spatial index splits into cells.
     for (let i = 0; i < 11; i++) {
       await dropFromTray(page, 'task-resistor', 350 + (i % 6) * 120, 120 + Math.floor(i / 6) * 140);
@@ -138,8 +144,6 @@ test.describe('Known bugs (debt map)', () => {
   });
 
   test('a pasted copy is selectable', { tag: ['@B-003', '@D-001'] }, async ({ page }) => {
-    test.fail(true, 'B-003 open: paste bypasses the spatial index');
-
     const original = await dropFromTray(page, 'task-resistor', 500, 300);
     await clickAt(page, original.x, original.y);
     expect(await detailsPanelOpen(page)).toBe(true);
@@ -153,8 +157,6 @@ test.describe('Known bugs (debt map)', () => {
   });
 
   test('a nested component is selectable after reload', { tag: ['@B-004', '@D-001'] }, async ({ page }) => {
-    test.fail(true, 'B-004 open: nested components are not re-indexed after load');
-
     const mod = await dropFromTray(page, 'module-ic', 700, 300);
     await enterModule(page, mod);
     const inner = await dropFromTray(page, 'task-resistor', 500, 200);
