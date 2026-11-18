@@ -61,11 +61,8 @@ export class ExportImportManager {
     eventBus.on(
       Events.PROJECT_STATE_REQUEST,
       (payload: { callback: (components: any[], connections: any[]) => void }) => {
-        const currentView = hooks.getCurrentView();
-        if (currentView.type === 'schematic' && currentView.component) {
-          currentView.component.internalComponents = [...currentView.components];
-          currentView.component.internalConnections = [...currentView.connections];
-        }
+        // Read only (B-001): nested views share the module's arrays, so the
+        // top-level state already holds nested content. Don't reassign them.
         payload.callback(hooks.getComponents(), hooks.getConnections());
       }
     );

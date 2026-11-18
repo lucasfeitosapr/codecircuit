@@ -121,6 +121,27 @@ export async function componentsInView(page: Page): Promise<number> {
   return page.evaluate(() => (window as any).app.getCurrentViewComponents().length);
 }
 
+/** Parts inside the first Module IC on the main board (read-only; works from any view). */
+export async function moduleContentCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const mod = (window as any).app.appStateManager.getComponents().find((c: any) => c.type === 'module-ic');
+    return mod?.internalComponents?.length ?? -1;
+  });
+}
+
+/** Part count per nesting level, following the first Module IC down (read-only). */
+export async function countsPerLevel(page: Page): Promise<number[]> {
+  return page.evaluate(() => {
+    const counts: number[] = [];
+    let level: any[] | undefined = (window as any).app.appStateManager.getComponents();
+    while (level) {
+      counts.push(level.length);
+      level = level.find((c: any) => c.type === 'module-ic')?.internalComponents;
+    }
+    return counts;
+  });
+}
+
 /** Click a component and check the details panel opens for it. */
 export async function expectSelectable(page: Page, center: { x: number; y: number }) {
   await clickEmpty(page);

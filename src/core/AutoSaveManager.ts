@@ -133,11 +133,18 @@ export class AutoSaveManager {
     try {
       const currentView = this.hooks.getCurrentView();
 
-      // If inside a schematic view, flush internal components back to the parent
-      // module so the top-level serialization captures them.
+      // Read only (B-001): inside a schematic view, the view's arrays ARE the
+      // module's internal arrays (SchematicViewManager binds them), so the
+      // top-level serialization already sees nested content. Never reassign
+      // them here: a copy would split view and module.
       if (currentView.type === 'schematic' && currentView.component) {
-        currentView.component.internalComponents = [...currentView.components];
-        currentView.component.internalConnections = [...currentView.connections];
+        const mod = currentView.component;
+        if (
+          mod.internalComponents !== currentView.components ||
+          mod.internalConnections !== currentView.connections
+        ) {
+          console.warn('⚠️ AutoSave: schematic view is not bound to its module arrays');
+        }
       }
 
       const components = this.hooks.getComponents();

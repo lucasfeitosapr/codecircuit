@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   openFreshBoard, dropFromTray, enterModule, pressBack, reloadPage, waitForAutosave,
   dragOnCanvas, clickAt, clickEmpty, expectSelectable, componentsInView, detailsPanelOpen,
+  moduleContentCount, countsPerLevel,
 } from './ui';
 
 /**
@@ -19,8 +20,6 @@ test.describe('Known bugs (debt map)', () => {
   });
 
   test('nested content survives an autosave while nested', { tag: ['@B-001', '@D-002'] }, async ({ page }) => {
-    test.fail(true, 'B-001 open: autosave replaces the module array while nested');
-
     const mod = await dropFromTray(page, 'module-ic', 700, 300);
     await enterModule(page, mod);
     await dropFromTray(page, 'task-resistor', 450, 200);
@@ -33,6 +32,92 @@ test.describe('Known bugs (debt map)', () => {
     await enterModule(page, mod);
 
     expect(await componentsInView(page)).toBe(2);
+  });
+
+  test('nested content survives reload, then a second edit', { tag: ['@B-001', '@D-002'] }, async ({ page }) => {
+    // Card goal: survives Back, re-entry and reload. The first-pass repro saw
+    // view and module arrays split after reload + re-enter.
+    const mod = await dropFromTray(page, 'module-ic', 700, 300);
+    await enterModule(page, mod);
+    await dropFromTray(page, 'task-resistor', 450, 200);
+    await pressBack(page);
+    await waitForAutosave(page);
+
+    await reloadPage(page);
+    await enterModule(page, mod);
+    expect(await componentsInView(page)).toBe(1);
+    await dropFromTray(page, 'task-resistor', 650, 200);
+    await waitForAutosave(page);
+    await dropFromTray(page, 'task-resistor', 450, 450);
+    await pressBack(page);
+    await enterModule(page, mod);
+    expect(await componentsInView(page)).toBe(3);
+  });
+
+  for (const depth of [3, 6]) {
+    test(`a ${depth}-level build keeps every level's content`, { tag: ['@B-001', '@D-002'] }, async ({ page }) => {
+      test.setTimeout(90_000);
+      // Each level: a resistor, an autosave, then a module to go deeper.
+      // The deepest level holds only a resistor.
+      for (let level = 1; level <= depth; level++) {
+        await dropFromTray(page, 'task-resistor', 450, 200);
+        await waitForAutosave(page);
+        if (level < depth) {
+          const mod = await dropFromTray(page, 'module-ic', 700, 300);
+          await enterModule(page, mod);
+        }
+      }
+      const expected = [...Array(depth - 1).fill(2), 1];
+      for (let level = 1; level < depth; level++) {
+        await pressBack(page);
+        await waitForAutosave(page);
+      }
+      expect(await countsPerLevel(page)).toEqual(expected);
+
+      // Entering nested modules after reload is blocked by B-004, so read the levels.
+      await reloadPage(page);
+      expect(await countsPerLevel(page)).toEqual(expected);
+    });
+  }
+
+  test('undo inside a module keeps view and module in step', { tag: ['@B-001', '@D-002'] }, async ({ page }) => {
+    // Guard for the B-001 fix: undo used to replace the view's arrays, and only
+    // autosave's copy-back (removed in the fix) brought the module up to date.
+    const mod = await dropFromTray(page, 'module-ic', 700, 300);
+    await enterModule(page, mod);
+    await dropFromTray(page, 'task-resistor', 450, 200);
+    await dropFromTray(page, 'task-resistor', 650, 200);
+    await dropFromTray(page, 'task-resistor', 450, 450);
+    expect(await componentsInView(page)).toBe(3);
+
+    await clickEmpty(page);
+    await page.keyboard.press('Control+z');
+    expect(await componentsInView(page)).toBe(2);
+
+    // Autosave no longer copies the view back, so only undo itself can keep
+    // the module current. Read the module directly: re-entering after an undo
+    // is blocked by B-018 (tested below).
+    await pressBack(page);
+    await waitForAutosave(page);
+    expect(await moduleContentCount(page)).toBe(2);
+  });
+
+  test('a module stays enterable after an undo inside it', { tag: ['@B-018', '@D-001'] }, async ({ page }) => {
+    test.fail(true, 'B-018 open: undo inside a module leaves the main board out of the spatial index');
+
+    const mod = await dropFromTray(page, 'module-ic', 700, 300);
+    await enterModule(page, mod);
+    await dropFromTray(page, 'task-resistor', 450, 200);
+    await dropFromTray(page, 'task-resistor', 650, 200);
+    await clickEmpty(page);
+    await page.keyboard.press('Control+z');
+    await pressBack(page);
+    await waitForAutosave(page);
+
+    await enterModule(page, mod);
+    // Main board has 1 part; inside the module there is 1 after the undo.
+    // Assert we actually left the main board.
+    expect(await page.evaluate(() => (window as any).app.appStateManager.getCurrentView().type)).toBe('schematic');
   });
 
   test('a moved component stays selectable on a busy board', { tag: ['@B-002', '@D-001'] }, async ({ page }) => {

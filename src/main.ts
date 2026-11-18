@@ -436,9 +436,10 @@ export class MotherboardApp {
           this.appStateManager.setConnections(snapshot.connections);
           this.initializeMainView();
         } else {
-          // Schematic view: restore to current view's component internals
-          currentView.components = [...snapshot.components];
-          currentView.connections = [...snapshot.connections];
+          // Schematic view: restore in place so the view keeps sharing the
+          // module's internal arrays (B-001). Replacing them would split the two.
+          currentView.components.splice(0, currentView.components.length, ...snapshot.components);
+          currentView.connections.splice(0, currentView.connections.length, ...snapshot.connections);
           this.appStateManager.setCurrentView(currentView);
         }
         this.appStateManager.setSelectedComponent(null);
