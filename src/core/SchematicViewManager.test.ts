@@ -505,7 +505,35 @@ describe('SchematicViewManager', () => {
         component: moduleIC,
       });
 
-      expect(spy).toHaveBeenCalledWith(moduleIC);
+      expect(spy).toHaveBeenCalledWith(moduleIC, { instant: false });
+    });
+
+    it('passes instant: true through the enter request', () => {
+      const moduleIC = createMockModuleIC('module-1', 'Test Module');
+      const spy = vi.spyOn(schematicViewManager, 'enterSchematicView');
+
+      eventBus.emit(Events.VIEW_ENTER_SCHEMATIC_REQUESTED, {
+        component: moduleIC,
+        instant: true,
+      });
+
+      expect(spy).toHaveBeenCalledWith(moduleIC, { instant: true });
+    });
+
+    it('instant enter skips the animation and finishes synchronously (reload restore)', () => {
+      const moduleIC = createMockModuleIC('module-1', 'Test Module');
+      appStateManager.addComponentToCurrentView(moduleIC);
+      const entered = vi.fn();
+      eventBus.on('schematic.view.entered', entered);
+
+      schematicViewManager.enterSchematicView(moduleIC, { instant: true });
+
+      expect(mockViewNavigationManager.animateToSchematicView).not.toHaveBeenCalled();
+      expect(appStateManager.getCurrentView().type).toBe('schematic');
+      expect(appStateManager.getCurrentView().component).toBe(moduleIC);
+      expect(appStateManager.isInTransition()).toBe(false);
+      expect(entered).toHaveBeenCalledTimes(1);
+      expect(viewStack.size()).toBe(1);
     });
 
     it('should respond to VIEW_EXIT_SCHEMATIC_REQUESTED event', () => {

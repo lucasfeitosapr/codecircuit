@@ -539,7 +539,7 @@ export class MotherboardApp {
   }
 
   /**
-   * Enter each saved module in turn, waiting for one transition before the next (B-007).
+   * Reopen each saved level in turn, without the zoom animation (B-007).
    * Stops quietly where the path no longer matches the board.
    */
   private restoreViewPath(path: string[] | undefined) {
@@ -551,7 +551,7 @@ export class MotherboardApp {
         .find(c => c.id === path[i] && c.type === 'module-ic');
       if (!mod) return;
       eventBus.once('schematic.view.entered', () => enterNext(i + 1));
-      eventBus.emit(Events.VIEW_ENTER_SCHEMATIC_REQUESTED, { component: mod });
+      eventBus.emit(Events.VIEW_ENTER_SCHEMATIC_REQUESTED, { component: mod, instant: true });
     };
     enterNext(0);
   }

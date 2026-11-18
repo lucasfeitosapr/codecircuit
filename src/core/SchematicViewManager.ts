@@ -42,7 +42,7 @@ export class SchematicViewManager {
     eventBus.on(Events.VIEW_ENTER_SCHEMATIC_REQUESTED, (payload: any) => {
       const moduleComponent = payload.component;
       if (moduleComponent && moduleComponent.type === 'module-ic') {
-        this.enterSchematicView(moduleComponent);
+        this.enterSchematicView(moduleComponent, { instant: payload.instant === true });
       }
     });
 
@@ -51,7 +51,11 @@ export class SchematicViewManager {
     });
   }
 
-  enterSchematicView(moduleComponent: ModuleComponent): void {
+  /**
+   * Enter a module's schematic. `instant` skips the zoom animation (used when a reload
+   * reopens the saved level).
+   */
+  enterSchematicView(moduleComponent: ModuleComponent, opts: { instant?: boolean } = {}): void {
     if (this.context.isTransitioning()) return;
 
     const currentView = this.context.getCurrentView();
@@ -91,8 +95,7 @@ export class SchematicViewManager {
     this.context.hideDatasheet();
     this.context.setSelectedComponent(null);
 
-    // Animate transition using ViewNavigationManager
-    viewNavigationManager.animateToSchematicView(moduleComponent.id, () => {
+    const finishEnter = () => {
       const newView: ViewState = {
         type: 'schematic',
         component: moduleComponent,
@@ -126,7 +129,13 @@ export class SchematicViewManager {
         view: newView,
         timestamp: Date.now(),
       });
-    });
+    };
+
+    if (opts.instant) {
+      finishEnter();
+    } else {
+      viewNavigationManager.animateToSchematicView(moduleComponent.id, finishEnter);
+    }
   }
 
   exitSchematicView(): void {
