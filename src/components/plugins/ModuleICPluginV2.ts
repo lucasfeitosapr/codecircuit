@@ -173,7 +173,7 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
 
       if (component.status === 'defined') {
         ctx.fillStyle = 'rgba(200, 255, 255, 0.85)';
-        ctx.font = `${16 * camera.zoom}px monospace italic`;
+        ctx.font = `italic ${16 * camera.zoom}px monospace`;
         ctx.globalAlpha = 0.85;
       } else {
         ctx.fillStyle = '#ffffff';
@@ -187,7 +187,7 @@ export class ModuleICPluginV2 extends BaseComponentPlugin {
 
       if (screenHeight > 40) {
         if (component.status === 'defined') {
-          ctx.font = `${10 * camera.zoom}px monospace italic`;
+          ctx.font = `italic ${10 * camera.zoom}px monospace`;
           ctx.fillStyle = 'rgba(200, 255, 255, 0.7)';
         } else {
           ctx.font = `${10 * camera.zoom}px monospace`;

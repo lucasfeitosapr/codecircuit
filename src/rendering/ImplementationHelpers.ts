@@ -121,7 +121,7 @@ export function renderComponent(
   if (showLabels) {
     if (component.status === 'defined') {
       c.fillStyle = 'rgba(200, 255, 255, 0.85)';
-      c.font = `${16 * camera.zoom}px monospace italic`;
+      c.font = `italic ${16 * camera.zoom}px monospace`;
       c.globalAlpha = 0.85;
     } else {
       c.fillStyle = '#ffffff';
@@ -136,7 +136,7 @@ export function renderComponent(
 
     if (screenHeight > 40) {
       if (component.status === 'defined') {
-        c.font = `${10 * camera.zoom}px monospace italic`;
+        c.font = `italic ${10 * camera.zoom}px monospace`;
         c.fillStyle = 'rgba(200, 255, 255, 0.7)';
       } else {
         c.font = `${10 * camera.zoom}px monospace`;

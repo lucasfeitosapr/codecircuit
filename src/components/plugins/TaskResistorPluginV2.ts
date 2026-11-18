@@ -162,7 +162,7 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
 
       if (component.status === 'defined') {
         ctx.fillStyle = 'rgba(200, 255, 255, 0.85)';
-        ctx.font = `${16 * camera.zoom}px monospace italic`;
+        ctx.font = `italic ${16 * camera.zoom}px monospace`;
         ctx.globalAlpha = 0.85;
       } else {
         ctx.fillStyle = '#ffffff';

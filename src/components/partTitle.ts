@@ -28,7 +28,7 @@ export function drawPartTitle(ctx: CanvasRenderingContext2D, a: PartTitleArgs): 
   if (!pos) return;
   ctx.save();
   if (a.status === 'defined') {
-    ctx.font = `${10 * a.zoom}px monospace italic`;
+    ctx.font = `italic ${10 * a.zoom}px monospace`;
     ctx.fillStyle = 'rgba(200, 255, 255, 0.7)';
   } else {
     ctx.font = `${10 * a.zoom}px monospace`;
