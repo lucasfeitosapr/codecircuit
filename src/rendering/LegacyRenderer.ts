@@ -26,6 +26,7 @@ import { BatchedComponentRenderer } from './BatchedComponentRenderer';
 import { RenderProfiler } from './RenderProfiler';
 import { logger } from '../utils/Logger';
 import type { ComponentBase, Connection, Camera } from '../types';
+import { selectionFocus, FOCUS_DIM_ALPHA } from './selectionFocus';
 
 export interface LegacyRendererContext {
   ctx: CanvasRenderingContext2D;
@@ -158,6 +159,11 @@ export class LegacyRenderer {
       );
     }
 
+    // Selection focus (S-006): dim everything, then redraw the selected part's traces and neighbours
+    if (context.selectedComponent && !context.isTransitioning) {
+      RenderProfiler.measureSection('ui', () => LegacyRenderer.drawSelectionFocus(context, components));
+    }
+
     // Draw transition overlay if transitioning
     if (context.isTransitioning) {
       RenderProfiler.measureSection('ui', () => LegacyRenderer.drawTransitionOverlay(context));
@@ -176,6 +182,30 @@ export class LegacyRenderer {
    */
   static drawSchematicBackground(context: LegacyRendererContext): void {
     rendererDrawSchematicBackground(context.ctx, context.camera, context.canvas);
+  }
+
+  /**
+   * Selection focus (S-006). A dark film over the whole canvas (grid, traces and parts alike),
+   * then the focused traces and parts drawn again on top. Uses the normal draw paths, so the
+   * focused items look exactly as they do without a selection, only everything else is darker.
+   */
+  static drawSelectionFocus(context: LegacyRendererContext, components: ComponentBase[]): void {
+    const focus = selectionFocus(context.selectedComponent?.id, context.getCurrentViewConnections());
+    if (!focus) return;
+    const { ctx, canvas } = context;
+    ctx.save();
+    ctx.fillStyle = `rgba(0, 0, 0, ${FOCUS_DIM_ALPHA})`;
+    ctx.fillRect(0, 0, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
+    ctx.restore();
+    if (focus.connections.length > 0) {
+      LegacyRenderer.drawConnections({
+        ...context,
+        getCurrentViewConnections: () => focus.connections,
+      });
+    }
+    for (const component of components) {
+      if (focus.componentIds.has(component.id)) LegacyRenderer.drawComponent(context, component);
+    }
   }
 
   /**
