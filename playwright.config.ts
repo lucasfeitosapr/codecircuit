@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
   retries: 0,
+  // known-bug-reporter: test.fail() tests must fail on their last expect (debt map M-005)
+  reporter: [['list'], ['./e2e/known-bug-reporter.ts']],
   use: {
     baseURL: 'http://localhost:3000',
     headless: true,
