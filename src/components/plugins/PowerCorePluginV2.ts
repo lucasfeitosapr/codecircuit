@@ -7,6 +7,7 @@ import { ComponentBase } from '../../types';
 import { RenderFrame } from '../../rendering/LayeredRenderer';
 import { PluginMetadata } from '../../events/eventTypes';
 import { drawPartIcon, partIconColor } from '../icons';
+import { drawPartTitle } from '../partTitle';
 
 export interface PowerCoreComponent extends ComponentBase {
   type: 'power-core';
@@ -165,16 +166,16 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
       ctx.textBaseline = 'middle';
       drawPartIcon(ctx, 'power-core', centerX, centerY - 5 * camera.zoom, 14 * camera.zoom, partIconColor(frame, component));
 
-      if (screenHeight > 40) {
-        if (component.status === 'defined') {
-          ctx.font = `${10 * camera.zoom}px monospace italic`;
-          ctx.fillStyle = 'rgba(200, 255, 255, 0.7)';
-        } else {
-          ctx.font = `${10 * camera.zoom}px monospace`;
-          ctx.fillStyle = '#ffffff';
-        }
-        ctx.fillText(component.title || 'Power Core', centerX, centerY + 15 * camera.zoom);
-      }
+      // B-014: short parts draw the title below themselves instead of skipping it
+      drawPartTitle(ctx, {
+        title: component.title || 'Power Core',
+        status: component.status,
+        centerX,
+        centerY,
+        screenY,
+        screenHeight,
+        zoom: camera.zoom,
+      });
 
       ctx.globalAlpha = 1;
 

@@ -246,14 +246,15 @@ describe('PowerCorePluginV2', () => {
       );
     });
 
-    // Known bug B-014: titles are drawn only when the part is taller than 40 px,
-    // so this part never shows its title. Remove .fails when B-014 is fixed.
-    it.fails('should render title when height allows @B-014', () => {
+    // B-014 (fixed): the part is too short for icon + title, so the title goes below it.
+    it('draws its title below the part @B-014', () => {
+      component.title = 'Short part title';
       plugin.renderComponent(mockCanvasContext, mockFrame, component);
 
-      // Check that fillText was called (icon + title)
-      expect(mockCanvasContext.fillText).toHaveBeenCalled();
-      expect(mockCanvasContext.fillText.mock.calls.length).toBeGreaterThanOrEqual(1);
+      const call = mockCanvasContext.fillText.mock.calls.find((c: any[]) => c[0] === 'Short part title');
+      expect(call).toBeDefined();
+      const bottom = component.y + component.height; // camera at 0,0, zoom 1
+      expect(call![2]).toBeGreaterThan(bottom);
     });
 
     describe('Status-based rendering', () => {
