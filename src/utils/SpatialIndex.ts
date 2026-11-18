@@ -212,21 +212,23 @@ export class SpatialIndex {
     }
   }
 
+  // B-011: closed edges, like ComponentLifecycleManager.isPointInComponent. A point on a
+  // quadrant border is checked in both quadrants; a part's right/bottom edge counts as a hit.
   private pointInBounds(x: number, y: number, bounds: Bounds): boolean {
     return (
       x >= bounds.x &&
-      x < bounds.x + bounds.width &&
+      x <= bounds.x + bounds.width &&
       y >= bounds.y &&
-      y < bounds.y + bounds.height
+      y <= bounds.y + bounds.height
     );
   }
 
   private pointInComponent(x: number, y: number, component: ComponentBase): boolean {
     return (
       x >= component.x &&
-      x < component.x + component.width &&
+      x <= component.x + component.width &&
       y >= component.y &&
-      y < component.y + component.height
+      y <= component.y + component.height
     );
   }
 

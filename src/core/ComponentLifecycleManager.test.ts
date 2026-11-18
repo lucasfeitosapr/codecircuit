@@ -7,7 +7,6 @@ import { EventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import RuntimeLayer from '../rendering/layers/RuntimeLayer';
 import type { ComponentBase, ViewState } from '../types';
-import { getUnifiedFeatureManager } from './UnifiedFeatureManager';
 
 // Mock RuntimeLayer
 vi.mock('../rendering/layers/RuntimeLayer', () => {
@@ -344,23 +343,13 @@ describe('ComponentLifecycleManager', () => {
       expect(foundComponent).toBe(component2);
     });
 
-    it('should handle edge coordinates correctly', () => {
-      // KNOWN ISSUE: Spatial index (quadtree) has boundary precision issues with exact edges
-      // Disabling spatial indexing temporarily to test the correct linear search logic
-      // TODO: Fix quadtree queryPoint to handle exact boundary coordinates correctly
-      const manager = getUnifiedFeatureManager();
-      const originalSpatialFlag = manager.getFlag('performance', 'spatialIndexing');
-      manager.setFlag('performance', 'spatialIndexing', false);
-
-      try {
-        // Test exact corners and edges (component at x:100, y:50, w:80, h:40)
-        expect(componentLifecycleManager.getComponentAt(100, 50, currentView)).toBe(testComponent); // top-left
-        expect(componentLifecycleManager.getComponentAt(180, 90, currentView)).toBe(testComponent); // bottom-right (x+w, y+h)
-        expect(componentLifecycleManager.getComponentAt(99, 50, currentView)).toBeNull(); // just outside left
-        expect(componentLifecycleManager.getComponentAt(181, 90, currentView)).toBeNull(); // just outside right
-      } finally {
-        manager.setFlag('performance', 'spatialIndexing', originalSpatialFlag);
-      }
+    it('should handle edge coordinates correctly, with the spatial index on @B-011', () => {
+      // B-011 (fixed): the index now uses the same closed edges as the linear search.
+      // Test exact corners and edges (component at x:100, y:50, w:80, h:40)
+      expect(componentLifecycleManager.getComponentAt(100, 50, currentView)).toBe(testComponent); // top-left
+      expect(componentLifecycleManager.getComponentAt(180, 90, currentView)).toBe(testComponent); // bottom-right (x+w, y+h)
+      expect(componentLifecycleManager.getComponentAt(99, 50, currentView)).toBeNull(); // just outside left
+      expect(componentLifecycleManager.getComponentAt(181, 90, currentView)).toBeNull(); // just outside right
     });
   });
 
