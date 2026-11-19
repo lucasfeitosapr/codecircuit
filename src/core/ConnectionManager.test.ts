@@ -1,3 +1,4 @@
+import { CATEGORY_COLORS } from '../config/palette';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConnectionManager } from './ConnectionManager';
 import { EventBus } from '../events/EventBus';
@@ -761,7 +762,8 @@ describe('ConnectionManager', () => {
       const connection = connectionManager.createConnection(outputPin, inputPin);
       const state = connectionManager.getConnectionRenderState(connection!);
 
-      expect(state.categoryColor).toBe('#00ff88'); // Default fallback color
+      // S-015: unknown categories fall back to Frontend's color (was #00ff88, the done green)
+      expect(state.categoryColor).toBe(CATEGORY_COLORS.frontend.color);
     });
   });
 });

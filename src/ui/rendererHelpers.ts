@@ -1,3 +1,4 @@
+import { CATEGORY_COLORS } from '../config/palette';
 import { drawOrthogonalTrace as rendererDrawOrthogonalTrace } from '../renderer';
 import { hexToRgb as _hexToRgb, getPointOnPath as _getPointOnPath } from '../utils';
 import type { Camera, Connection, ComponentBase, PinRef } from '../types';
@@ -117,7 +118,7 @@ export function drawConnections(app: AppContext, connections: Connection[] | und
             const maxY = Math.max(fromY, toY) + cullMargin;
             if (maxX < 0 || maxY < 0 || minX > vw || minY > vh) continue;
 
-            const categoryColor = app.categories[conn.category ?? 'frontend']?.color || '#00ff88';
+            const categoryColor = app.categories[conn.category ?? 'frontend']?.color || CATEGORY_COLORS.frontend.color;
             const fromStatus = fromComp.status;
             const isActive = fromStatus === 'in-progress' || fromStatus === 'done';
             const isPowered = fromStatus === 'done';
@@ -210,7 +211,7 @@ export function drawConnections(app: AppContext, connections: Connection[] | und
     const toX = (toComponent.x + toPinDef.x) * app.camera.zoom + app.camera.x;
     const toY = (toComponent.y + toPinDef.y) * app.camera.zoom + app.camera.y;
 
-    const categoryColor = app.categories[connection.category ?? 'frontend']?.color || '#00ff88';
+    const categoryColor = app.categories[connection.category ?? 'frontend']?.color || CATEGORY_COLORS.frontend.color;
 
     const fromStatus = connection.from.component.status;
     const toStatus = connection.to.component.status;
@@ -266,7 +267,7 @@ export function drawTempConnection(app: AppContext) {
   const toY = mousePos.y * app.camera.zoom + app.camera.y;
 
   const cat = connectionStart.category ?? 'frontend';
-  const categoryColor = app.categories[cat]?.color || '#00ff88';
+  const categoryColor = app.categories[cat]?.color || CATEGORY_COLORS.frontend.color;
 
   const ctx = app.ctx;
   ctx.strokeStyle = categoryColor + '80';

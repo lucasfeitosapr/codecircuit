@@ -1,3 +1,4 @@
+import { CATEGORY_COLORS } from '../config/palette';
 import { EventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import { Connection, PinHit, ComponentBase, ViewState } from '../types.d';
@@ -503,7 +504,7 @@ export class ConnectionManager {
         const toStatus = connection.to.component.status ?? 'defined';
         const isActive = fromStatus === 'in-progress' || fromStatus === 'done';
         const isPowered = fromStatus === 'done';
-        const categoryColor = this.categories[connection.category ?? 'frontend']?.color || '#00ff88';
+        const categoryColor = this.categories[connection.category ?? 'frontend']?.color || CATEGORY_COLORS.frontend.color;
 
         return {
             isActive,
