@@ -23,6 +23,8 @@ export interface KeyboardShortcutManagerContext {
   exitSchematicView: () => void;
   enterSchematicView: (component: ComponentBase) => void;
   cancelConnection: () => void;
+  /** Re-show the details panel for this part if it is open (Space changes its status). */
+  refreshDetails?: (component: ComponentBase) => void;
   isConnecting: () => boolean;
   addComponentToCurrentView: (component: ComponentBase) => void;
   addConnectionToCurrentView: (connection: any) => void;
@@ -225,6 +227,7 @@ export class KeyboardShortcutManager {
 
     if (selectedComponent && selectedComponent.type !== 'power-core') {
       this.context.toggleComponentStatus(selectedComponent);
+      this.context.refreshDetails?.(selectedComponent);
 
       // Emit event for UI updates (like datasheet refresh)
       eventBus.emit('component.status.toggled', {
