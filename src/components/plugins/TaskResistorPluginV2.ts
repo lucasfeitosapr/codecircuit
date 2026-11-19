@@ -172,11 +172,11 @@ export class TaskResistorPluginV2 extends BaseComponentPlugin {
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      drawPartIcon(ctx, 'task-resistor', centerX, centerY - 5 * camera.zoom, 14 * camera.zoom, partIconColor(frame, component));
+      drawPartIcon(ctx, this.type, centerX, centerY - 5 * camera.zoom, 14 * camera.zoom, partIconColor(frame, component));
 
       // B-014: short parts draw the title below themselves instead of skipping it
       drawPartTitle(ctx, {
-        title: component.title || 'Task Resistor',
+        title: component.title || this.metadata.displayName,
         status: component.status,
         centerX,
         centerY,

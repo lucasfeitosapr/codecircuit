@@ -13,6 +13,8 @@ import { PowerCorePluginV2 } from '../components/plugins/PowerCorePluginV2';
 import { ModuleICPluginV2 } from '../components/plugins/ModuleICPluginV2';
 import { TaskResistorPluginV2 } from '../components/plugins/TaskResistorPluginV2';
 import { GatewayPluginV2 } from '../components/plugins/GatewayPluginV2';
+import { FusePluginV2 } from '../components/plugins/FusePluginV2';
+import { CapacitorPluginV2 } from '../components/plugins/CapacitorPluginV2';
 
 import type { ComponentBase, Connection } from '../types';
 
@@ -64,6 +66,8 @@ export class ApplicationInitializer {
     this.context.componentRegistry.register(new ModuleICPluginV2());
     this.context.componentRegistry.register(new TaskResistorPluginV2());
     this.context.componentRegistry.register(new GatewayPluginV2()); // Phase 2B: Gateway plugin!
+    this.context.componentRegistry.register(new FusePluginV2()); // S-013: root causes
+    this.context.componentRegistry.register(new CapacitorPluginV2()); // S-013: debt
 
     logger.info('init', 'Event-driven plugin system initialized');
     logger.debug('init', `ComponentTypes populated: ${Object.keys(this.context.componentTypes).join(', ')}`);

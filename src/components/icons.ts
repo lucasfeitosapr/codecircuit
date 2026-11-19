@@ -9,7 +9,7 @@
  * in one place (drawPartIcon / partIconSvg).
  */
 
-export type PartIconShape = 'circle' | 'square' | 'bar' | 'diamond' | 'pentagon';
+export type PartIconShape = 'circle' | 'square' | 'bar' | 'diamond' | 'pentagon' | 'fuse' | 'plates';
 
 export interface PartIcon {
   shape: PartIconShape;
@@ -23,6 +23,8 @@ export const PART_ICONS: Record<string, PartIcon> = {
   'task-resistor': { shape: 'bar' },
   'decision-point': { shape: 'diamond' },
   gateway: { shape: 'pentagon' },
+  fuse: { shape: 'fuse' }, // S-013: root cause
+  capacitor: { shape: 'plates' }, // S-013: debt
 };
 
 const FALLBACK: PartIcon = { shape: 'square' };
@@ -31,28 +33,49 @@ export function partIcon(type: string | undefined): PartIcon {
   return (type && PART_ICONS[type]) || FALLBACK;
 }
 
-/** Outline points of a shape centered on (0, 0), `size` px tall. Null for the circle. */
-function shapePoints(shape: PartIconShape, size: number): Array<[number, number]> | null {
+type Polygon = Array<[number, number]>;
+
+/** Outline polygons of a shape centered on (0, 0), `size` px tall. Null for the circle. */
+function shapePolygons(shape: PartIconShape, size: number): Polygon[] | null {
   const h = size / 2;
   switch (shape) {
     case 'circle':
       return null;
     case 'square': {
       const s = h * 0.85;
-      return [[-s, -s], [s, -s], [s, s], [-s, s]];
+      return [[[-s, -s], [s, -s], [s, s], [-s, s]]];
     }
     case 'bar': {
       const w = h * 1.4;
       const t = h * 0.45;
-      return [[-w, -t], [w, -t], [w, t], [-w, t]];
+      return [[[-w, -t], [w, -t], [w, t], [-w, t]]];
     }
     case 'diamond':
-      return [[0, -h], [h, 0], [0, h], [-h, 0]];
+      return [[[0, -h], [h, 0], [0, h], [-h, 0]]];
     case 'pentagon':
-      return Array.from({ length: 5 }, (_, i) => {
-        const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
-        return [h * Math.cos(a), h * Math.sin(a)] as [number, number];
-      });
+      return [
+        Array.from({ length: 5 }, (_, i) => {
+          const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+          return [h * Math.cos(a), h * Math.sin(a)] as [number, number];
+        }),
+      ];
+    case 'fuse': {
+      // Cartridge fuse: a stretched hexagon. The wire inside is drawn by the Fuse part.
+      const w = h * 1.5;
+      const t = h * 0.5;
+      const tip = h * 0.35;
+      return [[[-w, 0], [-w + tip, -t], [w - tip, -t], [w, 0], [w - tip, t], [-w + tip, t]]];
+    }
+    case 'plates': {
+      // Capacitor: two parallel plates.
+      const g = h * 0.22;
+      const b = h * 0.22;
+      const t = h * 0.9;
+      return [
+        [[-g - b, -t], [-g, -t], [-g, t], [-g - b, t]],
+        [[g, -t], [g + b, -t], [g + b, t], [g, t]],
+      ];
+    }
   }
 }
 
@@ -66,14 +89,16 @@ export function drawPartIcon(
   color: string
 ): void {
   const { shape } = partIcon(type);
-  const points = shapePoints(shape, size);
+  const polygons = shapePolygons(shape, size);
   // Put back exactly what we change (doesn't rely on save/restore, so callers and
   // test doubles see the same state they had before).
   const prev = { stroke: ctx.strokeStyle, fill: ctx.fillStyle, width: ctx.lineWidth, alpha: ctx.globalAlpha };
   ctx.beginPath();
-  if (points) {
-    points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(cx + x, cy + y) : ctx.lineTo(cx + x, cy + y)));
-    ctx.closePath();
+  if (polygons) {
+    for (const points of polygons) {
+      points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(cx + x, cy + y) : ctx.lineTo(cx + x, cy + y)));
+      ctx.closePath();
+    }
   } else {
     ctx.arc(cx, cy, (size / 2) * 0.9, 0, Math.PI * 2);
   }
@@ -93,11 +118,13 @@ export function drawPartIcon(
 /** Same icon as inline SVG, for DOM places (parts tray, details panel). */
 export function partIconSvg(type: string | undefined, size = 16, color = 'currentColor'): string {
   const { shape } = partIcon(type);
-  const points = shapePoints(shape, size * 0.8);
+  const polygons = shapePolygons(shape, size * 0.8);
   const c = size / 2;
   const sw = Math.max(1.5, size * 0.1).toFixed(1);
-  const body = points
-    ? `<polygon points="${points.map(([x, y]) => `${(c + x).toFixed(1)},${(c + y).toFixed(1)}`).join(' ')}"/>`
+  const body = polygons
+    ? polygons
+        .map(points => `<polygon points="${points.map(([x, y]) => `${(c + x).toFixed(1)},${(c + y).toFixed(1)}`).join(' ')}"/>`)
+        .join('')
     : `<circle cx="${c}" cy="${c}" r="${(size * 0.36).toFixed(1)}"/>`;
   return (
     `<svg class="part-icon" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" ` +
