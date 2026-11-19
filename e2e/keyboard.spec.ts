@@ -22,8 +22,12 @@ test.describe('Keyboard: one action per key press', () => {
     // Output pin of a Module IC dropped at (420, 260): right edge, middle.
     await clickAt(page, 420 + 100, 260 + 30);
     await expect(page.locator('#connection-mode')).toBeVisible();
+    const cursor = () => page.locator('#circuit-board').evaluate((c: HTMLCanvasElement) => c.style.cursor);
+    expect(await cursor()).toBe('crosshair');
     await page.keyboard.press('Escape');
     await expect(page.locator('#connection-mode')).toBeHidden();
+    // Lucas, 19/nov: the crosshair cursor stayed after Esc.
+    expect(await cursor()).not.toBe('crosshair');
     // One step per press: the selection is still there.
     await expect(page.locator('#comp-status')).toBeVisible();
   });

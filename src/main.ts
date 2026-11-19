@@ -729,6 +729,13 @@ export class MotherboardApp {
     } else {
       indicator.style.display = 'none';
     }
+    // B-024 (Lucas, 19/nov): the crosshair stayed after Esc. Connection mode owns the cursor here,
+    // so every way of leaving it (end, Esc, cancel) puts the normal cursor back.
+    if (connectionState.isConnecting) {
+      this.canvas.style.cursor = 'crosshair';
+    } else if (this.canvas.style.cursor === 'crosshair') {
+      this.canvas.style.cursor = 'grab';
+    }
   }
 
   // Phase 2B: Removed old animate() method - now using RenderScheduler
