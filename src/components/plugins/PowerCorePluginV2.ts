@@ -7,6 +7,7 @@ import { ComponentBase } from '../../types';
 import { RenderFrame } from '../../rendering/LayeredRenderer';
 import { PluginMetadata } from '../../events/eventTypes';
 import { drawPartIcon, partIconColor } from '../icons';
+import { focusBorderColor } from '../focusColor';
 import { drawPartTitle } from '../partTitle';
 
 export interface PowerCoreComponent extends ComponentBase {
@@ -131,6 +132,8 @@ export class PowerCorePluginV2 extends BaseComponentPlugin {
           glowIntensity = 0.8;
           break;
       }
+
+      borderColor = focusBorderColor(frame, component, borderColor); // S-014
 
       ctx.strokeStyle = borderColor;
       ctx.lineWidth = 2;

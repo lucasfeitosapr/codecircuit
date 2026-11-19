@@ -204,7 +204,8 @@ export class LegacyRenderer {
       });
     }
     for (const component of components) {
-      if (focus.componentIds.has(component.id)) LegacyRenderer.drawComponent(context, component);
+      // S-014: focused parts show their own (category) colors, not the status green
+      if (focus.componentIds.has(component.id)) LegacyRenderer.drawComponent(context, component, { trueColors: true });
     }
   }
 
@@ -242,14 +243,14 @@ export class LegacyRenderer {
   /**
    * Draw a single component (legacy method, kept for fallback)
    */
-  static drawComponent(context: LegacyRendererContext, component: ComponentBase): void {
+  static drawComponent(context: LegacyRendererContext, component: ComponentBase, extra: { trueColors?: boolean } = {}): void {
     // Create minimal app context for component renderer
     const appContext = {
       getCurrentViewConnections: context.getCurrentViewConnections,
       categories: context.categories,
       selectedComponent: context.selectedComponent,
     };
-    renderComponentWrapper(context.ctx, context.camera, appContext, component);
+    renderComponentWrapper(context.ctx, context.camera, appContext, component, extra);
   }
 
   /**

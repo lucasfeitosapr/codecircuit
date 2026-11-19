@@ -8,6 +8,7 @@ import { RenderFrame } from '../../rendering/LayeredRenderer';
 import { PluginMetadata } from '../../events/eventTypes';
 import { eventBus } from '../../events/EventBus';
 import { drawPartIcon } from '../icons';
+import { focusBorderColor } from '../focusColor';
 
 export interface DecisionPointComponent extends ComponentBase {
   type: 'decision-point';
@@ -197,6 +198,7 @@ export class DecisionPointPluginV2 extends BaseComponentPlugin {
         }
     }
 
+    borderColor = focusBorderColor(frame, component, borderColor); // S-014
     if (glowIntensity > 0) {
       canvasCtx.shadowColor = borderColor;
       canvasCtx.shadowBlur = 15 * glowIntensity * camera.zoom;
