@@ -26,6 +26,8 @@ const CATEGORY_HINTS: Record<string, string> = {
   'processing': 'Individual tasks',
   'logic': 'Conditional logic',
   'integration': 'External integrations',
+  'protection': 'Root causes (blown = active)',
+  'storage': 'Debt that builds up',
 };
 
 export class PartsTrayRenderer {

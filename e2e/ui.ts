@@ -15,7 +15,7 @@ import { Page, expect } from '@playwright/test';
  * overlaps the left side of the canvas, so keep x above ~300.
  */
 
-export type PartType = 'power-core' | 'module-ic' | 'task-resistor' | 'decision-point' | 'gateway';
+export type PartType = 'power-core' | 'module-ic' | 'task-resistor' | 'decision-point' | 'gateway' | 'fuse' | 'capacitor';
 
 /** Size of each part when dropped, from the component plugins. Used to click centers. */
 const SIZE: Record<PartType, { w: number; h: number }> = {
@@ -24,6 +24,8 @@ const SIZE: Record<PartType, { w: number; h: number }> = {
   'task-resistor': { w: 60, h: 20 },
   'decision-point': { w: 60, h: 60 },
   gateway: { w: 60, h: 60 },
+  fuse: { w: 60, h: 20 },
+  capacitor: { w: 40, h: 30 },
 };
 
 /** Center of a part dropped at (x, y). Drops place the top-left corner at the drop point. */
