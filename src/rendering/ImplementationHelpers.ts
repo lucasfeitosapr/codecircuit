@@ -8,6 +8,8 @@ export type RenderOptions = {
   categories: Record<string, { name: string; color: string }>;
   selectedComponentId?: string | null;
   connections?: any[]; // precomputed connections with pin positions and component refs
+  /** S-014: draw with category colors (selection focus pass). */
+  trueColors?: boolean;
 };
 
 export function renderComponent(
@@ -34,6 +36,7 @@ export function renderComponent(
             categories: options.categories,
             connections: options.connections ?? [],
             selectedComponentId: options.selectedComponentId ?? null,
+            trueColors: options.trueColors ?? false,
           },
         };
         instructions[0].render(c, pluginFrame as any);

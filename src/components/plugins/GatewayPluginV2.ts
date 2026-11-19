@@ -5,6 +5,7 @@ import { BaseComponentPlugin } from './BaseComponentPlugin';
 import { ComponentBase } from '../../types';
 import { PluginMetadata } from '../../events/eventTypes';
 import { drawPartIcon } from '../icons';
+import { focusBorderColor } from '../focusColor';
 
 export interface GatewayComponent extends ComponentBase {
   type: 'gateway';
@@ -166,6 +167,7 @@ export function renderGateway(
       borderColor = healthColors[healthState] || borderColor;
   }
 
+  borderColor = focusBorderColor(frame, component, borderColor); // S-014
   if (glowIntensity > 0) {
     canvasCtx.shadowColor = borderColor;
     canvasCtx.shadowBlur = 15 * glowIntensity * camera.zoom;

@@ -13,7 +13,8 @@ export function renderComponentWrapper(
   ctx: CanvasRenderingContext2D,
   camera: Camera,
   app: AppMinimal,
-  component: ComponentBase
+  component: ComponentBase,
+  extra: { trueColors?: boolean } = {}
 ) {
   const connections = app
     .getCurrentViewConnections()
@@ -39,5 +40,6 @@ export function renderComponentWrapper(
     categories: app.categories,
     selectedComponentId: app.selectedComponent?.id ?? null,
     connections,
+    trueColors: extra.trueColors,
   });
 }
