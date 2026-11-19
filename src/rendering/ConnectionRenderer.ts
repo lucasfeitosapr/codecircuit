@@ -11,6 +11,7 @@
  * - Maintains visual quality
  */
 
+import { CATEGORY_COLORS } from '../config/palette';
 import type { Connection, Camera, ComponentBase } from '../types';
 import { drawOrthogonalTrace } from '../renderer';
 import { ConnectionCache } from '../utils/ConnectionCache';
@@ -93,7 +94,7 @@ export class ConnectionRenderer {
 
     // Render each category in batch
     for (const [category, conns] of byCategory) {
-      const categoryColor = categories[category]?.color || '#00ff88';
+      const categoryColor = categories[category]?.color || CATEGORY_COLORS.frontend.color;
       this.renderCategoryBatch(ctx, conns, camera, categoryColor, allowGlow);
     }
   }

@@ -9,6 +9,7 @@
  * This module calls those methods with the appropriate hooks from AppContext.
  */
 
+import { CATEGORY_COLORS } from '../config/palette';
 import type { AppContext } from './AppContext';
 import { ViewStack } from '../viewStack';
 import { eventBus } from '../events/EventBus';
@@ -128,7 +129,7 @@ function wireConnectionManager(ctx: AppContext): void {
     },
     clearConnectionIntents: () => ctx.uiLayer.clearConnectionIntents(),
     runtimeEnergyFlow: (fx, fy, tx, ty, color) => ctx.runtimeLayer.energyFlow(fx, fy, tx, ty, color),
-    getCategoryColor: cat => ctx.categories[cat]?.color || '#00ff88',
+    getCategoryColor: cat => ctx.categories[cat]?.color || CATEGORY_COLORS.frontend.color,
   });
 }
 

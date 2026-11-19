@@ -47,6 +47,7 @@ import { showDatasheet as showDatasheetUI, hideDatasheet as hideDatasheetUI } fr
 import { LegacyRenderer, type LegacyRendererContext } from './rendering/LegacyRenderer';
 import { RenderScheduler } from './rendering/RenderScheduler';
 import { PerformanceConfig } from './config/FeatureFlagAdapter';
+import { defaultCategories } from './config/palette';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { MotherboardReactUI } from './ui/react/App';
@@ -196,16 +197,7 @@ export class MotherboardApp {
     // ComponentTypes now populated automatically by plugin registration
     this.componentTypes = {};
 
-    this.categories = {
-      frontend: { name: 'Frontend', color: '#00ff88' },
-      backend: { name: 'Backend', color: '#4488ff' },
-      database: { name: 'Database', color: '#ffaa00' },
-      security: { name: 'Security', color: '#ff0088' },
-      testing: { name: 'Testing', color: '#88ff00' },
-      devops: { name: 'DevOps', color: '#ff8800' },
-      design: { name: 'Design', color: '#aa44ff' },
-      research: { name: 'Research', color: '#00aaff' },
-    };
+    this.categories = defaultCategories(); // S-015: one palette (src/config/palette.ts)
   }
 
   private initializeApplication() {
