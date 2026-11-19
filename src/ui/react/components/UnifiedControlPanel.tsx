@@ -67,7 +67,7 @@ export const UnifiedControlPanel: React.FC<PanelProps> = ({
 
     // Keyboard shortcut: Ctrl+Shift+F
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') { // B-025: Caps Lock flips the case
         e.preventDefault();
         setIsOpen((prev) => !prev);
       }

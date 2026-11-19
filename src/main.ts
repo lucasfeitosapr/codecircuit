@@ -240,7 +240,13 @@ export class MotherboardApp {
         exitSchematicView: () => this.schematicViewManager.exitSchematicView(),
         enterSchematicView: component =>
           this.schematicViewManager.enterSchematicView(component as ModuleComponent),
-        cancelConnection: () => this.connectionManager.cancelConnection(),
+        cancelConnection: () => {
+          this.connectionManager.cancelConnection();
+          this.updateConnectionModeUI(); // B-024: hide the connection-mode indicator
+        },
+        refreshDetails: component => {
+          if (document.getElementById('datasheet-panel')?.classList.contains('active')) this.showDatasheet(component);
+        },
         isConnecting: () => this.connectionManager.getConnectionState().isConnecting,
         addComponentToCurrentView: component => this.appStateManager.addComponentToCurrentView(component),
         addConnectionToCurrentView: connection => this.appStateManager.addConnectionToCurrentView(connection),
@@ -351,7 +357,6 @@ export class MotherboardApp {
         hideDatasheet: () => this.hideDatasheet(),
         navigateToBreadcrumbLevel: level =>
           this.schematicViewManager.navigateToBreadcrumbLevel(level),
-        handleKeyboardShortcut: () => { }, // Now handled by KeyboardShortcutManager
         addComponent: this.addComponent.bind(this),
         onMouseDown: this.onMouseDown.bind(this),
         onMouseMove: this.onMouseMove.bind(this),

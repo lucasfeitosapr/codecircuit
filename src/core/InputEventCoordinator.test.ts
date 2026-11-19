@@ -126,26 +126,26 @@ describe('InputEventCoordinator', () => {
       // Verify that constructor completed successfully, which means setupEventListeners was called
       expect(coordinator).toBeInstanceOf(InputEventCoordinator);
 
-      // Verify keyboard event listener was added (we can spy on addEventListener)
       const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
       // Create a new coordinator to test the setup process
       const newCoordinator = new InputEventCoordinator(mockDependencies);
 
-      // Should have added keydown event listener
-      expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
+      // D-010: keyboard input belongs to KeyboardShortcutManager alone; a second keydown
+      // listener here made every shared key run twice (B-024, B-026, B-027).
+      expect(addEventListenerSpy).not.toHaveBeenCalledWith('keydown', expect.any(Function));
 
       // Cleanup
       newCoordinator.destroy();
       addEventListenerSpy.mockRestore();
     });
 
-    it('should setup keyboard event listener', () => {
+    it('does not listen to the keyboard (KeyboardShortcutManager owns it) @B-026', () => {
       const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
       new InputEventCoordinator(mockDependencies);
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
+      expect(addEventListenerSpy).not.toHaveBeenCalledWith('keydown', expect.any(Function));
     });
 
     it('should create coordinator via factory function', () => {
@@ -359,9 +359,10 @@ describe('InputEventCoordinator', () => {
     it('should remove event listeners on destroy', () => {
       const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
 
-      coordinator.destroy();
+      expect(() => coordinator.destroy()).not.toThrow();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
+      // No keydown listener to remove any more (D-010).
+      expect(removeEventListenerSpy).not.toHaveBeenCalledWith('keydown', expect.any(Function));
     });
 
     it('should log cleanup message', () => {

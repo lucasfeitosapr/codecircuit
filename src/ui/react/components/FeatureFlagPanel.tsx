@@ -27,7 +27,8 @@ export function FeatureFlagPanel() {
   // Keyboard shortcut: Ctrl+F to toggle panel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'f') {
+      // B-025: key is 'F' with Caps Lock on; Ctrl+Shift+F belongs to the control panel
+      if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         setIsExpanded(prev => !prev);
       }

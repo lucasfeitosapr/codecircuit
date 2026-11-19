@@ -34,7 +34,6 @@ export interface UIControllerContext {
   exitSchematicView(): void;
   hideDatasheet(): void;
   navigateToBreadcrumbLevel(index: number): void;
-  handleKeyboardShortcut(event: KeyboardEvent): void;
   addComponent(type: string, x: number, y: number): void;
 
   // Mouse event handlers
@@ -57,16 +56,7 @@ export class UIController {
   setupUI() {
     this.setupDragAndDrop();
     this.setupCanvasEvents();
-    // Close help overlay when clicking outside
-    const helpOverlay = document.getElementById('help-overlay');
-    if (helpOverlay) {
-      helpOverlay.addEventListener('click', (e: MouseEvent) => {
-        const target = e.target as HTMLElement | null;
-        if (target?.id === 'help-overlay') {
-          target.classList.remove('active');
-        }
-      });
-    }
+    // Help overlay click-outside is handled by InputEventCoordinator (D-010: it was bound twice).
 
     // UI controls
     const backBtn = document.getElementById('back-btn');
@@ -125,9 +115,7 @@ export class UIController {
    * Setup keyboard shortcuts
    */
   setupKeyboardShortcuts() {
-    document.addEventListener('keydown', event => {
-      this.context.handleKeyboardShortcut(event);
-    });
+    // Keyboard input is owned by KeyboardShortcutManager (D-010). main.ts passed a no-op here.
   }
 
   /**

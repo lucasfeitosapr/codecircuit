@@ -1,7 +1,6 @@
 import { eventBus } from '../events/EventBus';
 import { Events } from '../events/eventTypes';
 import type { ComponentBase, ModuleComponent, PinHit, Camera } from '../types';
-import { hideDatasheet as hideDatasheetUI, showDatasheet as showDatasheetUI } from '../datasheet';
 import { isFeatureEnabled } from '../config/FeatureFlagAdapter';
 
 /**
@@ -99,7 +98,7 @@ export class InputEventCoordinator {
    */
   private setupEventListeners(): void {
     this.setupCanvasInputListeners();
-    this.setupKeyboardShortcuts();
+    // Keyboard input is owned by KeyboardShortcutManager alone (D-010, B-024, B-026, B-027).
     this.setupUIEventHandlers();
     this.setupImportHandler();
     this.setupExportImportEventHandlers();
@@ -138,22 +137,6 @@ export class InputEventCoordinator {
     // MIGRATION NOTE: setupInputListeners (archived/legacy-ui-code/inputHandler.ts)
     // is intentionally NOT called here. InputEventCoordinator replaces that legacy system
     // with modern event handling via setupEventListeners() above.
-  }
-
-  /**
-   * Setup keyboard shortcut listeners
-   */
-  private setupKeyboardShortcuts(): void {
-    const keydownHandler = (event: KeyboardEvent) => {
-      this.handleKeyboardShortcut(event);
-    };
-
-    document.addEventListener('keydown', keydownHandler);
-    this.eventListeners.push({
-      element: document,
-      event: 'keydown',
-      handler: keydownHandler as EventListener,
-    });
   }
 
   /**
@@ -498,155 +481,6 @@ export class InputEventCoordinator {
    */
   private handleWheel(e: WheelEvent): void {
     this.dependencies.viewportManager.handleWheelEvent(e);
-  }
-
-  /**
-   * Handle keyboard shortcuts
-   */
-  private handleKeyboardShortcut(event: KeyboardEvent): void {
-    // Ignore keyboard shortcuts when typing in input fields
-    const target = event.target as HTMLElement;
-    if (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.contentEditable === 'true'
-    ) {
-      return;
-    }
-
-    // Prevent default behavior for our shortcuts
-    const shortcutKeys = ['Escape', 'Tab', ' ', 'F1'];
-    if (shortcutKeys.includes(event.key)) {
-      event.preventDefault();
-    }
-
-    switch (event.key) {
-      case 'Escape':
-        this.handleEscapeKey();
-        break;
-      case 'Tab':
-        this.handleTabKey(event.shiftKey);
-        break;
-      case ' ': // Space key
-        this.handleSpaceKey();
-        break;
-      case 'F1':
-        this.handleHelpKey();
-        break;
-      case '?':
-        if (event.shiftKey) {
-          // Shift + ? = ?
-          this.handleHelpKey();
-        }
-        break;
-    }
-  }
-
-  /**
-   * Handle Escape key - exit contexts and close modals
-   */
-  private handleEscapeKey(): void {
-    // Priority 1: Close help overlay if open
-    const helpOverlay = document.getElementById('help-overlay') as HTMLElement;
-    if (helpOverlay && helpOverlay.classList.contains('active')) {
-      helpOverlay.classList.remove('active');
-      return;
-    }
-
-    // Priority 2: Exit connection mode if active
-    if (this.dependencies.connectionManager.getConnectionState().isConnecting) {
-      this.dependencies.connectionManager.cancelConnection();
-      const connectionModeIndicator = document.getElementById('connection-mode') as HTMLElement;
-      if (connectionModeIndicator) {
-        connectionModeIndicator.style.display = 'none';
-      }
-      return;
-    }
-
-    // Priority 3: Clear component selection
-    if (this.dependencies.getSelectedComponent()) {
-      this.dependencies.setSelectedComponent(null);
-      hideDatasheetUI();
-      return;
-    }
-
-    // Priority 4: Exit schematic view if in one
-    if (this.dependencies.getCurrentView().type === 'schematic') {
-      this.dependencies.exitSchematicView();
-      return;
-    }
-  }
-
-  /**
-   * Handle Tab key - cycle between views
-   */
-  private handleTabKey(shiftPressed: boolean): void {
-    if (this.dependencies.getIsTransitioning()) return;
-
-    const viewStackSize = this.dependencies.viewStack.size();
-
-    if (viewStackSize === 0) {
-      return;
-    }
-
-    if (shiftPressed) {
-      // Shift+Tab: Go back one level
-      if (this.dependencies.getCurrentView().type === 'schematic') {
-        this.dependencies.exitSchematicView();
-      }
-    } else {
-      // Tab: Navigate deeper or cycle through Module ICs
-      if (this.dependencies.getCurrentView().type === 'main') {
-        // Find first Module IC and enter it
-        const moduleICs = this.dependencies.getComponents().filter(c => c.type === 'module-ic');
-        if (moduleICs.length > 0) {
-          this.dependencies.enterSchematicView(moduleICs[0] as ModuleComponent);
-        }
-      } else {
-        // In schematic view - find next Module IC or exit to main
-        const currentComponents = this.dependencies.getCurrentViewComponents();
-        const moduleICs = currentComponents.filter(c => c.type === 'module-ic');
-        if (moduleICs.length > 0) {
-          this.dependencies.enterSchematicView(moduleICs[0] as ModuleComponent);
-        } else {
-          this.dependencies.exitSchematicView();
-        }
-      }
-    }
-  }
-
-  /**
-   * Handle Space key - toggle component status
-   */
-  private handleSpaceKey(): void {
-    const selectedComponent = this.dependencies.getSelectedComponent();
-    if (selectedComponent && selectedComponent.type !== 'power-core') {
-      this.dependencies.toggleComponentStatus(selectedComponent);
-
-      // Update datasheet if open
-      if (document.getElementById('datasheet-panel')?.classList.contains('active')) {
-        showDatasheetUI(this.dependencies as any, selectedComponent);
-      }
-    } else if (!selectedComponent) {
-      // No component selected - show status hint
-      this.dependencies.showTemporaryMessage(
-        'Select a component first, then press SPACE to toggle its status'
-      );
-    }
-  }
-
-  /**
-   * Handle F1 key - toggle help overlay
-   */
-  private handleHelpKey(): void {
-    const helpOverlay = document.getElementById('help-overlay') as HTMLElement;
-    if (helpOverlay) {
-      if (helpOverlay.classList.contains('active')) {
-        helpOverlay.classList.remove('active');
-      } else {
-        helpOverlay.classList.add('active');
-      }
-    }
   }
 
   /**
